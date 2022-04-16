@@ -8,8 +8,8 @@
  ============================================================================
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "kernel.h"
+
 
 int main(void) {
 	puts("!!!Hello KERNEL!!!"); /* prints !!!Hello World!!! */
