@@ -14,6 +14,13 @@
 #include<commons/config.h>
 #include<readline/readline.h>
 
-// #include <shared/utils.h>
+//#include <utils.c>
 
 #endif /* CONSOLE_H_ */
+
+
+typedef struct instruction {
+    char* instruction_id;
+    int* instruction_params;
+} t_instruction;
+

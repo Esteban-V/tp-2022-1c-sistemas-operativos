@@ -1,4 +1,4 @@
-typedef struct Instruction {
+typedef struct instruction {
     char* instruction_id;
     int* instruction_params;
-} Instruction;
+} t_instruction;

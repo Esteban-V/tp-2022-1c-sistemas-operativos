@@ -5,11 +5,12 @@
  *      Author: utn-so
  */
 
-#include<console.h>
-
+#include "console.h"
+/*
 Instruction parse_instruction(char* linea) {
 // leer por salto de linea
 		// guardar id de instruccion
 		// leer lista de params
 		// guardar
 }
+*/
