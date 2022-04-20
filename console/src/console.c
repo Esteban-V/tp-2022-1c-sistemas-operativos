@@ -10,10 +10,14 @@
 
 #include "console.h"
 
-t_instruction turn_string_into_instruction(char* string);
+int get_code_from_path(char* path);
+t_instruction* create_instruction(char* name,int* params);
+void destroy_instruction(t_instruction* instruct);
+t_instruction* turn_string_into_instruction(char* string);
 
 int main(int argc, char** argv) {
 	// iniciar logger
+
 
 	if(argc < 3) {
 		// tirar error con logger y cortar
@@ -26,12 +30,11 @@ int main(int argc, char** argv) {
 
 	char* code_path = argv[1];
 	char* process_size = argv[2];
-	puts("Code Path:");
-	puts(code_path);
-	puts("Process Size:");
-	puts(process_size);
-
-
+	printf("Code Path:");
+	printf("%s",code_path);
+	printf("Process Size:");
+	printf("%s",process_size);
+	printf("HOLA");
 	get_code_from_path(code_path);
 
 	t_list* listOfInstructions = list_create();
@@ -63,14 +66,15 @@ int get_code_from_path(char* path) {
 
 
 	while((line =getline(&line_buf,&line_buf_size,instructionsFile))!=-1){
-		puts(line_buf);
-		t_instruction instruct = turn_string_into_instruction(line_buf);
-		printf("id: %s \n",instruct.instruction_id);
+
+		t_instruction* instruct = turn_string_into_instruction(line_buf);
+		printf("id: %s \n",instruct->instruction_id);
 		int i=0;
-		while(instruct.instruction_params[i]!=NULL){
-			printf("param num %d : %d \n",i+1,instruct.instruction_params[i]);
+		while(instruct->instruction_params[i]!=NULL){
+			printf("param num %d : %d \n",i+1,instruct->instruction_params[i]);
 			i++;
 		}
+		destroy_instruction(instruct);
 		}
 	fclose(instructionsFile);
 	// leer archivo
@@ -81,23 +85,37 @@ int get_code_from_path(char* path) {
 	return 0;
 }
 
-t_instruction turn_string_into_instruction(char* string){
+t_instruction* turn_string_into_instruction(char* string){
+	printf("HOLA");
 	char * word = strtok(string, " ");
-	int param;
 	int n=0;
-	t_instruction instruct;
-	instruct.instruction_id = word;
-	word = strtok(NULL," ");
-			while(word!=NULL){
-				puts(word);
-				param=atoi(word);
-				instruct.instruction_params[n] = param;
-				n++;
-				word = strtok(NULL," ");
+	int* params=malloc(sizeof(int*));
+	char* name_param=strtok(NULL," ");
+	while(name_param!=NULL){
 
-				if(word==NULL){
-					puts("ES NULO");
-				}
-			}
-			return instruct;
+		params[n]=atoi(name_param);
+
+		n++;
+		name_param=strtok(NULL," ");
+	}
+	t_instruction* instruct = create_instruction(word,params);
+	free(params);
+	return instruct;
+}
+
+t_instruction* create_instruction(char* name,int* params){
+	int n=0;
+	t_instruction* instruct=malloc(sizeof(t_instruction));
+	instruct->instruction_id=name;
+	while(params[n]!=NULL){
+		instruct->instruction_params[n] = params[n];
+		n++;
+	}
+	return instruct;
+}
+
+void destroy_instruction(t_instruction* instruct){
+	free(instruct->instruction_id);
+	free(instruct->instruction_params);
+	free(instruct);
 }
