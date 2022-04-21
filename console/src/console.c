@@ -10,12 +10,19 @@
 
 #include "console.h"
 
-t_instruction turn_string_into_instruction(char* string);
+t_instruction* parse_instruction(char* string);
+FILE* open_file(char* path);
+int get_code(FILE* file, t_list* list);
+void terminate_console();
+t_instruction* new_instruction(size_t id_size);
+void destroy_instruction (t_instruction *instruction);
+
 
 int main(int argc, char** argv) {
 	// iniciar logger
 
 	if(argc < 3) {
+		puts("Missing params");
 		// tirar error con logger y cortar
 		return EXIT_FAILURE;
 	}
@@ -26,78 +33,103 @@ int main(int argc, char** argv) {
 
 	char* code_path = argv[1];
 	char* process_size = argv[2];
-	puts("Code Path:");
-	puts(code_path);
-	puts("Process Size:");
-	puts(process_size);
+	printf("Code Path: ");
+	printf("%s\n", code_path);
+	printf("Process Size: ");
+	printf("%s\n", process_size);
 
-
-	get_code_from_path(code_path);
-
-	t_list* listOfInstructions = list_create();
+	t_list* instruction_list = list_create();
+	FILE* instruction_file = open_file(code_path);
+	get_code(instruction_file, instruction_list);
 	// abrir config
 
 	// abrir conexion con server kernel segun datos config
 	// enviar tamano
+	// serializar lista
 	// enviar lista (como paquete)
 
 	// esperar resultado
 	// tirar info/error resultado con logger
 
-	// cerrar conexion
+	terminate_console();
 	return EXIT_SUCCESS;
 }
 
 
-
-int get_code_from_path(char* path) {
-	FILE* instructionsFile = fopen(path,"r");
-	if(instructionsFile==NULL){
-			puts("couldnt open file");
-			return -1;
-		}
-
+int get_code(FILE* file, t_list* list) {
 	char* line_buf = NULL;
 	size_t line_buf_size = 0;
-	ssize_t line;
+	ssize_t lines_read;
 
+	lines_read = getline(&line_buf, &line_buf_size, file);
+	while (lines_read != -1) {
+		t_instruction* instruction = parse_instruction(line_buf);
+		puts(instruction->id);
+		destroy_instruction(instruction);
 
-	while((line =getline(&line_buf,&line_buf_size,instructionsFile))!=-1){
-		puts(line_buf);
-		t_instruction instruct = turn_string_into_instruction(line_buf);
-		printf("id: %s \n",instruct.instruction_id);
-		int i=0;
-		while(instruct.instruction_params[i]!=NULL){
-			printf("param num %d : %d \n",i+1,instruct.instruction_params[i]);
-			i++;
-		}
-		}
-	fclose(instructionsFile);
-	// leer archivo
-		// parse_instruction()
-	// escupir contenido de archivo en lista
-	// cerrar archivo
-
+		lines_read = getline(&line_buf, &line_buf_size, file);
+	}
+	fclose(file);
 	return 0;
 }
 
-t_instruction turn_string_into_instruction(char* string){
-	char * word = strtok(string, " ");
+t_instruction* parse_instruction(char* string){
 	int param;
-	int n=0;
-	t_instruction instruct;
-	instruct.instruction_id = word;
-	word = strtok(NULL," ");
-			while(word!=NULL){
-				puts(word);
-				param=atoi(word);
-				instruct.instruction_params[n] = param;
-				n++;
-				word = strtok(NULL," ");
+	int i = 0;
 
-				if(word==NULL){
-					puts("ES NULO");
-				}
-			}
-			return instruct;
+	char* id = strtok(string, " ");
+	t_instruction* instruction = new_instruction(strlen(id));
+	instruction->id = id;
+
+	char* params = strtok(NULL, " ");
+	while(params != NULL){
+		param = atoi(params);
+		instruction->params[i] = param;
+		params = strtok(NULL," ");
+		i++;
+	}
+	return instruction;
+}
+
+FILE* open_file(char* path) {
+	FILE* file = fopen(path, "r");
+	if (file == NULL){
+		puts("Couldn't open file");
+		exit(-1);
+	}
+	return file;
+}
+
+void terminate_console() {
+	//close conection
+}
+
+t_instruction* new_instruction(size_t id_size) {
+    // Try to allocate instruction structure.
+    t_instruction *instruction = malloc(sizeof(t_instruction));
+    if (instruction == NULL)
+        return NULL;
+
+    // Try to allocate instruction id and params, free structure if fail.
+    instruction->id = malloc (id_size * sizeof (char));
+    if (instruction->id == NULL) {
+        free(instruction);
+        return NULL;
+    }
+
+    instruction->params = malloc(2 * sizeof (int));
+    if (instruction->params == NULL) {
+		free(instruction);
+		return NULL;
+	}
+
+    return instruction;
+}
+
+void destroy_instruction (t_instruction *instruction) {
+    if (instruction != NULL) {
+        free (instruction->id);
+        free (instruction->params);
+        free (instruction);
+    }
 }

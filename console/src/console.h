@@ -3,6 +3,7 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 #include<commons/log.h>
 
@@ -14,13 +15,9 @@
 #include<commons/config.h>
 #include<readline/readline.h>
 
-//#include <utils.c>
-
-#endif /* CONSOLE_H_ */
-
-
 typedef struct instruction {
-    char* instruction_id;
-    int* instruction_params;
+    char* id;
+    int* params;
 } t_instruction;
 
+#endif /* CONSOLE_H_ */
