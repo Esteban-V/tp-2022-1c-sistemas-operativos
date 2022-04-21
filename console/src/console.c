@@ -10,16 +10,16 @@
 
 #include "console.h"
 
-t_instruction* parse_instruction(char* string);
 FILE* open_file(char* path);
-int get_code(FILE* file, t_list* list);
-void terminate_console();
+void get_code(FILE* file, t_list* list);
+t_instruction* parse_instruction(char* string);
 t_instruction* new_instruction(size_t id_size);
-void destroy_instruction (t_instruction *instruction);
-
+void destroy_instruction(t_instruction* instruct);
+void terminate_console();
 
 int main(int argc, char** argv) {
 	// iniciar logger
+
 
 	if(argc < 3) {
 		puts("Missing params");
@@ -34,13 +34,14 @@ int main(int argc, char** argv) {
 	char* code_path = argv[1];
 	char* process_size = argv[2];
 	printf("Code Path: ");
-	printf("%s\n", code_path);
+	printf("%s\n",code_path);
 	printf("Process Size: ");
-	printf("%s\n", process_size);
+	printf("%s\n",process_size);
 
-	t_list* instruction_list = list_create();
 	FILE* instruction_file = open_file(code_path);
+	t_list* instruction_list = list_create();
 	get_code(instruction_file, instruction_list);
+
 	// abrir config
 
 	// abrir conexion con server kernel segun datos config
@@ -56,24 +57,25 @@ int main(int argc, char** argv) {
 }
 
 
-int get_code(FILE* file, t_list* list) {
+void get_code(FILE* file, t_list* list) {
 	char* line_buf = NULL;
 	size_t line_buf_size = 0;
 	ssize_t lines_read;
 
+	t_instruction* instruction;
+
 	lines_read = getline(&line_buf, &line_buf_size, file);
 	while (lines_read != -1) {
-		t_instruction* instruction = parse_instruction(line_buf);
+		instruction = parse_instruction(line_buf);
 		puts(instruction->id);
-		destroy_instruction(instruction);
 
 		lines_read = getline(&line_buf, &line_buf_size, file);
 	}
+	destroy_instruction(instruction);
 	fclose(file);
-	return 0;
 }
 
-t_instruction* parse_instruction(char* string){
+t_instruction* parse_instruction(char* string) {
 	int param;
 	int i = 0;
 
@@ -94,14 +96,13 @@ t_instruction* parse_instruction(char* string){
 FILE* open_file(char* path) {
 	FILE* file = fopen(path, "r");
 	if (file == NULL){
-		puts("Couldn't open file");
 		exit(-1);
 	}
 	return file;
 }
 
 void terminate_console() {
-	//close conection
+	//close connection
 }
 
 t_instruction* new_instruction(size_t id_size) {
