@@ -17,7 +17,7 @@
 
 typedef struct instruction {
     char* id;
-    int* params;
+    u_int32_t* params;
 } t_instruction;
 
 #endif /* CONSOLE_H_ */
