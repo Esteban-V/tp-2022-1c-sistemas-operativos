@@ -8,6 +8,7 @@
 
 #include "console.h"
 
+
 /*
  Listado de instrucciones:
 	 NO_OP: 1 parámetro
@@ -29,6 +30,9 @@ void log_instruction(void *elem) {
 };
 
 int main(int argc, char **argv) {
+	char* ip;
+	char* port;
+
 	// iniciar logger
 	if (argc < 3) {
 		puts("Missing params");
@@ -40,8 +44,16 @@ int main(int argc, char **argv) {
 		puts('Unused params');
 	}
 
-	logger = iniciar_logger();
-	config = iniciar_config();
+	logger = create_logger();
+	config = create_config();
+	log_info(logger,"Logger created");
+
+	ip = config_get_string_value(config,"IP_KERNEL");
+	port = config_get_string_value(config,"PUERTO_KERNEL");
+
+	log_info(logger,"IP value is: %s\nPort value is: %s \n",ip,port);
+
+
 
 	char* code_path = argv[1];
 	int process_size = atoi(argv[2]);
@@ -53,7 +65,6 @@ int main(int argc, char **argv) {
 
 	process = process_create(process_size);
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
-	process->size = process_size;
 
 	printf("Size: %d\n", process->size);
 	puts("Instructions:");
@@ -153,7 +164,7 @@ void instruction_destroy(t_instruction *instruction) {
 }
 
 
-t_process* process_create() {
+t_process* process_create(int size) {
 	// Try to allocate process structure.
 	t_process *process = malloc(sizeof(t_process));
 	if (process == NULL) {
@@ -166,8 +177,9 @@ t_process* process_create() {
 		free(process);
 		return NULL;
 	}
-
+	process->size = size;
 	process->instructions = list_create();
+
 	if (process->instructions == NULL) {
 		free(process->size);
 		free(process);
@@ -189,13 +201,13 @@ void process_destroy(t_process *process) {
 	}
 }
 
-t_log* iniciar_logger() {
+t_log* create_logger() {
 	t_log* nuevo_logger;
 	nuevo_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
 	return nuevo_logger;
 }
 
-t_config* iniciar_config() {
+t_config* create_config() {
 	t_config* nuevo_config;
 	nuevo_config = config_create("console.config");
 	return nuevo_config;

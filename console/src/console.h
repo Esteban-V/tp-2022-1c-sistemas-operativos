@@ -5,6 +5,7 @@
 #include<stdlib.h>
 #include<string.h>
 
+#include "client.h"
 #include<commons/log.h>
 
 #include<commons/string.h>
@@ -39,11 +40,11 @@ t_instruction* parse_instruction(char *string);
 t_instruction* instruction_create(size_t id_size);
 void instruction_destroy(t_instruction *instruction);
 
-t_process* process_create();
+t_process* process_create(int size);
 void process_destroy(t_process *process);
 
-t_log* iniciar_logger(void);
-t_config* iniciar_config(void);
+t_log* create_logger();
+t_config* create_config();
 
 void terminate_console();
 
