@@ -8,13 +8,6 @@
 
 #include "console.h"
 
-FILE* open_file(char *path);
-void get_code(FILE *file, t_list *list);
-t_instruction* parse_instruction(char *string);
-t_instruction* new_instruction(size_t id_size);
-void destroy_instruction(t_instruction *instruct);
-void terminate_console();
-
 /*
  Listado de instrucciones:
 	 NO_OP: 1 parámetro
@@ -22,6 +15,18 @@ void terminate_console();
 	 COPY y WRITE: 2 parámetros
 	 EXIT: 0 parámetros
  */
+
+void log_params(void *elem) {
+	int* param = (int*) elem;
+	printf(" %d", param);
+};
+
+void log_instruction(void *elem) {
+	t_instruction* inst = (t_instruction*) elem;
+	printf(inst->id);
+	list_iterate(inst->params, log_params);
+	printf("\n");
+};
 
 int main(int argc, char **argv) {
 	// iniciar logger
@@ -35,23 +40,24 @@ int main(int argc, char **argv) {
 		puts('Unused params');
 	}
 
-	char *code_path = argv[1];
-	char *process_size = argv[2];
-	printf("Code Path: ");
-	printf("%s\n", code_path);
-	printf("Process Size: ");
-	printf("%s\n", process_size);
+	logger = iniciar_logger();
+	config = iniciar_config();
+
+	char* code_path = argv[1];
+	int process_size = atoi(argv[2]);
+
+	instruction_list = list_create();
 
 	FILE *instruction_file = open_file(code_path);
-	t_list *instruction_list = list_create();
-	get_code(instruction_file, instruction_list);
+	get_code(instruction_file);
 
-	void logElem(void *elem) {
-		t_instruction *instruction = (t_instruction*) elem;
-		puts(instruction->id);
-	};
+	process = process_create(process_size);
+	memcpy(process->instructions, instruction_list, sizeof(t_list));
+	process->size = process_size;
 
-	list_iterate(instruction_list, logElem);
+	printf("Size: %d\n", process->size);
+	puts("Instructions:");
+	list_iterate(process->instructions, log_instruction);
 
 	// abrir config
 
@@ -67,16 +73,14 @@ int main(int argc, char **argv) {
 	return EXIT_SUCCESS;
 }
 
-void get_code(FILE *file, t_list *list) {
+void get_code(FILE *file) {
 	char *line_buf = NULL;
 	size_t line_buf_size = 0;
 	ssize_t lines_read;
 
 	lines_read = getline(&line_buf, &line_buf_size, file);
 	while (lines_read != -1) {
-		puts(line_buf);
-		list_add(list, parse_instruction(line_buf));
-
+		list_add(instruction_list, parse_instruction(line_buf));
 		lines_read = getline(&line_buf, &line_buf_size, file);
 	}
 
@@ -87,15 +91,15 @@ t_instruction* parse_instruction(char *string) {
 	int param;
 	int i = 0;
 
-	char *id = strtok(string, " ");
-	t_instruction *instruction = new_instruction(strlen(id));
-	instruction->id = id;
+	char** instruction_text = string_split(string, " ");
+	char* id = instruction_text[0];
+	t_instruction* instruction = instruction_create(string_length(id)+1);
+	memcpy(instruction->id, id, string_length(id)+1);
 
-	char *params = strtok(NULL, " ");
-	while (params != NULL) {
-		param = atoi(params);
-		instruction->params[i] = param;
-		params = strtok(NULL, " ");
+	char* next_param;
+	while ((next_param = instruction_text[i+1]) != NULL) {
+		param = atoi(next_param);
+		list_add(instruction->params, param);
 		i++;
 	}
 
@@ -111,24 +115,28 @@ FILE* open_file(char *path) {
 }
 
 void terminate_console() {
-	//close connection
+	log_destroy(logger);
+	config_destroy(config);
+	//liberar_conexion(conexion);
+	exit(0);
 }
 
-t_instruction* new_instruction(size_t id_size) {
+t_instruction* instruction_create(size_t id_size) {
 	// Try to allocate instruction structure.
 	t_instruction *instruction = malloc(sizeof(t_instruction));
 	if (instruction == NULL)
 		return NULL;
 
 	// Try to allocate instruction id and params, free structure if fail.
-	instruction->id = malloc((id_size + 1) * sizeof(char));
+	instruction->id = malloc(id_size * sizeof(char));
 	if (instruction->id == NULL) {
 		free(instruction);
 		return NULL;
 	}
 
-	instruction->params = malloc(2 * sizeof(int));
+	instruction->params = list_create();
 	if (instruction->params == NULL) {
+		free(instruction->id);
 		free(instruction);
 		return NULL;
 	}
@@ -136,10 +144,59 @@ t_instruction* new_instruction(size_t id_size) {
 	return instruction;
 }
 
-void destroy_instruction(t_instruction *instruction) {
+void instruction_destroy(t_instruction *instruction) {
 	if (instruction != NULL) {
 		free(instruction->id);
 		free(instruction->params);
 		free(instruction);
 	}
+}
+
+
+t_process* process_create() {
+	// Try to allocate process structure.
+	t_process *process = malloc(sizeof(t_process));
+	if (process == NULL) {
+		return NULL;
+	}
+
+	// Try to allocate instruction size and instructions, free structure if fail.
+	process->size = malloc(sizeof(int));
+	if (process->size == NULL) {
+		free(process);
+		return NULL;
+	}
+
+	process->instructions = list_create();
+	if (process->instructions == NULL) {
+		free(process->size);
+		free(process);
+		return NULL;
+	}
+
+	return process;
+}
+
+void destroy_instruction_iteratee(void *elem) {
+	instruction_destroy((t_instruction*) elem);
+}
+
+void process_destroy(t_process *process) {
+	if (process != NULL) {
+		free(process->size);
+		list_iterate(process->instructions, destroy_instruction_iteratee);
+		free(process->instructions);
+	}
+}
+
+t_log* iniciar_logger() {
+	t_log* nuevo_logger;
+	nuevo_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
+	return nuevo_logger;
+}
+
+t_config* iniciar_config() {
+	t_config* nuevo_config;
+	nuevo_config = config_create("console.config");
+	return nuevo_config;
 }
