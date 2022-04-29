@@ -31,7 +31,10 @@ t_process* process;
 
 t_config* config;
 t_log* logger;
-int conexion;
+int connection;
+
+char* ip;
+char* port;
 
 FILE* open_file(char *path);
 void get_code(FILE *file);

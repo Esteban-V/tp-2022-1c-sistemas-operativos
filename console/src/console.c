@@ -19,40 +19,31 @@
 
 void log_params(void *elem) {
 	int* param = (int*) elem;
-	printf(" %d", param);
+	log_info(logger, " %d", param);
 };
 
 void log_instruction(void *elem) {
 	t_instruction* inst = (t_instruction*) elem;
-	printf(inst->id);
+	log_info(logger, inst->id);
 	list_iterate(inst->params, log_params);
-	printf("\n");
 };
 
 int main(int argc, char **argv) {
-	char* ip;
-	char* port;
+	logger = create_logger();
+	config = create_config();
 
-	// iniciar logger
 	if (argc < 3) {
-		puts("Missing params");
-		// tirar error con logger y cortar
+		log_warning(logger,"Missing params");
 		return EXIT_FAILURE;
 	}
 	if (argc > 3) {
-		// tirar warning con logger e ignorar otros params
-		puts('Unused params');
+		log_warning(logger,"Unused params");
 	}
-
-	logger = create_logger();
-	config = create_config();
-	log_info(logger,"Logger created");
 
 	ip = config_get_string_value(config,"IP_KERNEL");
 	port = config_get_string_value(config,"PUERTO_KERNEL");
 
 	log_info(logger,"IP value is: %s\nPort value is: %s \n",ip,port);
-
 
 
 	char* code_path = argv[1];
@@ -66,8 +57,8 @@ int main(int argc, char **argv) {
 	process = process_create(process_size);
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 
-	printf("Size: %d\n", process->size);
-	puts("Instructions:");
+	log_info(logger, "Size: %d\n", process->size);
+	log_info(logger, "Instructions:\n");
 	list_iterate(process->instructions, log_instruction);
 
 	// abrir config
