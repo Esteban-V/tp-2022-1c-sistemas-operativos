@@ -1,0 +1,3 @@
+COPY 10 11
+READ 3
+EXIT

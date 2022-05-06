@@ -4,31 +4,31 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../kernel/src/kernel.c \
-../kernel/src/utils.c 
+../src/kernel.c \
+../src/utils.c 
 
 C_DEPS += \
-./kernel/src/kernel.d \
-./kernel/src/utils.d 
+./src/kernel.d \
+./src/utils.d 
 
 OBJS += \
-./kernel/src/kernel.o \
-./kernel/src/utils.o 
+./src/kernel.o \
+./src/utils.o 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-kernel/src/%.o: ../kernel/src/%.c kernel/src/subdir.mk
+src/%.o: ../src/%.c src/subdir.mk
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
+	gcc -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 
-clean: clean-kernel-2f-src
+clean: clean-src
 
-clean-kernel-2f-src:
-	-$(RM) ./kernel/src/kernel.d ./kernel/src/kernel.o ./kernel/src/utils.d ./kernel/src/utils.o
+clean-src:
+	-$(RM) ./src/kernel.d ./src/kernel.o ./src/utils.d ./src/utils.o
 
-.PHONY: clean-kernel-2f-src
+.PHONY: clean-src
 

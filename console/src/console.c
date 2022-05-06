@@ -8,24 +8,21 @@
 
 #include "console.h"
 
-
 /*
  Listado de instrucciones:
-	 NO_OP: 1 parámetro
-	 I/O y READ: 1 parámetro
-	 COPY y WRITE: 2 parámetros
-	 EXIT: 0 parámetros
+ NO_OP: 1 parámetro
+ I/O y READ: 1 parámetro
+ COPY y WRITE: 2 parámetros
+ EXIT: 0 parámetros
  */
 
-void log_params(void *elem) {
-	int* param = (int*) elem;
+void log_params(int param) {
 	log_info(logger, " %d", param);
 };
 
-void log_instruction(void *elem) {
-	t_instruction* inst = (t_instruction*) elem;
+void log_instruction(t_instruction *inst) {
 	log_info(logger, inst->id);
-	list_iterate(inst->params, log_params);
+	list_iterate(inst->params, (void*) log_params);
 };
 
 int main(int argc, char **argv) {
@@ -33,20 +30,19 @@ int main(int argc, char **argv) {
 	config = create_config();
 
 	if (argc < 3) {
-		log_warning(logger,"Missing params");
+		log_error(logger, "Missing params");
 		return EXIT_FAILURE;
 	}
 	if (argc > 3) {
-		log_warning(logger,"Unused params");
+		log_warning(logger, "Unused params");
 	}
 
-	ip = config_get_string_value(config,"IP_KERNEL");
-	port = config_get_string_value(config,"PUERTO_KERNEL");
+	ip = config_get_string_value(config, "IP_KERNEL");
+	port = config_get_string_value(config, "PUERTO_KERNEL");
 
-	log_info(logger,"IP value is: %s\nPort value is: %s \n",ip,port);
+	log_info(logger, "IP value is: %s\nPort value is: %s \n", ip, port);
 
-
-	char* code_path = argv[1];
+	char *code_path = argv[1];
 	int process_size = atoi(argv[2]);
 
 	instruction_list = list_create();
@@ -55,24 +51,24 @@ int main(int argc, char **argv) {
 	get_code(instruction_file);
 
 	process = process_create(process_size);
+	if (!process)
+		return EXIT_FAILURE;
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 
 	log_info(logger, "Size: %d\n", process->size);
 	log_info(logger, "Instructions:\n");
-	list_iterate(process->instructions, log_instruction);
+	list_iterate(process->instructions, (void*) log_instruction);
 
-	// abrir config
+	connection = create_connection(ip, port);
+	send_message_to(code_path, connection);
 
-	// abrir conexion con server kernel segun datos config
-	// enviar tamano
-	// serializar lista
-	// enviar lista (como paquete)
+	// serializar proceso
+	// enviar proceso (como paquete)
 
 	// esperar resultado
 	// tirar info/error resultado con logger
 
 	terminate_console();
-	return EXIT_SUCCESS;
 }
 
 void get_code(FILE *file) {
@@ -93,13 +89,13 @@ t_instruction* parse_instruction(char *string) {
 	int param;
 	int i = 0;
 
-	char** instruction_text = string_split(string, " ");
-	char* id = instruction_text[0];
-	t_instruction* instruction = instruction_create(string_length(id)+1);
-	memcpy(instruction->id, id, string_length(id)+1);
+	char **instruction_text = string_split(string, " ");
+	char *id = instruction_text[0];
+	t_instruction *instruction = instruction_create(string_length(id) + 1);
+	memcpy(instruction->id, id, string_length(id) + 1);
 
-	char* next_param;
-	while ((next_param = instruction_text[i+1]) != NULL) {
+	char *next_param;
+	while ((next_param = instruction_text[i + 1]) != NULL) {
 		param = atoi(next_param);
 		list_add(instruction->params, param);
 		i++;
@@ -119,8 +115,8 @@ FILE* open_file(char *path) {
 void terminate_console() {
 	log_destroy(logger);
 	config_destroy(config);
-	//liberar_conexion(conexion);
-	exit(0);
+	destroy_connection(connection);
+	exit(EXIT_SUCCESS);
 }
 
 t_instruction* instruction_create(size_t id_size) {
@@ -154,7 +150,6 @@ void instruction_destroy(t_instruction *instruction) {
 	}
 }
 
-
 t_process* process_create(int size) {
 	// Try to allocate process structure.
 	t_process *process = malloc(sizeof(t_process));
@@ -162,7 +157,7 @@ t_process* process_create(int size) {
 		return NULL;
 	}
 
-	// Try to allocate instruction size and instructions, free structure if fail.
+	// Try to allocate process size and instructions, free structure if fail.
 	process->size = malloc(sizeof(int));
 	if (process->size == NULL) {
 		free(process);
@@ -193,13 +188,13 @@ void process_destroy(t_process *process) {
 }
 
 t_log* create_logger() {
-	t_log* nuevo_logger;
+	t_log *nuevo_logger;
 	nuevo_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
 	return nuevo_logger;
 }
 
 t_config* create_config() {
-	t_config* nuevo_config;
+	t_config *nuevo_config;
 	nuevo_config = config_create("console.config");
 	return nuevo_config;
 }

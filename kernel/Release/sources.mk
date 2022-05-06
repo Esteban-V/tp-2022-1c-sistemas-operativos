@@ -13,12 +13,5 @@ OBJS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-console/Debug/src \
-console/src \
-cpu/src \
-kernel/Debug/src \
-kernel/src \
-memory/src \
-shared/Debug \
-shared \
+src \
 
