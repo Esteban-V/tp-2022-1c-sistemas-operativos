@@ -242,13 +242,23 @@ offset=0;
 
 //ahora seria como una especie de serializacion pero del paquete
 memcpy(to_send + offset, &(paquete->op_code), sizeof(uint8_t));
-offset += sizeof(uint8_t);
+offset += sizeof(uint8_t); //vamos copiando y desplazando
 memcpy(to_send+ offset, &(paquete->buffer->size), sizeof(uint32_t));
 offset += sizeof(uint32_t);
 memcpy(to_send + offset, paquete->buffer->stream, paquete->buffer->size);
 
 
-}
+
+// aca iria la parte final de enviar, pero ya tendria que estar el servidor prendido y esperando recibir
+// send(socket, to_send, buffer->size, sizeof(uint8_t) + sizeof(uint32_t));
+
+
+free(to_send);
+free(paquete->buffer->stream);
+free(paquete->buffer);
+free(paquete); //liberariamos de memoria todo lo usado asd asd
+
+} // FALTA TERMINAR
 
 
 
