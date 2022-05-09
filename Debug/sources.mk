@@ -19,6 +19,7 @@ cpu/src \
 kernel/Debug/src \
 kernel/src \
 memory/src \
-shared/Debug \
-shared \
+shared/Debug/src \
+shared/Release \
+shared/src \
 

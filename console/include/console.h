@@ -5,8 +5,9 @@
 #include<stdlib.h>
 #include<string.h>
 
-#include "client.h"
 #include<commons/log.h>
+
+#include<pthread.h>
 
 #include<commons/string.h>
 #include<commons/collections/list.h>
@@ -15,6 +16,10 @@
 
 #include<commons/config.h>
 #include<readline/readline.h>
+
+#include "serialization.h"
+#include"networking.h"
+#include"socket_headers.h"
 
 typedef struct instruction {
     char* id;
@@ -31,7 +36,7 @@ t_process* process;
 
 t_config* config;
 t_log* logger;
-int connection;
+int server_socket;
 
 char* ip;
 char* port;

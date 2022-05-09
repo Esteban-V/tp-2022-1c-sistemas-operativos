@@ -21,16 +21,12 @@
 
 #include"networking.h"
 
+#include"socket_headers.h"
+
 char* ip;
 char* port;
 
 t_config* config;
-
-typedef enum
-{
-	MESSAGE,
-	PACKAGE
-} op_code;
 
 void iterator(char* value);
 

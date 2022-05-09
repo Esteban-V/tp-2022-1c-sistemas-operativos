@@ -33,7 +33,7 @@ void stream_add(t_stream_buffer *stream, void *source, size_t size);
 void stream_add_UINT32P(t_stream_buffer *stream, void *source);
 void stream_add_UINT32(t_stream_buffer *stream, uint32_t value);
 void stream_add_STRINGP(t_stream_buffer *stream, void *source);
-void streama_add_STRING(t_stream_buffer *stream, char *source);
+void stream_add_STRING(t_stream_buffer *stream, char *source);
 
 
 void stream_take(t_stream_buffer *stream, void **dest, size_t size);

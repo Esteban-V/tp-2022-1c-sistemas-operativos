@@ -53,7 +53,7 @@ void stream_add_STRINGP(t_stream_buffer *stream, void *source) {
 	stream_add(stream, source, size);
 }
 
-void streama_add_STRING(t_stream_buffer *stream, char *source) {
+void stream_add_STRING(t_stream_buffer *stream, char *source) {
 	stream_add_STRINGP(stream, (void*) source);
 }
 

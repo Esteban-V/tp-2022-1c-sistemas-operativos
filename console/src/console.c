@@ -18,12 +18,12 @@
 
 void log_params(int param) {
 	log_info(logger, " %d", param);
-};
+}
 
 void log_instruction(t_instruction *inst) {
 	log_info(logger, inst->id);
 	list_iterate(inst->params, (void*) log_params);
-};
+}
 
 int main(int argc, char **argv) {
 	logger = create_logger();
@@ -59,15 +59,19 @@ int main(int argc, char **argv) {
 	log_info(logger, "Instructions:\n");
 	list_iterate(process->instructions, (void*) log_instruction);
 
-	connection = create_connection(ip, port);
-	send_message_to(code_path, connection);
+	server_socket = connect_to(ip, port);
+
+	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
+	stream_add_STRING(process_packet->payload, code_path);
+	socket_send_packet(server_socket, process_packet);
+	packet_destroy(process_packet);
 
 	// serializar proceso
 	// enviar proceso (como paquete)
 
 	// esperar resultado
 	// tirar info/error resultado con logger
-
+	//process_destroy(process);
 	terminate_console();
 }
 
@@ -115,7 +119,7 @@ FILE* open_file(char *path) {
 void terminate_console() {
 	log_destroy(logger);
 	config_destroy(config);
-	destroy_connection(connection);
+	destroy_connection(server_socket);
 	exit(EXIT_SUCCESS);
 }
 
@@ -175,14 +179,15 @@ t_process* process_create(int size) {
 	return process;
 }
 
-void destroy_instruction_iteratee(void *elem) {
-	instruction_destroy((t_instruction*) elem);
+void destroy_instruction_iteratee(t_instruction *elem) {
+	instruction_destroy(elem);
 }
 
 void process_destroy(t_process *process) {
 	if (process != NULL) {
 		free(process->size);
-		list_iterate(process->instructions, destroy_instruction_iteratee);
+		list_iterate(process->instructions,
+				(void*) destroy_instruction_iteratee);
 		free(process->instructions);
 	}
 }

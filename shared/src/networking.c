@@ -68,7 +68,6 @@ int create_server(char *server_ip, char *server_port) {
 	return server_socket;
 }
 
-// int*
 int accept_client(int server_socket) {
 	int client_socket = 0; // = malloc(sizeof(int));
 
@@ -76,7 +75,6 @@ int accept_client(int server_socket) {
 	socklen_t address_size = sizeof(struct sockaddr_in);
 
 	catch_syscall_err(
-	// *client_socket
 			client_socket = accept(server_socket,
 					(struct sockaddr*) &client_address, &address_size));
 
@@ -96,23 +94,23 @@ void server_listen(int server_socket, void* (*client_handler)(void*)) {
 //uso
 /*
  while(1) {
- server_listen(serverSocket, handler);
+ server_listen(server_socket, handler);
  }
 
- void* handler(void *client_socket) {
+ void* handler(void *_client_socket) {
  int client_socket = (int) _client_socket;
- bool keepServing = true;
- while (keepServing) {
- t_packet *petition = socket_getPacket(client_socket);
+ bool serve = true;
+ while (serve) {
+ t_packet *petition = socket_receive_packet(client_socket);
  if (petition == NULL) {
- if (!retry_getPacket(client_socket, &petition)) {
+ if (!socket_retry_packet(client_socket, &petition)) {
  close(client_socket);
  break;
  }
  }
- keepServing = petitionHandlers[petition->header](petition,
+ serve = petitionHandlers[petition->header](petition,
  client_socket);
- destroyPacket(petition);
+ packet_destroy(petition);
  }
  return 0;
  }
@@ -139,7 +137,7 @@ void packet_destroy(t_packet *packet) {
 	free(packet);
 }
 
-int receive(int socket, void *dest, size_t size) {
+int receive_wrapper(int socket, void *dest, size_t size) {
 	while (size > 0) {
 		int i = recv(socket, dest, size, 0);
 		if (i == 0)
@@ -155,7 +153,7 @@ int receive(int socket, void *dest, size_t size) {
 bool socket_receive(int socket, void *dest, size_t size) {
 	if (size != 0) {
 		int rcv;
-		catch_syscall_err(rcv = receive(socket, dest, size));
+		catch_syscall_err(rcv = receive_wrapper(socket, dest, size));
 		if (rcv < 1)
 			return false;
 	}
@@ -199,7 +197,7 @@ bool socket_retry_packet(int socket, t_packet **packet) {
 	return false;
 }
 
-int send_cs(int socket, void *buffer, size_t size) {
+int send_wrapper(int socket, void *buffer, size_t size) {
 	while (size > 0) {
 		int i = send(socket, buffer, size, 0);
 		if (i == 0)
@@ -213,7 +211,7 @@ int send_cs(int socket, void *buffer, size_t size) {
 }
 
 void socket_send(int socket, void *source, size_t size) {
-	catch_syscall_err(send_cs(socket, source, size));
+	catch_syscall_err(send_wrapper(socket, source, size));
 }
 
 void socket_send_header(int socket, uint8_t header) {
@@ -228,9 +226,8 @@ void socket_send_packet(int socket, t_packet *packet) {
 			packet->payload->offset);
 }
 
-/*
- void socket_relay(int socket, t_packet *packet) {
- packet->payload->offset = (uint32_t) packet->payload->malloc_size;
- socket_send_packet(socket, packet);
- }
- */
+void socket_relay(int socket, t_packet *packet) {
+	packet->payload->offset = (uint32_t) packet->payload->malloc_size;
+	socket_send_packet(socket, packet);
+}
+
