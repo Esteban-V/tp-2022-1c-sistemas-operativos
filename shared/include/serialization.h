@@ -24,6 +24,11 @@ typedef struct t_stream_buffer {
     char* stream;
 } t_stream_buffer;
 
+typedef struct {
+    uint32_t size; // Tamaño del payload
+    void* stream; // Payload
+} t_buffer; //structura de buffer // la de arriba es la de piatti se puede usar pero usar un "size_t" ??
+
 
 t_stream_buffer* create_stream(size_t size);
 void stream_destroy(t_stream_buffer *stream);
@@ -35,6 +40,7 @@ void stream_add_UINT32(t_stream_buffer *stream, uint32_t value);
 void stream_add_STRINGP(t_stream_buffer *stream, void *source);
 void stream_add_STRING(t_stream_buffer *stream, char *source);
 
+void stream_add_LIST(t_stream_buffer* stream, t_list* source, void(*stream_add_ELEM_P)(t_stream_buffer*, void*));
 
 void stream_take(t_stream_buffer *stream, void **dest, size_t size);
 

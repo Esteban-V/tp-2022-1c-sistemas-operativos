@@ -57,6 +57,18 @@ void stream_add_STRING(t_stream_buffer *stream, char *source) {
 	stream_add_STRINGP(stream, (void*) source);
 }
 
+void stream_add_LIST(t_stream_buffer *stream, t_list *source,
+		void (*stream_add_ELEM_P)(t_stream_buffer*, void*)) {
+	void _stream_add_ELEM_P(void *elem) {
+		stream_add_ELEM_P(stream, elem);
+	}
+	;
+
+	uint32_t size = source->elements_count;
+	stream_add_UINT32(stream, size);
+	list_iterate(source, _stream_add_ELEM_P);
+}
+
 void stream_take(t_stream_buffer *stream, void **dest, size_t size) {
 	if (*dest == NULL)
 		*dest = calloc(1, size);

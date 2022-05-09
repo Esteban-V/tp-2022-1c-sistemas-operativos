@@ -16,15 +16,6 @@
  EXIT: 0 parámetros
  */
 
-void log_params(int param) {
-	log_info(logger, " %d", param);
-}
-
-void log_instruction(t_instruction *inst) {
-	log_info(logger, inst->id);
-	list_iterate(inst->params, (void*) log_params);
-}
-
 int main(int argc, char **argv) {
 	logger = create_logger();
 	config = create_config();
@@ -43,14 +34,14 @@ int main(int argc, char **argv) {
 	log_info(logger, "IP value is: %s\nPort value is: %s \n", ip, port);
 
 	char *code_path = argv[1];
-	int process_size = atoi(argv[2]);
+	uint32_t process_size = atoi(argv[2]);
 
 	instruction_list = list_create();
 
 	FILE *instruction_file = open_file(code_path);
 	get_code(instruction_file);
 
-	process = process_create(process_size);
+	process = create_process(process_size);
 	if (!process)
 		return EXIT_FAILURE;
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
@@ -61,13 +52,17 @@ int main(int argc, char **argv) {
 
 	server_socket = connect_to(ip, port);
 
-	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
-	stream_add_STRING(process_packet->payload, code_path);
-	socket_send_packet(server_socket, process_packet);
-	packet_destroy(process_packet);
+	//Serializacion de la estructura proceso
+	// serializacion_process(process);
 
-	// serializar proceso
-	// enviar proceso (como paquete)
+	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
+	stream_process(process_packet);
+	//stream_add_STRING(process_packet->payload, code_path);
+
+	if (server_socket != -1) {
+		socket_send_packet(server_socket, process_packet);
+	}
+	packet_destroy(process_packet);
 
 	// esperar resultado
 	// tirar info/error resultado con logger
@@ -95,7 +90,7 @@ t_instruction* parse_instruction(char *string) {
 
 	char **instruction_text = string_split(string, " ");
 	char *id = instruction_text[0];
-	t_instruction *instruction = instruction_create(string_length(id) + 1);
+	t_instruction *instruction = create_instruction(string_length(id) + 1);
 	memcpy(instruction->id, id, string_length(id) + 1);
 
 	char *next_param;
@@ -108,98 +103,69 @@ t_instruction* parse_instruction(char *string) {
 	return instruction;
 }
 
-FILE* open_file(char *path) {
-	FILE *file = fopen(path, "r");
-	if (file == NULL) {
-		exit(-1);
-	}
-	return file;
-}
-
 void terminate_console() {
 	log_destroy(logger);
 	config_destroy(config);
-	destroy_connection(server_socket);
+	close(server_socket);
 	exit(EXIT_SUCCESS);
 }
 
-t_instruction* instruction_create(size_t id_size) {
-	// Try to allocate instruction structure.
-	t_instruction *instruction = malloc(sizeof(t_instruction));
-	if (instruction == NULL)
-		return NULL;
+void stream_process(t_packet *packet) {
+	stream_add_UINT32(packet->payload, process->size);
+	stream_add_LIST(packet->payload, process->instructions, stream_instruction);
 
-	// Try to allocate instruction id and params, free structure if fail.
-	instruction->id = malloc(id_size * sizeof(char));
-	if (instruction->id == NULL) {
-		free(instruction);
-		return NULL;
-	}
-
-	instruction->params = list_create();
-	if (instruction->params == NULL) {
-		free(instruction->id);
-		free(instruction);
-		return NULL;
-	}
-
-	return instruction;
 }
 
-void instruction_destroy(t_instruction *instruction) {
-	if (instruction != NULL) {
-		free(instruction->id);
-		free(instruction->params);
-		free(instruction);
-	}
+void stream_instruction(t_stream_buffer *stream, void *elem) {
+	t_instruction *instruction = (t_instruction*) elem;
+	stream_add_STRING(stream, instruction->id);
+	stream_add_LIST(stream, instruction->params, stream_add_UINT32);
+
 }
 
-t_process* process_create(int size) {
-	// Try to allocate process structure.
-	t_process *process = malloc(sizeof(t_process));
-	if (process == NULL) {
-		return NULL;
-	}
+/*
+ void serializacion_process(t_process *process) {
 
-	// Try to allocate process size and instructions, free structure if fail.
-	process->size = malloc(sizeof(int));
-	if (process->size == NULL) {
-		free(process);
-		return NULL;
-	}
-	process->size = size;
-	process->instructions = list_create();
+ t_buffer *buffer = malloc(sizeof(t_buffer)); //creamos el buffer
 
-	if (process->instructions == NULL) {
-		free(process->size);
-		free(process);
-		return NULL;
-	}
+ buffer->size = sizeof(uint8_t) + //le hacemos espacio para el process->size
+ (sizeof(t_list) * process->instruction_count); //espacio para las instrucciones
 
-	return process;
-}
+ void *stream = malloc(buffer->size); // stream del tamanio del buffer
 
-void destroy_instruction_iteratee(t_instruction *elem) {
-	instruction_destroy(elem);
-}
+ int offset = 0; // desplazamiento
 
-void process_destroy(t_process *process) {
-	if (process != NULL) {
-		free(process->size);
-		list_iterate(process->instructions,
-				(void*) destroy_instruction_iteratee);
-		free(process->instructions);
-	}
-}
+ memcpy(stream + offset, &process->size, sizeof(uint8_t));
+ offset += sizeof(uint8_t); //copiamos al stream el size del process y nos desplazamos
+ memcpy(stream + offset, &process->instruction_count, sizeof(uint8_t));
+ offset += sizeof(uint8_t); //copiamos al stream el size del t_list count
+ memcpy(stream + offset, &process->instructions,
+ sizeof(t_list) * (process->instruction_count));
 
-t_log* create_logger() {
-	t_log *nuevo_logger;
-	nuevo_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
-	return nuevo_logger;
-}
+ buffer->stream = stream;
 
-t_config* create_config() {
-	t_config *nuevo_config;
-	nuevo_config = config_create("console.config");
-	return nuevo_config;
-}
+ free(process->instructions); //es la unica variable dinamica la liberamos
+
+ t_packet *packet = malloc(sizeof(t_packet));
+
+ packet->header = NEW_PROCESS;
+ packet->payload = buffer;
+
+ void *to_send = malloc(buffer->size + sizeof(uint8_t) + sizeof(uint32_t));
+ offset = 0;
+
+ //ahora seria como una especie de serializacion pero del paquete
+ memcpy(to_send + offset, &(packet->header), sizeof(uint8_t));
+ offset += sizeof(uint8_t); //vamos copiando y desplazando
+ memcpy(to_send + offset, &(packet->payload->size), sizeof(uint32_t));
+ offset += sizeof(uint32_t);
+ memcpy(to_send + offset, packet->payload->stream, packet->payload->size);
+
+ free(to_send);
+ free(packet->payload->stream);
+ free(packet->payload);
+ free(packet);
+
+ } // FALTA TERMINAR
+ */
+
