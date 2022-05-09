@@ -120,7 +120,6 @@ void stream_instruction(t_stream_buffer *stream, void *elem) {
 	t_instruction *instruction = (t_instruction*) elem;
 	stream_add_STRING(stream, instruction->id);
 	stream_add_LIST(stream, instruction->params, stream_add_UINT32);
-
 }
 
 /*
