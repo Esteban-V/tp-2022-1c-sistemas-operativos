@@ -22,9 +22,10 @@ typedef struct instruction {
 } t_instruction;
 
 typedef struct process {
-    int size;
+    uint8_t size;
     t_list* instructions;
-} t_process;
+    uint8_t instructions_count; // como la lista de instrucciones es dinamica, llevamos la cuenta de cuantas son en otra variable de la struct (nos sirve para serializar)
+}__attribute__((packed)) t_process; //este atributo es para que no se agregue padding a la hora de serializar
 
 t_list* instruction_list;
 t_process* process;
@@ -50,5 +51,7 @@ t_log* create_logger();
 t_config* create_config();
 
 void terminate_console();
+
+void serializacion_process(t_process* procces);
 
 #endif /* CONSOLE_H_ */

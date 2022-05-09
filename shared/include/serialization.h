@@ -24,6 +24,11 @@ typedef struct t_stream_buffer {
     char* stream;
 } t_stream_buffer;
 
+typedef struct {
+    uint32_t size; // Tamaño del payload
+    void* stream; // Payload
+} t_buffer; //structura de buffer // la de arriba es la de piatti se puede usar pero usar un "size_t" ??
+
 
 t_stream_buffer* create_stream(size_t size);
 void stream_destroy(t_stream_buffer *stream);

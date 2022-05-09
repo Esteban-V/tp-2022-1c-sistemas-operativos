@@ -16,6 +16,8 @@
  EXIT: 0 parámetros
  */
 
+int PROCESS=1; //hay que hacerla global ni me acuerdo como hacerla ahora
+
 void log_params(int param) {
 	log_info(logger, " %d", param);
 };
@@ -59,17 +61,25 @@ int main(int argc, char **argv) {
 	log_info(logger, "Instructions:\n");
 	list_iterate(process->instructions, (void*) log_instruction);
 
-	connection = create_connection(ip, port);
+	//connection = connect_to(ip, port);
 	send_message_to(code_path, connection);
 
-	// serializar proceso
+	//Serializacion de la estructura proceso
+	serializacion_process(process);
+
+
+
 	// enviar proceso (como paquete)
 
 	// esperar resultado
 	// tirar info/error resultado con logger
 
+
 	terminate_console();
 }
+
+
+
 
 void get_code(FILE *file) {
 	char *line_buf = NULL;
@@ -198,3 +208,48 @@ t_config* create_config() {
 	nuevo_config = config_create("console.config");
 	return nuevo_config;
 }
+
+void serializacion_process(t_process* process){
+
+t_buffer* buffer=malloc(sizeof(t_buffer)); //creamos el buffer
+
+buffer->size= sizeof(uint8_t) + //le hacemos espacio para el process->size
+		(sizeof(t_list) * process->instructions_count); //espacio para las instrucciones
+
+void* stream= malloc(buffer->size); // stream del tamanio del buffer
+
+int offset=0;// desplazamiento
+
+memcpy(stream + offset, &process->size, sizeof(uint8_t));
+offset +=sizeof(uint8_t); //copiamos al stream el size del process y nos desplazamos
+memcpy(stream + offset, &process->instructions_count, sizeof(uint8_t));
+offset +=sizeof(uint8_t); //copiamos al stream el size del t_list count
+memcpy(stream + offset, &process->instructions, sizeof(t_list) * (process->instructions_count)); //esto habria que revisar no se si esta bien calculado el espacio y tengo suenio xd
+// ya esta todoo copiado en el stream
+
+
+buffer->stream=stream;
+
+free(process->instructions); //es la unica variable dinamica la liberamos
+
+t_paquete * paquete= malloc(sizeof(t_paquete));
+
+paquete->op_code=PROCESS;
+paquete->buffer=buffer; //llenamos el paquete con el buffer(contenido) y codigo de operacion(mensaje en clave para saber de q se trata)
+
+void* to_send=malloc(buffer->size+ sizeof(uint8_t)+ sizeof(uint32_t));
+offset=0;
+
+//ahora seria como una especie de serializacion pero del paquete
+memcpy(to_send + offset, &(paquete->op_code), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+memcpy(to_send+ offset, &(paquete->buffer->size), sizeof(uint32_t));
+offset += sizeof(uint32_t);
+memcpy(to_send + offset, paquete->buffer->stream, paquete->buffer->size);
+
+
+}
+
+
+
+

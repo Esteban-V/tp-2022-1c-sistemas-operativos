@@ -25,6 +25,11 @@ typedef struct t_packet {
 	t_stream_buffer *payload;
 } t_packet;
 
+typedef struct {
+    uint8_t codigo_operacion;
+    t_buffer* buffer;
+} t_paquete; // parecido al de piatti pero qsy, no funciona el otro
+
 void catch_syscall_err(int code);
 
 int connect_to(char *server_ip, char *server_port);
