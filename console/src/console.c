@@ -57,11 +57,11 @@ int main(int argc, char **argv) {
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
 	stream_process(process_packet);
-	//stream_add_STRING(process_packet->payload, code_path);
 
 	if (server_socket != -1) {
 		socket_send_packet(server_socket, process_packet);
 	}
+
 	packet_destroy(process_packet);
 
 	// esperar resultado

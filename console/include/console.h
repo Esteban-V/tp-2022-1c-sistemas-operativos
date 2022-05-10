@@ -32,9 +32,11 @@ int server_socket;
 char* ip;
 char* port;
 
-FILE* open_file(char *path);
 void get_code(FILE *file);
 t_instruction* parse_instruction(char *string);
+
+void stream_process(t_packet *packet);
+void stream_instruction(t_stream_buffer *stream, void *elem);
 
 void terminate_console();
 
