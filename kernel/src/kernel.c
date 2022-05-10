@@ -11,8 +11,8 @@
 #include "kernel.h"
 
 bool receive_process(t_packet *petition, int console_socket) {
-	char *file_name = stream_take_STRING(petition->payload);
-	log_info(logger, "recibidisimoooo: %s", file_name);
+	//char *file_name = stream_take_STRING(petition->payload);
+	//log_info(logger, "recibidisimoooo: %s", file_name);
 	return false;
 }
 
@@ -52,6 +52,25 @@ int main(void) {
 	while (1) {
 		server_listen(server_socket, op_code_handler);
 	}
+<<<<<<< HEAD
+
+	/*
+	 while (1) {
+	 pthread_t thread;
+	 int *client_socket = accept_client(server_socket);
+
+	 int thread_error = pthread_create(&thread, NULL, (void*) receive_client,
+	 client_socket);
+	 if (thread_error != 0) {
+	 log_error(logger, "Error creating thread");
+	 }
+
+	 pthread_detach(thread);
+	 }
+	 */
+	return EXIT_SUCCESS;
+}
+=======
 
 	/*
 	 while (1) {
@@ -97,9 +116,10 @@ int main(void) {
  }
  }
  */
+>>>>>>> fcd9125... Enviar primer mensaje serializado
 
 t_log* create_logger() {
-	t_log *new_logger = log_create("kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+	t_log *new_logger = log_create("kernel.log", "KERNEL", 1, LOG_LEVEL_ERROR);
 	return new_logger;
 }
 
@@ -108,7 +128,4 @@ t_config* create_config() {
 	return new_config;
 }
 
-void iterator(char *value) {
-	log_info(logger, "%s", value);
-}
 

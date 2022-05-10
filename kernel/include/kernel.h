@@ -28,11 +28,11 @@ char* port;
 
 t_config* config;
 
-void iterator(char* value);
-
 t_log* create_logger();
 t_config* create_config();
-void receive_client(void* thread_args);
+
+void* op_code_handler(void *_client_socket);
+bool receive_process(t_packet *petition, int console_socket);
 
 void terminate_kernel();
 

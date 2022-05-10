@@ -25,7 +25,7 @@ FILE* open_file(char *path) {
 }
 
 t_log* create_logger() {
-	new_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
+	new_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_ERROR);
 	return new_logger;
 }
 
