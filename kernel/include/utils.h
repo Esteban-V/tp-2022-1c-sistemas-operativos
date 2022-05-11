@@ -16,13 +16,30 @@
 #include<netdb.h>
 
 #include<assert.h>
-/*
-t_log* logger;
 
-int create_server(char* ip, char* port);
-int* accept_client(int server_socket);
-t_list* receive_package(int);
-void receive_message(int);
-int receive_op(int);
-*/
+#include"networking.h"
+#include"socket_headers.h"
+#include"serialization.h"
+#include "process.h"
+
+typedef struct kernelConfig{
+    t_config* config;
+    int kernelIP;
+    int kernelPort;
+    int memoryIP;
+    int memoryPort;
+    char* cpuIP;
+    int cpuPortDispatch;
+    int cpuPortInterrupt;
+    int listenPort;
+    char* schedulerAlgorithm;
+    int initialEstimate;
+    int alpha;
+    int multiprogrammingLevel;
+    int maxBlockedTime;
+} t_kernelConfig;
+
+t_kernelConfig* getKernelConfig(char* path);
+void destroyKernelConfig(t_kernelConfig* kernelConfig);
+
 #endif /* UTILS_H_ */
