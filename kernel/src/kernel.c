@@ -1,5 +1,75 @@
 #include "kernel.h"
 
+int main(void) {
+	logger = create_logger();
+	log_info(logger, "Logger started");
+
+	config = getKernelConfig("kernel.config");
+
+
+	if (config == NULL) {
+		log_error(logger, "Config failed to load");
+		return EXIT_FAILURE;
+	}
+
+	// Creacion de Server
+	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	log_info(logger, "Servidor listo para recibir al cliente");
+
+	// Poner en Modo Escucha
+	while (1) {
+		server_listen(server_socket, header_handler);
+
+		t_process *process;
+		//Proceso a PCB
+
+		//Planificador a Largo Plazo
+		//NEW
+		//queue_push(newQ,pcb);
+
+		//t_pcb pcb = create_pcb(process);
+
+		//READY
+
+		if (queue_size(readyQ) < config->multiprogrammingLevel) {
+			t_queue *ready_process = queue_pop(newQ);
+			//queue_push(readyQ, ready_process);
+
+			//MSJ a Memoria
+		} else {
+
+		}
+
+		// if finalizacion -> exit -> msj a memoria -> msj a consola
+
+		//plan med
+		/*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
+		 if(X->blocked_time>max_blocked_time){
+		 //Suspender
+		 //msj a memoria
+		 }*/
+
+		//plan corto
+		/*if(){
+		 //estimacion
+
+		 }*/
+
+		/*if(){
+		 //interrupt a CPU
+		 //CPU desaloja proceso
+		 //PCB se recibe por dispatch
+
+		 }*/
+
+	}
+
+	destroyKernelConfig(config);
+
+	return EXIT_SUCCESS;
+}
+
+
 void stream_take_process(t_packet *packet, t_process *process) {
 	uint32_t *size = &(process->size);
 	stream_take_UINT32P(packet->payload, &size);
@@ -100,73 +170,6 @@ void* header_handler(void *_client_socket) {
 		packet_destroy(packet);
 	}
 	return 0;
-}
-
-int main(void) {
-	logger = create_logger();
-	log_info(logger, "Loggin");
-	config = getKernelConfig("kernel.config");
-	log_info(logger, "No Rompio Paco");
-	if (config == NULL) {
-		log_info(logger, "Rompio Paco");
-		return EXIT_FAILURE;
-	}
-
-	// Creacion de Server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
-	log_info(logger, "Servidor listo para recibir al cliente");
-
-	// Poner en Modo Escucha
-	while (1) {
-		server_listen(server_socket, header_handler);
-
-		t_process *process;
-		//Proceso a PCB
-
-		//Planificador a Largo Plazo
-		//NEW
-		//queue_push(newQ,pcb);
-
-		//t_pcb pcb = create_pcb(process);
-
-		//READY
-
-		if (queue_size(readyQ) < config->multiprogrammingLevel) {
-			t_queue *ready_process = queue_pop(newQ);
-			//queue_push(readyQ, ready_process);
-
-			//MSJ a Memoria
-		} else {
-
-		}
-
-		// if finalizacion -> exit -> msj a memoria -> msj a consola
-
-		//plan med
-		/*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
-		 if(X->blocked_time>max_blocked_time){
-		 //Suspender
-		 //msj a memoria
-		 }*/
-
-		//plan corto
-		/*if(){
-		 //estimacion
-
-		 }*/
-
-		/*if(){
-		 //interrupt a CPU
-		 //CPU desaloja proceso
-		 //PCB se recibe por dispatch
-
-		 }*/
-
-	}
-
-	destroyKernelConfig(config);
-
-	return EXIT_SUCCESS;
 }
 
 t_log* create_logger() {
