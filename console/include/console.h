@@ -21,25 +21,26 @@
 #include"socket_headers.h"
 
 #include"utils.h"
+#include"process_utils.h"
 
-t_list* instruction_list;
-t_process* process;
+t_list *instruction_list;
+t_process *process;
 
-t_config* config;
-t_log* logger;
+t_config *config;
+t_log *logger;
 int server_socket;
 
-char* ip;
-char* port;
+char *ip;
+char *port;
 
 void get_code(FILE *file);
 t_instruction* parse_instruction(char *string);
 
-void stream_process(t_packet *packet);
-void stream_instruction(t_stream_buffer *stream, void *elem);
+void stream_add_process(t_packet *packet);
+void stream_add_instruction(t_stream_buffer *stream, void *elem);
 
 void terminate_console();
 
-void serializacion_process(t_process* procces);
+// void serializacion_process(t_process* procces);
 
 #endif /* CONSOLE_H_ */

@@ -49,5 +49,7 @@ uint32_t stream_take_UINT32(t_stream_buffer *stream);
 void stream_take_STRINGP(t_stream_buffer *stream, void **dest);
 char* stream_take_STRING(t_stream_buffer *stream);
 
+void stream_take_LISTP(t_stream_buffer* stream, t_list** source, void(*stream_take_ELEMP)(t_stream_buffer*, void**));
+t_list* stream_take_LIST(t_stream_buffer* stream, void(*stream_take_ELEMP)(t_stream_buffer*, void**));
 
 #endif /* SERIALIZATION_H_ */

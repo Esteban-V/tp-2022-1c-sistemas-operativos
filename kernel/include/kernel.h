@@ -20,19 +20,24 @@
 #include<assert.h>
 
 #include"networking.h"
+#include"serialization.h"
 
 #include"socket_headers.h"
+#include"process_utils.h"
 
-char* ip;
-char* port;
+char *ip;
+char *port;
 
-t_config* config;
+t_config *config;
 
 t_log* create_logger();
 t_config* create_config();
 
-void* op_code_handler(void *_client_socket);
+void* header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
+
+void stream_take_process(t_packet *packet, t_process *process);
+void stream_take_instruction(t_stream_buffer *stream, void **elem);
 
 void terminate_kernel();
 

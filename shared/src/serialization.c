@@ -31,6 +31,7 @@ void stream_destroy(t_stream_buffer *stream) {
 }
 
 void stream_add(t_stream_buffer *stream, void *source, size_t size) {
+	// TODO: Que no agregue tamano de +
 	while (stream->malloc_size < stream->offset + size) {
 		stream->malloc_size += STREAM_SIZE_DEF;
 		stream->stream = realloc(stream->stream, stream->malloc_size);
@@ -58,21 +59,20 @@ void stream_add_STRING(t_stream_buffer *stream, char *source) {
 }
 
 void stream_add_LIST(t_stream_buffer *stream, t_list *source,
-		void (*stream_add_ELEM_P)(t_stream_buffer*, void*)) {
-	void _stream_add_ELEM_P(void *elem) {
-		stream_add_ELEM_P(stream, elem);
+		void (*stream_add_ELEMP)(t_stream_buffer*, void*)) {
+
+	void _stream_add_ELEMP(void *elem) {
+		stream_add_ELEMP(stream, elem);
 	}
-	;
 
 	uint32_t size = source->elements_count;
 	stream_add_UINT32(stream, size);
-	list_iterate(source, _stream_add_ELEM_P);
+	list_iterate(source, _stream_add_ELEMP);
 }
 
 void stream_take(t_stream_buffer *stream, void **dest, size_t size) {
 	if (*dest == NULL)
 		*dest = calloc(1, size);
-
 	memcpy(*dest, stream->stream + stream->offset, size);
 	stream->offset += size;
 }
@@ -97,5 +97,25 @@ char* stream_take_STRING(t_stream_buffer *stream) {
 	char *string = NULL;
 	stream_take_STRINGP(stream, (void**) &string);
 	return string;
+}
+
+void stream_take_LISTP(t_stream_buffer *stream, t_list **source,
+		void (*stream_take_ELEMP)(t_stream_buffer*, void**)) {
+	if (*source == NULL)
+		*source = list_create();
+	uint32_t size = stream_take_UINT32(stream);
+
+	for (uint32_t i = 0; i < size; i++) {
+		void *elem = NULL;
+		stream_take_ELEMP(stream, &elem);
+		list_add(*source, elem);
+	}
+}
+
+t_list* stream_take_LIST(t_stream_buffer *stream,
+		void (*stream_take_ELEMP)(t_stream_buffer*, void**)) {
+	t_list *tmp = NULL;
+	stream_take_LISTP(stream, &tmp, stream_take_ELEMP);
+	return tmp;
 }
 

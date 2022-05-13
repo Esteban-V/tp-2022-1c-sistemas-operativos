@@ -41,22 +41,24 @@ int main(int argc, char **argv) {
 	FILE *instruction_file = open_file(code_path);
 	get_code(instruction_file);
 
-	process = create_process(process_size);
+	process = create_process();
 	if (!process)
 		return EXIT_FAILURE;
+
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
+	process->size = process_size;
 
 	log_info(logger, "Size: %d\n", process->size);
 	log_info(logger, "Instructions:\n");
-	list_iterate(process->instructions, (void*) log_instruction);
+	void _log_instruction(void *elem) {
+		log_instruction(logger, elem);
+	}
+	list_iterate(process->instructions, _log_instruction);
 
 	server_socket = connect_to(ip, port);
 
-	//Serializacion de la estructura proceso
-	// serializacion_process(process);
-
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
-	stream_process(process_packet);
+	stream_add_process(process_packet);
 
 	if (server_socket != -1) {
 		socket_send_packet(server_socket, process_packet);
@@ -90,7 +92,7 @@ t_instruction* parse_instruction(char *string) {
 
 	char **instruction_text = string_split(string, " ");
 	char *id = instruction_text[0];
-	t_instruction *instruction = create_instruction(string_length(id) + 1);
+	t_instruction *instruction = create_instruction(string_length(id));
 	memcpy(instruction->id, id, string_length(id) + 1);
 
 	char *next_param;
@@ -103,23 +105,22 @@ t_instruction* parse_instruction(char *string) {
 	return instruction;
 }
 
+void stream_add_process(t_packet *packet) {
+	stream_add_UINT32(packet->payload, process->size);
+	stream_add_LIST(packet->payload, process->instructions, stream_add_instruction);
+}
+
+void stream_add_instruction(t_stream_buffer *stream, void *elem) {
+	t_instruction *instruction = (t_instruction*) elem;
+	stream_add_STRING(stream, instruction->id);
+	stream_add_LIST(stream, instruction->params, stream_add_UINT32);
+}
+
 void terminate_console() {
 	log_destroy(logger);
 	config_destroy(config);
 	close(server_socket);
 	exit(EXIT_SUCCESS);
-}
-
-void stream_process(t_packet *packet) {
-	stream_add_UINT32(packet->payload, process->size);
-	stream_add_LIST(packet->payload, process->instructions, stream_instruction);
-
-}
-
-void stream_instruction(t_stream_buffer *stream, void *elem) {
-	t_instruction *instruction = (t_instruction*) elem;
-	stream_add_STRING(stream, instruction->id);
-	stream_add_LIST(stream, instruction->params, stream_add_UINT32);
 }
 
 /*

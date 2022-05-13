@@ -8,8 +8,8 @@
 #ifndef INCLUDE_SOCKET_HEADERS_H_
 #define INCLUDE_SOCKET_HEADERS_H_
 
-typedef enum console_headers {
-	NEW_PROCESS = 1,
-} console_headers;
+typedef enum headers {
+	NEW_PROCESS = 0,
+} headers;
 
 #endif /* INCLUDE_SOCKET_HEADERS_H_ */
