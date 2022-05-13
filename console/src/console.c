@@ -1,11 +1,3 @@
-/*
- ============================================================================
- Name        : console.c
- Author      : 
- Version     :
- ============================================================================
- */
-
 #include "console.h"
 
 /*
@@ -107,7 +99,8 @@ t_instruction* parse_instruction(char *string) {
 
 void stream_add_process(t_packet *packet) {
 	stream_add_UINT32(packet->payload, process->size);
-	stream_add_LIST(packet->payload, process->instructions, stream_add_instruction);
+	stream_add_LIST(packet->payload, process->instructions,
+			stream_add_instruction);
 }
 
 void stream_add_instruction(t_stream_buffer *stream, void *elem) {

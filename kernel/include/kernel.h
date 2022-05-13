@@ -25,10 +25,35 @@
 #include"socket_headers.h"
 #include"process_utils.h"
 
+#include"utils.h"
+
 char *ip;
 char *port;
 
-t_config *config;
+t_log *logger;
+
+enum states {
+	NEW, READY, EXECUTE, EXIT, BLOCKED, SUSPENDED_READY, SUSPENDED_BLOCK
+};
+
+t_queue *newQ;
+t_queue *readyQ;
+t_queue *executeQ;
+t_queue *exitQ;
+t_queue *blockedQ;
+t_queue *suspended_readyQ;
+t_queue *suspended_blockQ;
+
+typedef struct pcb {
+	int id;
+	int size;
+	t_list *instructions;
+	int program_counter;
+	//t_ptbr page_table;
+	int burst_estimation;
+} t_pcb;
+
+t_kernelConfig *config;
 
 t_log* create_logger();
 t_config* create_config();
