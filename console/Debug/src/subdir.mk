@@ -7,28 +7,21 @@ C_SRCS += \
 ../src/console.c \
 ../src/utils.c 
 
-C_DEPS += \
-./src/console.d \
-./src/utils.d 
-
 OBJS += \
 ./src/console.o \
 ./src/utils.o 
 
+C_DEPS += \
+./src/console.d \
+./src/utils.d 
+
 
 # Each subdirectory must supply rules for building sources it contributes
-src/%.o: ../src/%.c src/subdir.mk
+src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/esteban/Desktop/tp/tp-2022-1c-grupito/shared/include" -I"/home/esteban/Desktop/tp/tp-2022-1c-grupito/console/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
+	gcc -I"/home/utnso/tp-2022-1c-grupito/shared/include" -I"/home/utnso/tp-2022-1c-grupito/console/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-
-clean: clean-src
-
-clean-src:
-	-$(RM) ./src/console.d ./src/console.o ./src/utils.d ./src/utils.o
-
-.PHONY: clean-src
 
