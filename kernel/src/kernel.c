@@ -1,21 +1,5 @@
 #include "kernel.h"
 
-/*crear thread
- * int pthread_create(pthread_t * thread_id,
- const pthread_attr_t * attr,
- void * (*start_routine)(void *),
- void * arg);
-
- (Esperar a la) Terminación:
- int pthread_join(pthread_t thread_id, void **value_ptr);
-
- recv (int __fd, void *__buf, size_t __n, int __flags);
- recv (client socket, message, strlen(message), 0);
-
- send (int __fd, const void *__buf, size_t __n, int __flags);
- send (client socket, message, strlen(message), 0);
- */
-
 int main(void) {
 	logger = create_logger();
 	log_info(logger, "Logger started");
@@ -25,7 +9,6 @@ int main(void) {
 	// Inicializar estructuras de estado
 	newQ = pQueue_create();
 	readyQ = pQueue_create();
-	//clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start); //Reloj de espera de ready
 	blockedQ = pQueue_create();
 	suspended_blockQ = pQueue_create();
 	suspended_readyQ = pQueue_create();
@@ -37,21 +20,23 @@ int main(void) {
 
 	// Setteo de Algoritmo de Planificacion
 	if (!strcmp(config->schedulerAlgorithm, "SJF"))
-		sortingAlgoritm = SRT;
+		sortingAlgorithm = SRT;
 	if (!strcmp(config->schedulerAlgorithm, "FIFO"))
-		sortingAlgoritm = FIFO;
+		sortingAlgorithm = FIFO;
 
 
-    // Inicializar Planificador de largo plazo
-    pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
-    pthread_detach(thread_longTerm);
+	// Inicializar Planificador de Largo Plazo
+	pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
+	pthread_detach(thread_longTerm);
 
-    pthread_create(&thread_shortTermUnsuspender, 0, thread_shortTermUnsuspenderFunc, NULL);
-    pthread_detach(thread_shortTermUnsuspender);
 
-    // Inicializar Planificador de mediano plazo
-    pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
-    pthread_detach(thread_mediumTerm);
+	// Inicializar Planificador de Mediano Plazo
+	pthread_create(&thread_mediumTermUnsuspender, 0, thread_mediumTermUnsuspenderFunc, NULL);
+	pthread_detach(thread_mediumTermUnsuspender);
+
+
+	pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
+	pthread_detach(thread_mediumTerm);
 
 	// Creacion de Server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
@@ -63,75 +48,57 @@ int main(void) {
 	// Poner en Modo Escucha
 	pid=0;
 	while (1) {
-		pid++;
+
 		//server_listen(server_socket, header_handler);//esto deberia despertarse cuando consola manda un proceso
+		pid++;
 
 		t_pcb *pcb = create_pcb(process);
 		pQueue_put(newQ, (void*) pcb);
+
 		pthread_mutex_lock(&mutex_log);
-            log_info(logger, "Adding process to new, &d", pcb->id);
-            pthread_mutex_unlock(&mutex_log);
-		 //agregar una funcion que logge con mutex en el lloger
-		 sem_post(&longTermSemCall);//despertar largo plazo
+            log_info(logger, "Adding process to New, &d", pcb->id);
+        pthread_mutex_unlock(&mutex_log);
+		//agregar una funcion que logge con mutex en el lloger
+		sem_post(&sem_newProcess); // Despertar mediano plazo
 
 	}
 	//receive_process(t_packet *petition, int console_socket);
 	//receive_process(, );
 
 	//Planificador de Largo Plazo
-
 	//NEW
-
 	//queue_push(newQ,pcb);
-
 	//READY
-
-	if (cupos_libres < config->multiprogrammingLevel) {
+	/*if (cupos_libres < config->multiprogrammingLevel) {
 		t_pcb *ready_process = (t_pcb*) pQueue_take(newQ);
-		pQueue_put(readyQ, (void*) ready_process);
+		pQueue_put(readyQ, (void*) ready_process);*/
 
 		//Mensaje a Memoria
 		//send (client socket, message, strlen(message), 0);
 
-		//recibir tabla de paginas
+		//Recibir tabla de paginas
 		//recv (client socket, message, strlen(message), 0);
 
 		//actualizar pcb
 		//
 
-	} else {
-
-	}
-
+	//} else {
+	//}
 	// if finalizacion -> exit -> msj a memoria -> msj a consola
-
 	//Planificador de Mediano Plazo
-
 	/*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
-
 	 if(X->blocked_time>max_blocked_time){
-
 	 //Suspender
-
 	 //Mensaje a Memoria
-
 	 }*/
-
 	//Planificador de Corto Plazo
 	/*if(){
-
 	 //estimacion
-
 	 }*/
-
 	/*if(){
-	 *
 	 //interrupt a CPU
-
 	 //CPU Desaloja Proceso
-
 	 //Se recibe PCB por dispatch
-
 	 }*/
 
 	destroyKernelConfig(config);
@@ -148,13 +115,13 @@ void* thread_longTermFunc(){
             pcb = (t_pcb*)pQueue_take(newQ);
 
             pthread_mutex_lock(&mutex_log);
-            log_info(logger, "Long Term Scheduler: process %u from NEW to READY", pcb->id);
+            log_info(logger, "Long Term Scheduler: process %u from New to Ready", pcb->id);
             pthread_mutex_unlock(&mutex_log);
 
             //putToReady(pcb);
 
             pthread_mutex_lock(&mutex_cupos);
-            cupos_libres--; // TODO Chequear bien donde se modifica
+            	cupos_libres--; // TODO Chequear bien donde se modifica
             pthread_mutex_unlock(&mutex_cupos);
 
         pthread_cond_signal(&cond_mediumTerm);
@@ -177,13 +144,13 @@ void* thread_mediumTermUnsuspenderFunc(void* args){
             pcb = (t_pcb*)pQueue_take(suspended_readyQ);
 
             pthread_mutex_lock(&mutex_log);
-            log_info(logger, "Medium Term Scheduler: process %u from SUSPENDED-READY to READY", pcb->id);
+            	log_info(logger, "Medium Term Scheduler: process %u from Suspended Ready to Ready", pcb->id);
             pthread_mutex_unlock(&mutex_log);
 
             //putToReady(process);
 
             pthread_mutex_lock(&mutex_cupos);
-            cupos_libres--;
+            	cupos_libres--;
             pthread_mutex_unlock(&mutex_cupos);
 
         pthread_cond_signal(&cond_mediumTerm);
@@ -210,14 +177,16 @@ void* thread_mediumTermFunc(void* args){
                 pthread_mutex_lock(&mutex_cupos);
             }
             pthread_mutex_unlock(&mutex_cupos);
+
             //Sacamos al proceso de la cola de blocked y lo metemos a suspended blocked
             pcb = (t_pcb*)pQueue_takeLast(blockedQ);
 
             pQueue_put(suspended_readyQ, (void*)process);
 
             sem_post(&sem_multiprogram);
+
             pthread_mutex_lock(&mutex_cupos);
-            cupos_libres++;
+            	cupos_libres++;
             pthread_mutex_unlock(&mutex_cupos);
 
             //Notifica a memoria de la suspension
@@ -225,10 +194,11 @@ void* thread_mediumTermFunc(void* args){
             //streamAdd_UINT32(suspendRequest->payload, process->pid);
             //socket_sendPacket(memorySocket, suspendRequest);
             //destroyPacket(suspendRequest);
+
         pthread_mutex_unlock(&mutex_mediumTerm);
 
         pthread_mutex_lock(&mutex_log);
-        log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
+        	log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
         pthread_mutex_unlock(&mutex_log);
     }
 }
@@ -260,7 +230,7 @@ void* thread_shortTermFunc(void* args){
         clock_gettime(CLOCK_MONOTONIC, &rafagaStart);
 
         pthread_mutex_lock(&mutex_log);
-        //log_info(logger, "Short Term Scheduler %i: el proceso %u pasa de READY a EXEC", CPUid, pcb->id);
+        	//log_info(logger, "Short Term Scheduler %i: el proceso %u pasa de READY a EXEC", CPUid, pcb->id);
         pthread_mutex_unlock(&mutex_log);
 
         while(keepServing){
@@ -284,7 +254,7 @@ void* thread_shortTermFunc(void* args){
                 double oldEstimate = process->estimate;
                 pcb->estimate = config->alpha * rafagaMs + (1 - config->alpha) * pcb->estimate;
                 pthread_mutex_lock(&mutex_log);
-                log_info(logger, "Proceso %u: Nueva estimacion - rafaga real finalizada: %f, Old Estimator: %f, New Estimator: %f", pcb->id, rafagaMs, oldEstimate, pcb->estimate);
+                	log_info(logger, "Proceso %u: Nueva estimacion - rafaga real finalizada: %f, Old Estimator: %f, New Estimator: %f", pcb->id, rafagaMs, oldEstimate, pcb->estimate);
                 pthread_mutex_unlock(&mutex_log);
             }
 
@@ -396,8 +366,11 @@ t_log* create_logger() {
 	return new_logger;
 }
 
-t_config* create_config() {
-	t_config *new_config = config_create("kernel.config");
-	return new_config;
-}
+// Funcion para poner un proceso a ready, actualiza la cola de ready y la reordena segun algoritmo
+// No hay hilo de corto plazo ya que esta funcion hace exactamente eso de un saque
+/*void putToReady(pcb* pcb){
+	pQueue_put(readyQ,(void*)pcb);
+	if(pcb->burst_estimation-><(start_exec_time-)
+			//if true interrupcion a CPU
 
+}*/

@@ -1,10 +1,3 @@
-/*
- * serialization.c
- *
- *  Created on: Apr 30, 2022
- *      Author: utn-so
- */
-
 #include"serialization.h"
 
 t_stream_buffer* create_stream(size_t size) {

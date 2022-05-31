@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 O_SRCS += \
 ../kernel/Debug/src/kernel.o \
+../kernel/Debug/src/p_queue.o \
 ../kernel/Debug/src/utils.o 
 
 

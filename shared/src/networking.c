@@ -1,10 +1,3 @@
-/*
- * networking.c
- *
- *  Created on: May 2, 2022
- *      Author: utn-so
- */
-
 #include"networking.h"
 
 void catch_syscall_err(int code) {
@@ -31,11 +24,8 @@ int connect_to(char *server_ip, char *server_port) {
 	hints.ai_flags = AI_PASSIVE;
 
 	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
-	catch_syscall_err(
-			client_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
-					serv_info->ai_protocol));
-	catch_syscall_err(
-			connect(client_socket, serv_info->ai_addr, serv_info->ai_addrlen));
+	catch_syscall_err(client_socket = socket(serv_info->ai_family, serv_info->ai_socktype,serv_info->ai_protocol));
+	catch_syscall_err(connect(client_socket, serv_info->ai_addr, serv_info->ai_addrlen));
 
 	freeaddrinfo(serv_info);
 	return client_socket;
@@ -53,14 +43,9 @@ int create_server(char *server_ip, char *server_port) {
 	hints.ai_flags = AI_PASSIVE;
 
 	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
-	catch_syscall_err(
-			server_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
-					serv_info->ai_protocol));
-	catch_syscall_err(
-			setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &(int ) { 1 },
-					sizeof(int)));
-	catch_syscall_err(
-			bind(server_socket, serv_info->ai_addr, serv_info->ai_addrlen));
+	catch_syscall_err(server_socket = socket(serv_info->ai_family, serv_info->ai_socktype,serv_info->ai_protocol));
+	catch_syscall_err(setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &(int) { 1 },sizeof(int)));
+	catch_syscall_err(bind(server_socket, serv_info->ai_addr, serv_info->ai_addrlen));
 	// TODO: replace SOMAXCONN -> MAX_BACKLOG
 	catch_syscall_err(listen(server_socket, SOMAXCONN));
 
@@ -74,9 +59,7 @@ int accept_client(int server_socket) {
 	struct sockaddr_in client_address;
 	socklen_t address_size = sizeof(struct sockaddr_in);
 
-	catch_syscall_err(
-			client_socket = accept(server_socket,
-					(struct sockaddr*) &client_address, &address_size));
+	catch_syscall_err(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size));
 
 	return client_socket;
 }
@@ -85,9 +68,7 @@ void server_listen(int server_socket, void* (*client_handler)(void*)) {
 	int client_socket = accept_client(server_socket);
 	pthread_t client_handler_thread = 0;
 
-	catch_syscall_err(
-			pthread_create(&client_handler_thread, NULL, client_handler,
-					(void*) client_socket));
+	catch_syscall_err(pthread_create(&client_handler_thread, NULL, client_handler, (void*) client_socket));
 	pthread_detach(client_handler_thread);
 }
 
