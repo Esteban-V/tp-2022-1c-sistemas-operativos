@@ -15,6 +15,7 @@
  send (int __fd, const void *__buf, size_t __n, int __flags);
  send (client socket, message, strlen(message), 0);
  */
+void* thread_mediumTermFunc(void* args); //faltaba declarar
 
 int main(void) {
 	logger = create_logger();
@@ -43,7 +44,7 @@ int main(void) {
 
 
     // Inicializar Planificador de largo plazo
-    pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
+    //pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
     pthread_detach(thread_longTerm);
 
     pthread_create(&thread_shortTermUnsuspender, 0, thread_shortTermUnsuspenderFunc, NULL);
@@ -53,9 +54,9 @@ int main(void) {
     pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
     pthread_detach(thread_mediumTerm);
 
-	// Creacion de Server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
-	log_info(logger, "Servidor listo para recibir al cliente");
+    // Creacion de Server
+    int server_socket = create_server(config->kernelIP, config->kernelPort);
+    log_info(logger, "Servidor listo para recibir al cliente");
 
 	// Inicilizacion de Semaforo
 	sem_init(&longTermSemCall, 0, 0);
