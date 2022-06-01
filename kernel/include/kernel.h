@@ -54,9 +54,10 @@ typedef struct pcb {
 	t_list *instructions;
 	int program_counter;
 	//t_ptbr page_table;
-	int burst_estimation;
+	double burst_estimation;
 } t_pcb;
 
+#define BILLION 1E9
 
 t_process *process;
 t_pcb* create_pcb(t_process *process);
@@ -66,9 +67,9 @@ t_kernelConfig *config;
 int pid=0;
 int cupos_libres=0;
 
-struct timespec start_exec_time, last_burst_estimate;
+struct timespec start_exec_time, last_burst_estimate, now_time;
 
-t_log* create_logger();
+t_log *logger;
 t_config* create_config();
 
 void* header_handler(void *_client_socket);

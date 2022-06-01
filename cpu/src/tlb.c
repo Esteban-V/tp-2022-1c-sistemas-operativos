@@ -1,5 +1,5 @@
 #include "tlb.h"
-#include "memory.h"
+#include "cpu.h"
 #include <unistd.h>
 /*
 t_tlb* createTLB() {

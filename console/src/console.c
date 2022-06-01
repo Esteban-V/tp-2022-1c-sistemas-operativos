@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
 	void _log_instruction(void *elem) {
 		log_instruction(logger, elem);
 	}
+
 	list_iterate(process->instructions, _log_instruction);
 
 	server_socket = connect_to(ip, port);
