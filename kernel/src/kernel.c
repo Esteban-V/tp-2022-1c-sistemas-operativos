@@ -16,6 +16,7 @@
  send (client socket, message, strlen(message), 0);
  */
 void* thread_mediumTermFunc(void* args); //faltaba declarar
+void* thread_longTermFunc();
 
 int main(void) {
 	logger = create_logger();
@@ -44,7 +45,7 @@ int main(void) {
 
 
     // Inicializar Planificador de largo plazo
-    //pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
+	pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
     pthread_detach(thread_longTerm);
 
     pthread_create(&thread_shortTermUnsuspender, 0, thread_shortTermUnsuspenderFunc, NULL);
