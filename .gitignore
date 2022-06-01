@@ -57,5 +57,5 @@ dkms.conf
 /.metadata/
 
 **/Debug/
-
+**/.settings/
 *.log

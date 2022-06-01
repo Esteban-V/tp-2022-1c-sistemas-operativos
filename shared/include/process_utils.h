@@ -1,10 +1,3 @@
-/*
- * process_utils.h
- *
- *  Created on: May 11, 2022
- *      Author: utn-so
- */
-
 #ifndef INCLUDE_PROCESS_UTILS_H_
 #define INCLUDE_PROCESS_UTILS_H_
 

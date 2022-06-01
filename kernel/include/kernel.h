@@ -24,6 +24,7 @@
 
 #include"socket_headers.h"
 #include"process_utils.h"
+#include"p_queue.h"
 
 #include"utils.h"
 
@@ -32,17 +33,20 @@ char *port;
 
 t_log *logger;
 
-enum states {
+enum e_states {
 	NEW, READY, EXECUTE, EXIT, BLOCKED, SUSPENDED_READY, SUSPENDED_BLOCK
 };
 
-t_queue *newQ;
-t_queue *readyQ;
-t_queue *executeQ;
-t_queue *exitQ;
-t_queue *blockedQ;
-t_queue *suspended_readyQ;
-t_queue *suspended_blockQ;
+enum e_sortingAlgoritm {
+	SRT, FIFO
+};
+
+t_pQueue *newQ,*readyQ,*blockedQ,*suspended_readyQ,*suspended_blockQ;
+enum e_sortingAlgoritm sortingAlgoritm;
+pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender, thread_shortTermUnsuspender, thread_shortTermUnsuspenderFunc;
+sem_t sem_multiprogram, sem_newProcess, longTermSemCall;
+pthread_mutex_t mutex_mediumTerm, mutex_cupos;
+pthread_cond_t cond_mediumTerm;
 
 typedef struct pcb {
 	int id;
@@ -53,7 +57,16 @@ typedef struct pcb {
 	int burst_estimation;
 } t_pcb;
 
+
+t_process *process;
+t_pcb* create_pcb(t_process *process);
+void destroy_pcb(t_pcb *pcb);
+
+struct timespec start, stop;
+
 t_kernelConfig *config;
+int pid=0;
+int cupos_libres=0;
 
 t_log* create_logger();
 t_config* create_config();

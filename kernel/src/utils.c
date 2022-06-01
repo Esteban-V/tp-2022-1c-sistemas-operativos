@@ -47,3 +47,5 @@ void destroyKernelConfig(t_kernelConfig *kernelConfig) {
 	config_destroy(kernelConfig->config);
 	free(kernelConfig);
 }
+
+
