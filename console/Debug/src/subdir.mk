@@ -20,7 +20,7 @@ OBJS += \
 src/%.o: ../src/%.c src/subdir.mk
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/esteban/Desktop/tp/tp-2022-1c-grupito/shared/include" -I"/home/esteban/Desktop/tp/tp-2022-1c-grupito/console/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
+	gcc -I"/home/utn-so/Desktop/so/tp-2022-1c-grupito/shared/include" -I"/home/utn-so/Desktop/so/tp-2022-1c-grupito/console/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
