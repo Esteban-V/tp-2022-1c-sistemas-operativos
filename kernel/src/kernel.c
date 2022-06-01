@@ -1,5 +1,26 @@
 #include "kernel.h"
 
+<<<<<<< HEAD
+=======
+/*crear thread
+ * int pthread_create(pthread_t * thread_id,
+ const pthread_attr_t * attr,
+ void * (*start_routine)(void *),
+ void * arg);
+
+ (Esperar a la) Terminación:
+ int pthread_join(pthread_t thread_id, void **value_ptr);
+
+ recv (int __fd, void *__buf, size_t __n, int __flags);
+ recv (client socket, message, strlen(message), 0);
+
+ send (int __fd, const void *__buf, size_t __n, int __flags);
+ send (client socket, message, strlen(message), 0);
+ */
+void* thread_mediumTermFunc(void* args); //faltaba declarar
+void* thread_longTermFunc();
+
+>>>>>>> 5374cd562bd109aa22ab9df29b1e6594ad815742
 int main(void) {
 	logger = create_logger();
 	log_info(logger, "Logger started");
@@ -29,6 +50,12 @@ int main(void) {
 	pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
 	pthread_detach(thread_longTerm);
 
+<<<<<<< HEAD
+=======
+    // Inicializar Planificador de largo plazo
+	pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
+    pthread_detach(thread_longTerm);
+>>>>>>> 5374cd562bd109aa22ab9df29b1e6594ad815742
 
 	// Inicializar Planificador de Mediano Plazo
 	pthread_create(&thread_mediumTermUnsuspender, 0, thread_mediumTermUnsuspenderFunc, NULL);
@@ -38,9 +65,9 @@ int main(void) {
 	pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
 	pthread_detach(thread_mediumTerm);
 
-	// Creacion de Server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
-	log_info(logger, "Servidor listo para recibir al cliente");
+    // Creacion de Server
+    int server_socket = create_server(config->kernelIP, config->kernelPort);
+    log_info(logger, "Servidor listo para recibir al cliente");
 
 	// Inicilizacion de Semaforo
 	sem_init(&longTermSemCall, 0, 0);
