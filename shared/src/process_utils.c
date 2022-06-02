@@ -1,10 +1,3 @@
-/*
- * process_utils.c
- *
- *  Created on: May 11, 2022
- *      Author: utn-so
- */
-
 #include"process_utils.h"
 
 void log_instruction_param(t_log *logger, uint32_t *param) {
@@ -97,7 +90,8 @@ void destroy_instruction_iteratee(t_instruction *elem) {
 
 void process_destroy(t_process *process) {
 	if (process != NULL) {
-		free(process->size);
+		//Tira Warning
+		//free(process->size);
 		list_iterate(process->instructions,
 				(void*) destroy_instruction_iteratee);
 		free(process->instructions);

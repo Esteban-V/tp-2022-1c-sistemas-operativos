@@ -1,10 +1,3 @@
-/*
- * serialization.h
- *
- *  Created on: Apr 30, 2022
- *      Author: utn-so
- */
-
 #ifndef SERIALIZATION_H_
 #define SERIALIZATION_H_
 

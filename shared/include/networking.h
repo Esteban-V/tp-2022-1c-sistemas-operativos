@@ -1,10 +1,3 @@
-/*
- * networking.h
- *
- *  Created on: May 2, 2022
- *      Author: utn-so
- */
-
 #ifndef NETWORKING_H_
 #define NETWORKING_H_
 
