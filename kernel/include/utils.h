@@ -18,6 +18,8 @@
 
 #include<assert.h>
 
+#include"kernel.h"
+
 #include"networking.h"
 #include"socket_headers.h"
 #include"serialization.h"
@@ -41,5 +43,12 @@ typedef struct kernelConfig {
 
 t_kernelConfig* getKernelConfig(char *path);
 void destroyKernelConfig(t_kernelConfig *kernelConfig);
+
+void* thread_mediumTermUnsuspenderFunc(void* args);
+
+void* thread_mediumTermFunc(void* args); //faltaba declarar
+void* thread_longTermFunc();
+bool SFJAlg(void*elem1, void*elem2);
+
 
 #endif /* UTILS_H_ */

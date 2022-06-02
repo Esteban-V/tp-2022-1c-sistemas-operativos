@@ -40,9 +40,11 @@ enum e_states {
 enum e_sortingAlgorithm {
 	FIFO=0, SRT=1
 };
+#define BILLION 1E9
+
+enum e_sortingAlgorithm sortingAlgorithm;
 
 t_pQueue *newQ,*readyQ,*blockedQ,*suspended_readyQ,*suspended_blockQ;
-enum e_sortingAlgorithm sortingAlgorithm;
 pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender;
 sem_t sem_multiprogram, sem_newProcess, longTermSemCall;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
@@ -57,13 +59,13 @@ typedef struct pcb {
 	double burst_estimation;
 } t_pcb;
 
-#define BILLION 1E9
 
+t_kernelConfig *config;
 t_process *process;
 t_pcb* create_pcb(t_process *process);
 void destroy_pcb(t_pcb *pcb);
 
-t_kernelConfig *config;
+
 int pid=0;
 int cupos_libres=0;
 
@@ -80,9 +82,9 @@ void stream_take_instruction(t_stream_buffer *stream, void **elem);
 
 void terminate_kernel();
 
-void* thread_longTermFunc();
-void* thread_mediumTermFunc();
-void* thread_mediumTermUnsuspenderFunc(void* args);
-void putToReady(t_process* process);
+
+
+
+
 
 #endif /* KERNEL_H_ */

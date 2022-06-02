@@ -29,11 +29,7 @@ all: console
 console: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-<<<<<<< HEAD
 	gcc -L"/home/utnso/tp-2022-1c-grupito/shared/Debug" -o "console" $(OBJS) $(USER_OBJS) $(LIBS)
-=======
-	gcc -L"/home/utn-so/Desktop/so/tp-2022-1c-grupito/shared/Debug" -o "console" $(OBJS) $(USER_OBJS) $(LIBS)
->>>>>>> 53ecdd0859ff56386b9fd1a8548efc8492f86f0a
 	@echo 'Finished building target: $@'
 	@echo ' '
 
