@@ -34,16 +34,19 @@ char *port;
 t_log *logger;
 
 enum e_states {
-	NEW, READY, EXECUTE, EXIT, BLOCKED, SUSPENDED_READY, SUSPENDED_BLOCK
+	NEW, READY, RUNNING, EXIT, BLOCKED, SUSPENDED_READY, SUSPENDED_BLOCKED
 };
 
 enum e_sortingAlgoritm {
 	SRT, FIFO
 };
 
-t_pQueue *newQ,*readyQ,*blockedQ,*suspended_readyQ,*suspended_blockQ;
+t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ;
+
 enum e_sortingAlgoritm sortingAlgoritm;
-pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender, thread_shortTermUnsuspender, thread_shortTermUnsuspenderFunc;
+
+pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender,
+		thread_shortTermUnsuspender, thread_shortTermUnsuspenderFunc;
 sem_t sem_multiprogram, sem_newProcess, longTermSemCall;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
 pthread_cond_t cond_mediumTerm;
@@ -57,7 +60,6 @@ typedef struct pcb {
 	int burst_estimation;
 } t_pcb;
 
-
 t_process *process;
 t_pcb* create_pcb(t_process *process);
 void destroy_pcb(t_pcb *pcb);
@@ -65,8 +67,8 @@ void destroy_pcb(t_pcb *pcb);
 struct timespec start, stop;
 
 t_kernelConfig *config;
-int pid=0;
-int cupos_libres=0;
+int pid = 0;
+int cupos_libres = 0;
 
 t_log* create_logger();
 t_config* create_config();
@@ -75,7 +77,10 @@ void* header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
 
 void stream_take_process(t_packet *packet, t_process *process);
-void stream_take_instruction(t_stream_buffer *stream, void **elem);
+void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem);
+
+void* thread_mediumTermFunc(void *args);
+void* thread_longTermFunc();
 
 void terminate_kernel();
 

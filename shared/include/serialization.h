@@ -9,6 +9,7 @@
 #define SERIALIZATION_H_
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <commons/string.h>
 #include <stdint.h>

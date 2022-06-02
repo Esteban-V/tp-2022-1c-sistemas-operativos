@@ -21,8 +21,8 @@ typedef struct process {
 	t_list *instructions;
 } t_process;
 
-void log_instruction_param(t_log* logger, int param);
-void log_instruction(t_log* logger, t_instruction *inst);
+void log_instruction_param(t_log *logger, uint32_t *param);
+void log_instruction(t_log *logger, t_instruction *inst);
 
 t_instruction* create_instruction(size_t id_size);
 void instruction_destroy(t_instruction *instruction);

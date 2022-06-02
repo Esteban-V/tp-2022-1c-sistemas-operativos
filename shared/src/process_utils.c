@@ -7,8 +7,8 @@
 
 #include"process_utils.h"
 
-void log_instruction_param(t_log *logger, int param) {
-	log_info(logger, " %d", param);
+void log_instruction_param(t_log *logger, uint32_t *param) {
+	log_info(logger, " %d", *param);
 }
 
 void log_instruction(t_log *logger, t_instruction *inst) {
@@ -25,7 +25,9 @@ void log_process(t_log *logger, t_process *proc) {
 		log_instruction(logger, elem);
 	}
 
-	log_info(logger, " %d", proc->size);
+	log_info(logger, "Size: %d\n", proc->size);
+	log_info(logger, "Instructions:\n");
+
 	list_iterate(proc->instructions, _log_instruction);
 }
 
@@ -36,7 +38,7 @@ t_instruction* create_instruction(size_t id_size) {
 		return NULL;
 
 	// Try to allocate instruction id and params, free structure if fail.
-	instruction->id = malloc((id_size+1) * sizeof(char));
+	instruction->id = malloc((id_size + 1) * sizeof(char));
 	if (instruction->id == NULL) {
 		free(instruction);
 		return NULL;

@@ -39,13 +39,7 @@ int main(int argc, char **argv) {
 
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
-
-	log_info(logger, "Size: %d\n", process->size);
-	log_info(logger, "Instructions:\n");
-	void _log_instruction(void *elem) {
-		log_instruction(logger, elem);
-	}
-	list_iterate(process->instructions, _log_instruction);
+	log_process(logger, process);
 
 	server_socket = connect_to(ip, port);
 
@@ -79,7 +73,6 @@ void get_code(FILE *file) {
 }
 
 t_instruction* parse_instruction(char *string) {
-	int param;
 	int i = 0;
 
 	char **instruction_text = string_split(string, " ");
@@ -89,8 +82,10 @@ t_instruction* parse_instruction(char *string) {
 
 	char *next_param;
 	while ((next_param = instruction_text[i + 1]) != NULL) {
-		param = atoi(next_param);
-		list_add(instruction->params, param);
+		int param = atoi(next_param);
+		int *param_pointer = malloc(sizeof(int));
+		memcpy(param_pointer, &param, sizeof(int));
+		list_add(instruction->params, param_pointer);
 		i++;
 	}
 
@@ -106,7 +101,7 @@ void stream_add_process(t_packet *packet) {
 void stream_add_instruction(t_stream_buffer *stream, void *elem) {
 	t_instruction *instruction = (t_instruction*) elem;
 	stream_add_STRING(stream, instruction->id);
-	stream_add_LIST(stream, instruction->params, stream_add_UINT32);
+	stream_add_LIST(stream, instruction->params, stream_add_UINT32P);
 }
 
 void terminate_console() {
