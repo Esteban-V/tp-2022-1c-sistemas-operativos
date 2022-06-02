@@ -50,30 +50,42 @@ void destroyKernelConfig(t_kernelConfig *kernelConfig) {
 	free(kernelConfig);
 }
 
-void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new o suspended_ready y lo pasa a ready
+void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb;
 	while (1) {
 		sem_wait(&longTermSemCall);
 		pthread_mutex_lock(&mutex_mediumTerm);
 		pcb = (t_pcb*) pQueue_take(newQ);
+		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: process %u from New to Ready",
-				pcb->id);
+			log_info(logger, "Long Term Scheduler: process %u from New to Ready",pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
-		//putToReady(pcb);
-
 		pthread_mutex_lock(&mutex_cupos);
-		cupos_libres--; // TODO Chequear bien donde se modifica
+			cupos_libres--; // TODO Chequear bien donde se modifica
 		pthread_mutex_unlock(&mutex_cupos);
 
-		pthread_cond_signal(&cond_mediumTerm);
+		// Message a Memoria para que cree estructuras
+		t_packet *memory_info = create_packet(MEMORY_INFO, 64);
+		stream_add_UINT32(memory_info->payload, pcb->size);
+
+		if (memory_server_socket != -1) {
+			socket_send_packet(memory_server_socket, memory_info);
+		}
+
+		// Recibir valo de Tabla
+
+		// Actualizar PCB
+
+
+
+		//pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
 	}
 }
 
-void* thread_mediumTermUnsuspenderFunc(void *args) { //Hilo del mediano plazo que pasa a Ready a aquellos procesos en Suspended-Ready
+void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo que pasa a Ready a aquellos procesos en Suspended-Ready
 	t_pcb *pcb;
 	while (1) {
 		sem_wait(&sem_multiprogram);
@@ -88,9 +100,7 @@ void* thread_mediumTermUnsuspenderFunc(void *args) { //Hilo del mediano plazo qu
 		pcb = (t_pcb*) pQueue_take(suspended_readyQ);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger,
-				"Medium Term Scheduler: process %u from Suspended Ready to Ready",
-				pcb->id);
+		log_info(logger, "Medium Term Scheduler: process %u from Suspended Ready to Ready",pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
 		putToReady(pcb);
@@ -142,15 +152,14 @@ void* thread_mediumTermFunc(void *args) {
 		//destroyPacket(suspendRequest);
 
 		pthread_mutex_unlock(&mutex_mediumTerm);
-
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger,
-				"Medium Term Scheduler: process %u to Suspended Blocked",
-				pcb->id);
+		log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 	}
 }
 
+// Funcion para poner un proceso a ready, actualiza la cola de ready y la reordena segun algoritmo
+// No hay hilo de corto plazo ya que esta funcion hace exactamente eso de un saque
 void putToReady(t_pcb *pcb) {
 
 	pQueue_put(readyQ, (void*) pcb);

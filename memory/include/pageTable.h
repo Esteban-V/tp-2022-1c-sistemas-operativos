@@ -14,21 +14,21 @@ typedef struct pageTableEntry {
     uint32_t frame;
 } t_pageTableEntry;
 
-typedef struct pageTable {
+typedef struct t_ptbr {
     int32_t pageQuantity;
     t_pageTableEntry *entries;
-} t_pageTable;
+} t_ptbr;
 
-t_pageTable *initializePageTable();
+t_ptbr *initializePageTable();
 
-void destroyPageTable(t_pageTable *table);
+void destroyPageTable(t_ptbr *table);
 void _destroyPageTable(void *table);
 
-int32_t pageTableAddEntry(t_pageTable *table, uint32_t newFrame);
+int32_t pageTableAddEntry(t_ptbr *table, uint32_t newFrame);
 
-void pageTable_destroyLastEntry(t_pageTable* pt);
+void pageTable_destroyLastEntry(t_ptbr* pt);
 
-t_pageTable* getPageTable(uint32_t _PID, t_dictionary* pageTables);
+t_ptbr* getPageTable(uint32_t _PID, t_dictionary* pageTables);
 
 bool pageTable_isEmpty(uint32_t PID);
 

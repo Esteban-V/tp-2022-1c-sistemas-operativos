@@ -23,11 +23,10 @@ typedef struct process {
 
 void log_instruction_param(t_log *logger, uint32_t *param);
 void log_instruction(t_log *logger, t_instruction *inst);
-
+void log_process(t_log *logger, t_process *proc);
 t_instruction* create_instruction(size_t id_size);
 void instruction_destroy(t_instruction *instruction);
-
 t_process* create_process();
-void process_destroy(t_process *process);
+void destroy_instruction_iteratee(t_instruction *elem);
 
 #endif /* INCLUDE_PROCESS_UTILS_H_ */

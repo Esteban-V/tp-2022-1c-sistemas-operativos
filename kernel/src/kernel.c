@@ -23,59 +23,56 @@ int main(void) {
 	config = getKernelConfig("kernel.config");
 
 	// Inicializar estructuras de estado
-	/*	newQ = pQueue_create();
-	 readyQ = pQueue_create();
-
-	 //Reloj de espera de ready
-	 //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-
-	 blockedQ = pQueue_create();
-	 suspended_blockQ = pQueue_create();
-	 suspended_readyQ = pQueue_create();
+	newQ = pQueue_create();
+	readyQ = pQueue_create();
+	blockedQ = pQueue_create();
+	suspended_blockQ = pQueue_create();
+	suspended_readyQ = pQueue_create();
 
 	 if (config == NULL) {
-	 log_error(logger, "Config failed to load");
-	 return EXIT_FAILURE;
+		 log_error(logger, "Config failed to load");
+		 return EXIT_FAILURE;
 	 }
 
 	 // Setteo de Algoritmo de Planificacion
 	 if (!strcmp(config->schedulerAlgorithm, "SJF"))
-	 sortingAlgoritm = SRT;
+	 sortingAlgorithm = SRT;
 	 if (!strcmp(config->schedulerAlgorithm, "FIFO"))
-	 sortingAlgoritm = FIFO;
+	 sortingAlgorithm = FIFO;
 
 	 // Inicializar Planificador de largo plazo
 	 pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
 	 pthread_detach(thread_longTerm);
 
-	 pthread_create(&thread_shortTermUnsuspender, 0,
-	 thread_shortTermUnsuspenderFunc, NULL);
-	 pthread_detach(thread_shortTermUnsuspender);
+	 pthread_create(&thread_mediumTermUnsuspender, 0, thread_mediumTermUnsuspenderFunc, NULL);
+	 pthread_detach(thread_mediumTermUnsuspender);
 
 	 // Inicializar Planificador de mediano plazo
 	 pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
-	 pthread_detach(thread_mediumTerm);*/
+	 pthread_detach(thread_mediumTerm);
 
 	// Creacion de server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
 	log_info(logger, "Servidor listo para recibir al cliente");
 
-	// Inicilizacion de semaforo
-	//sem_init(&longTermSemCall, 0, 0);
+	// Inicializar semaforo de multiprocesamiento
+	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
+	sem_init(&freeCpu, 0, 1);
+	cupos_libres = config->multiprogrammingLevel;
+	pthread_mutex_init(&mutex_cupos, NULL);
 
+	sem_init(&sem_newProcess, 0, 0);
+	sem_init(&longTermSemCall, 0, 0);
+
+	// Inicializo condition variable para despertar al planificador de mediano plazo
+	pthread_cond_init(&cond_mediumTerm, NULL);
+	pthread_mutex_init(&mutex_mediumTerm, NULL);
+
+	//memmory_server_socket = connect_to(config->memoryIP, config->memoryPort);CONEXION CON MEMORIA
 	//pid = 0;
 	while (1) {
-		// pid++;
 		server_listen(server_socket, header_handler);
 
-		// t_pcb *pcb = create_pcb(process);
-		// pQueue_put(newQ, (void*) pcb);
-		// pthread_mutex_lock(&mutex_log);
-		// log_info(logger, "Adding process to new, &d", pcb->id);
-		// pthread_mutex_unlock(&mutex_log);
-
-		// agregar una funcion que loggee con mutex en el logger
-		// sem_post(&longTermSemCall); //despertar largo plazo
 	}
 
 	//Planificador de Largo Plazo
@@ -97,16 +94,16 @@ int main(void) {
 
 	 // if finalizacion -> exit -> msj a memoria -> msj a consola
 	 //Planificador de Mediano Plazo
-	 /*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
-	 if(X->blocked_time>max_blocked_time){
+	 //int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
+	 //if(X->blocked_time>max_blocked_time){
 	 //Suspender
 	 //Mensaje a Memoria
-	 }*/
+	 //}
 	//Planificador de Corto Plazo
-	/*if(){
+	//if(){
 	 //estimacion
-	 }*/
-	/*if(){
+	 //}
+	//if(){
 	 //interrupt a CPU
 	 //CPU Desaloja Proceso
 	 //Se recibe PCB por dispatch
@@ -120,59 +117,19 @@ int main(void) {
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
 // Cuando lo pasa a blocked, recalcula el estimador de rafaga del proceso segun la cantidad de rafagas que duro
 void* thread_shortTermFunc(void *args) {
-	//intptr_t CPUid = (intptr_t)args;
 	t_pcb *pcb = NULL;
-	//t_packet *request = NULL;
-	bool keepServing = true;
-	struct timespec rafagaStart, rafagaStop;
+	while(1){
 
-	//int memorySocket = connectToServer(config->memoryIP, config->memoryPort);
-
-	while (1) {
-		pcb = NULL;
-		keepServing = true;
+		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
 
-		pthread_mutex_lock(&mutex_mediumTerm);
-		pthread_cond_signal(&cond_mediumTerm);
-		pthread_mutex_unlock(&mutex_mediumTerm);
-
-		//t_packet* ok_packet = createPacket(OK, 0);
-		//socket_sendPacket(pcb->socket, ok_packet);
-		//destroyPacket(ok_packet);
-
-		clock_gettime(CLOCK_MONOTONIC, &rafagaStart);
-
 		pthread_mutex_lock(&mutex_log);
-		//log_info(logger, "Short Term Scheduler %i: el proceso %u pasa de READY a EXEC", CPUid, pcb->id);
+			log_info(logger, "Process %d to CPU", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
-		while (keepServing) {
-			/*request = socket_getPacket(pcb->socket);
-			 if(request == NULL){
-			 if(!retry_getPacket(process->socket, &request)){
-			 t_packet* abruptTerm = createPacket(CAPI_TERM, INITIAL_STREAM_SIZE);
-			 streamAdd_UINT32(abruptTerm->payload, pcb->id);
-			 petitionHandlers[CAPI_TERM](process, abruptTerm, memorySocket);
-			 destroyPacket(abruptTerm);
-			 petitionHandlers[DISCONNECTED](process, request, memorySocket);
-			 break;
-			 }
-			 }*/
-			//keepServing = petitionHandlers[request->header](process, request, memorySocket);
-			/*if(request->header == SEM_WAIT || request->header == CALL_IO){
-			 clock_gettime(CLOCK_MONOTONIC, &rafagaStop);
-			 double rafagaMs = (double)(rafagaStop.tv_sec - rafagaStart.tv_sec) * 1000
-			 + (double)(rafagaStop.tv_nsec - rafagaStart.tv_nsec) / 1000000;
-			 double oldEstimate = process->estimate;
-			 pcb->estimate = config->alpha * rafagaMs + (1 - config->alpha) * pcb->estimate;
-			 pthread_mutex_lock(&mutex_log);
-			 log_info(logger, "Proceso %u: Nueva estimacion - rafaga real finalizada: %f, Old Estimator: %f, New Estimator: %f", pcb->id, rafagaMs, oldEstimate, pcb->estimate);
-			 pthread_mutex_unlock(&mutex_log);
-			 }
 
-			 destroyPacket(request);*/
-		}
+
+		//enviar pcb a cpu
 	}
 }
 
@@ -198,35 +155,31 @@ void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem) {
 
 }
 
-t_pcb* create_pcb(t_process *process) {
+t_pcb* create_pcb() {
 	pid++;
 	t_pcb *pcb = malloc(sizeof(t_pcb));
 	pcb->instructions = list_create();
-	//Tiran Warnings con Malloc
-	//pcb->id; = malloc(sizeof(int));
-	//pcb->size; = malloc(sizeof(int));
-	//pcb->program_counter; = malloc(sizeof(int));
-	//pcb->burst_estimation; = malloc(sizeof(int));
-	//pcb->page_table=malloc(sizeof(t_ptbr));
-
-	memcpy(pcb->instructions, process->instructions, sizeof(t_list));
-	pcb->id = pid;
-	pcb->size = process->size;
-	pcb->program_counter = 0;
-	pcb->burst_estimation = config->initialEstimate;
+	pcb->id = malloc(sizeof(int));
+	pcb->size = malloc(sizeof(int));
+	pcb->program_counter = malloc(sizeof(int));
+	pcb->burst_estimation = malloc(sizeof(int));
 
 	return pcb;
 }
 
+/*	memcpy(pcb->instructions, process->instructions, sizeof(t_list));
+	pcb->id = pid;
+	pcb->size = process->size;
+	pcb->program_counter = 0;
+	pcb->burst_estimation = config->initialEstimate;*/
+
 void destroy_pcb(t_pcb *pcb) {
 	if (pcb != NULL) {
-		//Tiran Warnings
-		//free(pcb->id);
-		//free(pcb->size);
-		//free(pcb->program_counter);
-		//free(pcb->burst_estimation);
-
-		//list_destroy(pcb->instructions);
+		free(pcb->id);
+		free(pcb->size);
+		free(pcb->program_counter);
+		free(pcb->burst_estimation);
+		list_destroy(pcb->instructions);
 
 		free(pcb->instructions);
 		free(pcb);
@@ -238,12 +191,38 @@ bool receive_process(t_packet *petition, int console_socket) {
 	stream_take_process(petition, received_process);
 	log_process(logger, received_process);
 
+	if(!!received_process){
+		t_pcb *pcb = create_pcb(received_process);
+		pQueue_put(newQ, (void*) pcb);
+		log_info(logger, "Adding process to New, %d", pcb->id);
+		sem_post(&sem_newProcess);
+	}
+
+	process_destroy(received_process);
+
 	return false;
 }
 
-bool (*kernel_handlers[1])(t_packet *petition, int console_socket) =
+bool io(t_packet *petition, int console_socket){
+	sem_post(&freeCpu);
+	t_pcb *received_pcb = create_pcb(); //cambiar create pcb para primero crearlo y dsp iniciarlo
+	stream_take_pcb(petition,received_pcb);
+	pQueue_put(blockedQ,(void*) received_pcb);//faltaria poner en que momento entro en bloqueado?
+	return false;
+}
+
+bool exit(t_packet *petition, int console_socket){
+	sem_post(&freeCpu);
+	t_pcb *received_pcb = create_pcb();
+	stream_take_pcb(petition,received_pcb);
+	return false;
+}
+
+bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
 {
 	receive_process,
+	io,
+	exit
 };
 
 void* header_handler(void *_client_socket) {
@@ -262,6 +241,3 @@ void* header_handler(void *_client_socket) {
 	}
 	return 0;
 }
-
-// Funcion para poner un proceso a ready, actualiza la cola de ready y la reordena segun algoritmo
-// No hay hilo de corto plazo ya que esta funcion hace exactamente eso de un saque

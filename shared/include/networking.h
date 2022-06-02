@@ -1,22 +1,23 @@
 #ifndef NETWORKING_H_
 #define NETWORKING_H_
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netdb.h>
-#include <pthread.h>
-#include <commons/log.h>
-#include <errno.h>
+#include<sys/socket.h>
+#include<sys/types.h>
+#include<netdb.h>
+#include<pthread.h>
+#include<commons/log.h>
+#include<errno.h>
 
-#include "serialization.h"
-
-t_log *logger;
-pthread_mutex_t mutex_log;
+#include"serialization.h"
 
 typedef struct t_packet {
 	uint8_t header;
 	t_stream_buffer *payload;
 } t_packet;
+
+
+t_log *logger;
+pthread_mutex_t mutex_log;
 
 void catch_syscall_err(int code);
 
