@@ -83,21 +83,21 @@ int main(void) {
 	//queue_push(newQ,pcb);
 	//READY
 	/*if (cupos_libres < config->multiprogrammingLevel) {
-		t_pcb *ready_process = (t_pcb*) pQueue_take(newQ);
-		pQueue_put(readyQ, (void*) ready_process);
+	 t_pcb *ready_process = (t_pcb*) pQueue_take(newQ);
+	 pQueue_put(readyQ, (void*) ready_process);
 
-		//Mensaje a memoria
-		//send(client socket, message, strlen(message), 0);
+	 //Mensaje a memoria
+	 //send(client socket, message, strlen(message), 0);
 
-		//Recibir tabla de paginas
-		//recv(client socket, message, strlen(message), 0);
+	 //Recibir tabla de paginas
+	 //recv(client socket, message, strlen(message), 0);
 
-		//actualizar pcb
-	}
+	 //actualizar pcb
+	 }
 
-	// if finalizacion -> exit -> msj a memoria -> msj a consola
-	//Planificador de Mediano Plazo
-	/*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
+	 // if finalizacion -> exit -> msj a memoria -> msj a consola
+	 //Planificador de Mediano Plazo
+	 /*int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
 	 if(X->blocked_time>max_blocked_time){
 	 //Suspender
 	 //Mensaje a Memoria
@@ -117,65 +117,63 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
-
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
 // Cuando lo pasa a blocked, recalcula el estimador de rafaga del proceso segun la cantidad de rafagas que duro
-void* thread_shortTermFunc(void* args){
-    //intptr_t CPUid = (intptr_t)args;
-    t_pcb *pcb = NULL;
-    //t_packet *request = NULL;
-    bool keepServing = true;
-    struct timespec rafagaStart, rafagaStop;
+void* thread_shortTermFunc(void *args) {
+	//intptr_t CPUid = (intptr_t)args;
+	t_pcb *pcb = NULL;
+	//t_packet *request = NULL;
+	bool keepServing = true;
+	struct timespec rafagaStart, rafagaStop;
 
-    //int memorySocket = connectToServer(config->memoryIP, config->memoryPort);
+	//int memorySocket = connectToServer(config->memoryIP, config->memoryPort);
 
-    while(1){
-    	pcb = NULL;
-        keepServing = true;
-        pcb = pQueue_take(readyQ);
+	while (1) {
+		pcb = NULL;
+		keepServing = true;
+		pcb = pQueue_take(readyQ);
 
-        pthread_mutex_lock(&mutex_mediumTerm);
-        pthread_cond_signal(&cond_mediumTerm);
-        pthread_mutex_unlock(&mutex_mediumTerm);
+		pthread_mutex_lock(&mutex_mediumTerm);
+		pthread_cond_signal(&cond_mediumTerm);
+		pthread_mutex_unlock(&mutex_mediumTerm);
 
-        //t_packet* ok_packet = createPacket(OK, 0);
-        //socket_sendPacket(pcb->socket, ok_packet);
-        //destroyPacket(ok_packet);
+		//t_packet* ok_packet = createPacket(OK, 0);
+		//socket_sendPacket(pcb->socket, ok_packet);
+		//destroyPacket(ok_packet);
 
-        clock_gettime(CLOCK_MONOTONIC, &rafagaStart);
+		clock_gettime(CLOCK_MONOTONIC, &rafagaStart);
 
-        pthread_mutex_lock(&mutex_log);
-        	//log_info(logger, "Short Term Scheduler %i: el proceso %u pasa de READY a EXEC", CPUid, pcb->id);
-        pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_lock(&mutex_log);
+		//log_info(logger, "Short Term Scheduler %i: el proceso %u pasa de READY a EXEC", CPUid, pcb->id);
+		pthread_mutex_unlock(&mutex_log);
 
-        while(keepServing){
-            /*request = socket_getPacket(pcb->socket);
-            if(request == NULL){
-                if(!retry_getPacket(process->socket, &request)){
-                    t_packet* abruptTerm = createPacket(CAPI_TERM, INITIAL_STREAM_SIZE);
-                    streamAdd_UINT32(abruptTerm->payload, pcb->id);
-                    petitionHandlers[CAPI_TERM](process, abruptTerm, memorySocket);
-                    destroyPacket(abruptTerm);
-                    petitionHandlers[DISCONNECTED](process, request, memorySocket);
-                    break;
-                }
-            }*/
-            //keepServing = petitionHandlers[request->header](process, request, memorySocket);
+		while (keepServing) {
+			/*request = socket_getPacket(pcb->socket);
+			 if(request == NULL){
+			 if(!retry_getPacket(process->socket, &request)){
+			 t_packet* abruptTerm = createPacket(CAPI_TERM, INITIAL_STREAM_SIZE);
+			 streamAdd_UINT32(abruptTerm->payload, pcb->id);
+			 petitionHandlers[CAPI_TERM](process, abruptTerm, memorySocket);
+			 destroyPacket(abruptTerm);
+			 petitionHandlers[DISCONNECTED](process, request, memorySocket);
+			 break;
+			 }
+			 }*/
+			//keepServing = petitionHandlers[request->header](process, request, memorySocket);
+			/*if(request->header == SEM_WAIT || request->header == CALL_IO){
+			 clock_gettime(CLOCK_MONOTONIC, &rafagaStop);
+			 double rafagaMs = (double)(rafagaStop.tv_sec - rafagaStart.tv_sec) * 1000
+			 + (double)(rafagaStop.tv_nsec - rafagaStart.tv_nsec) / 1000000;
+			 double oldEstimate = process->estimate;
+			 pcb->estimate = config->alpha * rafagaMs + (1 - config->alpha) * pcb->estimate;
+			 pthread_mutex_lock(&mutex_log);
+			 log_info(logger, "Proceso %u: Nueva estimacion - rafaga real finalizada: %f, Old Estimator: %f, New Estimator: %f", pcb->id, rafagaMs, oldEstimate, pcb->estimate);
+			 pthread_mutex_unlock(&mutex_log);
+			 }
 
-            /*if(request->header == SEM_WAIT || request->header == CALL_IO){
-                clock_gettime(CLOCK_MONOTONIC, &rafagaStop);
-                double rafagaMs = (double)(rafagaStop.tv_sec - rafagaStart.tv_sec) * 1000
-                                + (double)(rafagaStop.tv_nsec - rafagaStart.tv_nsec) / 1000000;
-                double oldEstimate = process->estimate;
-                pcb->estimate = config->alpha * rafagaMs + (1 - config->alpha) * pcb->estimate;
-                pthread_mutex_lock(&mutex_log);
-                	log_info(logger, "Proceso %u: Nueva estimacion - rafaga real finalizada: %f, Old Estimator: %f, New Estimator: %f", pcb->id, rafagaMs, oldEstimate, pcb->estimate);
-                pthread_mutex_unlock(&mutex_log);
-            }
-
-            destroyPacket(request);*/
-        }
-    }
+			 destroyPacket(request);*/
+		}
+	}
 }
 
 void stream_take_process(t_packet *packet, t_process *process) {
