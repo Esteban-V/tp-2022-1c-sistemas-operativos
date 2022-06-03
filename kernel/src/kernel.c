@@ -69,12 +69,15 @@ int main(void) {
 	sem_init(&sem_newProcess, 0, 0);
 	sem_init(&longTermSemCall, 0, 0);
 
+	sem_init(&exec_to_ready,0,0);
+
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
-
+/*
 	cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
 	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
+ */
 
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
@@ -83,51 +86,17 @@ int main(void) {
 		server_listen(server_socket, header_handler);
 
 	}
-
-	//Planificador de Largo Plazo
-	//NEW
-	//queue_push(newQ,pcb);
-	//READY
-	/*if (cupos_libres < config->multiprogrammingLevel) {
-	 t_pcb *ready_process = (t_pcb*) pQueue_take(newQ);
-	 pQueue_put(readyQ, (void*) ready_process);
-
-	 //Mensaje a memoria
-	 //send(client socket, message, strlen(message), 0);
-
-	 //Recibir tabla de paginas
-	 //recv(client socket, message, strlen(message), 0);
-
-	 //actualizar pcb
-	 }
-
-	 // if finalizacion -> exit -> msj a memoria -> msj a consola
-	 //Planificador de Mediano Plazo
-	 //int max_blocked_time = config_get_int_value(config,"TIEMPO_MAXIMO_BLOQUEADO");
-	 //if(X->blocked_time>max_blocked_time){
-	 //Suspender
-	 //Mensaje a Memoria
-	 //}
-	//Planificador de Corto Plazo
-	//if(){
-	 //estimacion
-	 //}
-	//if(){
-	 //interrupt a CPU
-	 //CPU Desaloja Proceso
-	 //Se recibe PCB por dispatch
-	 }*/
-
 	destroyKernelConfig(config);
 
 	return EXIT_SUCCESS;
 }
 
-void* cpu_listenerFunc(){
+void* cpu_listenerFunc(){/*
 	int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
 	while(1){
 		server_listen(server_cpu_socket, header_handler);
 	}
+*/
 }
 
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
@@ -153,30 +122,12 @@ void* thread_shortTermFunc(void *args) {
 	}
 }
 
-
-
-/*	memcpy(pcb->instructions, process->instructions, sizeof(t_list));
-	pcb->id = pid;
-	pcb->size = process->size;
-	pcb->program_counter = 0;
-	pcb->burst_estimation = config->initialEstimate;*/
-
-
 void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb;
 	while (1) {
 		sem_wait(&longTermSemCall);
 		pthread_mutex_lock(&mutex_mediumTerm);
 		pcb = (t_pcb*) pQueue_take(newQ);
-		putToReady(pcb);
-
-		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Long Term Scheduler: process %u from New to Ready",pcb->id);
-		pthread_mutex_unlock(&mutex_log);
-
-		pthread_mutex_lock(&mutex_cupos);
-			cupos_libres--; // TODO Chequear bien donde se modifica
-		pthread_mutex_unlock(&mutex_cupos);
 
 		// Message a Memoria para que cree estructuras
 		t_packet *memory_info = create_packet(MEMORY_INFO, 64);
@@ -189,15 +140,22 @@ void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y 
 		packet_destroy(memory_info);
 
 
-
-
 		// Recibir valo de Tabla
 
 		// Actualizar PCB
 
+		putToReady(pcb);
+
+				pthread_mutex_lock(&mutex_log);
+					log_info(logger, "Long Term Scheduler: process %u from New to Ready",pcb->id);
+				pthread_mutex_unlock(&mutex_log);
+
+				pthread_mutex_lock(&mutex_cupos);
+					cupos_libres--; // TODO Chequear bien donde se modifica
+				pthread_mutex_unlock(&mutex_cupos);
 
 
-		//pthread_cond_signal(&cond_mediumTerm);
+		pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
 	}
 }
@@ -226,7 +184,6 @@ void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo q
 		cupos_libres--;
 		pthread_mutex_unlock(&mutex_cupos);
 
-		pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
 	}
 }
@@ -282,24 +239,18 @@ void putToReady(t_pcb *pcb) {
 	pQueue_put(readyQ, (void*) pcb);
 
 	if (sortingAlgorithm) {
-		pQueue_sort(readyQ, SFJAlg);
 
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now_time);
-		/*	if(
-		 //pcb->burst_estimation <
-		 //((double)(now_time->tv_sec - start_exec_time->tv_sec)*BILLION + ((double)(now_time->tv_nsec - start_exec_time->tv_nsec)))
-
-		 )*/
-		{
-			t_packet *int_packet = create_packet(INTERRUPT, 64);
-			stream_add_UINT32(int_packet->payload, 1);
-				if (cpu_int_server_socket != -1) {
-					socket_send_packet(cpu_int_server_socket, int_packet);
-				}
-
-				packet_destroy(int_packet);
-
+		t_packet *int_packet = create_packet(INTERRUPT, 64);
+		stream_add_UINT32(int_packet->payload, 1);
+		if (cpu_int_server_socket != -1) {
+			socket_send_packet(cpu_int_server_socket, int_packet);
 		}
+
+		packet_destroy(int_packet);
+
+		sem_wait(&exec_to_ready);
+
+		pQueue_sort(readyQ, SFJAlg);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Corto Plazo: Cola Ready replanificada:");
@@ -348,15 +299,17 @@ bool io(t_packet *petition, int console_socket){
 bool exitt(t_packet *petition, int console_socket){
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition,received_pcb);//como avisar q finaliza
+	stream_take_pcb(petition,received_pcb);
+	pQueue_put(exitQ, (void*) received_pcb);
+	//como avisar q finaliza
 	return false;
 }
 
 bool int_ready(t_packet *petition, int console_socket){
-	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition,received_pcb);
 	putToReady(received_pcb);
+	sem_post(&exec_to_ready);
 	return false;
 }
 

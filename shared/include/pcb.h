@@ -34,7 +34,7 @@ typedef struct pcb {
 	int size;
 	t_list *instructions;
 	int program_counter;
-	//t_ptbr page_table;
+	int page_table;//esta mal
 	int burst_estimation;
 } t_pcb;
 

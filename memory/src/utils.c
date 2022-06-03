@@ -3,7 +3,7 @@
 t_memoryConfig* getMemoryConfig(char* path){
     t_memoryConfig* memoryConfig = malloc(sizeof(t_memoryConfig));
     memoryConfig->config = config_create(path);
-    memoryConfig->listenPort = config_get_int_value(memoryConfig->config, "PUERTO_ESCUCHA");
+    memoryConfig->listenPort = config_get_string_value(memoryConfig->config, "PUERTO_ESCUCHA");
     memoryConfig->memorySize = config_get_int_value(memoryConfig->config, "TAM_MEMORIA");
     memoryConfig->pageSize = config_get_int_value(memoryConfig->config, "TAM_PAGINA");
     memoryConfig->entriesPerPage = config_get_int_value(memoryConfig->config, "ENTRADAS_POR_TABLA");

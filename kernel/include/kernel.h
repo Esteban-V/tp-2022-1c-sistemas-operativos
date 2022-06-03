@@ -40,7 +40,7 @@ struct timespec start_exec_time, last_burst_estimate, now_time;
 
 t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ, *exitQ;
 pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender, cpu_listener;
-sem_t sem_multiprogram, sem_newProcess, longTermSemCall, freeCpu;
+sem_t sem_multiprogram, sem_newProcess, longTermSemCall, freeCpu, exec_to_ready;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
 pthread_cond_t cond_mediumTerm;
 

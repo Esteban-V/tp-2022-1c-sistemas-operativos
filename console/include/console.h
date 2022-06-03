@@ -30,7 +30,7 @@ void get_code(FILE *file);
 t_instruction* parse_instruction(char *string);
 
 void stream_add_process(t_packet *packet);
-void stream_add_instruction(t_stream_buffer *stream, void *elem);
+
 
 void terminate_console();
 
