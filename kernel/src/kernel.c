@@ -51,6 +51,10 @@ int main(void) {
 	 pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
 	 pthread_detach(thread_mediumTerm);
 
+	 // Inicializar cpu listener
+	 pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
+	 pthread_detach(cpu_listener);
+
 	// Creacion de server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
 	log_info(logger, "Servidor listo para recibir al cliente");
@@ -114,6 +118,10 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
+void cpu_listenerFunc(){
+
+}
+
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
 // Cuando lo pasa a blocked, recalcula el estimador de rafaga del proceso segun la cantidad de rafagas que duro
 void* thread_shortTermFunc(void *args) {
@@ -133,39 +141,7 @@ void* thread_shortTermFunc(void *args) {
 	}
 }
 
-void stream_take_process(t_packet *packet, t_process *process) {
-	uint32_t *size = &(process->size);
-	stream_take_UINT32P(packet->payload, &size);
 
-	t_list *instructions = stream_take_LIST(packet->payload,
-			stream_take_instruction);
-	memcpy(process->instructions, instructions, sizeof(t_list));
-}
-
-void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem) {
-	char *id = stream_take_STRING(stream);
-	if ((*elem) == NULL) {
-		*elem = create_instruction(string_length(id));
-	}
-
-	memcpy((*elem)->id, id, string_length(id) + 1);
-
-	t_list *params = stream_take_LIST(stream, stream_take_UINT32P);
-	memcpy((*elem)->params, params, sizeof(t_list));
-
-}
-
-t_pcb* create_pcb() {
-	pid++;
-	t_pcb *pcb = malloc(sizeof(t_pcb));
-	pcb->instructions = list_create();
-	pcb->id = malloc(sizeof(int));
-	pcb->size = malloc(sizeof(int));
-	pcb->program_counter = malloc(sizeof(int));
-	pcb->burst_estimation = malloc(sizeof(int));
-
-	return pcb;
-}
 
 /*	memcpy(pcb->instructions, process->instructions, sizeof(t_list));
 	pcb->id = pid;
@@ -173,18 +149,6 @@ t_pcb* create_pcb() {
 	pcb->program_counter = 0;
 	pcb->burst_estimation = config->initialEstimate;*/
 
-void destroy_pcb(t_pcb *pcb) {
-	if (pcb != NULL) {
-		free(pcb->id);
-		free(pcb->size);
-		free(pcb->program_counter);
-		free(pcb->burst_estimation);
-		list_destroy(pcb->instructions);
-
-		free(pcb->instructions);
-		free(pcb);
-	}
-}
 
 void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb;
@@ -327,12 +291,19 @@ bool SFJAlg(void *elem1, void *elem2) {
 
 
 bool receive_process(t_packet *petition, int console_socket) {
+
 	t_process *received_process = create_process();
 	stream_take_process(petition, received_process);
 	log_process(logger, received_process);
 
 	if(!!received_process){
-		t_pcb *pcb = create_pcb(received_process);
+		t_pcb *pcb = create_pcb();
+		pid++;
+		memcpy(pcb->instructions, received_process->instructions, sizeof(t_list));
+		pcb->id=pid;
+		pcb->size = received_process->size;
+		pcb->program_counter = 0;
+		pcb->burst_estimation = config -> initialEstimate;
 		pQueue_put(newQ, (void*) pcb);
 		log_info(logger, "Adding process to New, %d", pcb->id);
 		sem_post(&sem_newProcess);
@@ -345,8 +316,8 @@ bool receive_process(t_packet *petition, int console_socket) {
 
 bool io(t_packet *petition, int console_socket){
 	sem_post(&freeCpu);
-	t_pcb *received_pcb = create_pcb(); //cambiar create pcb para primero crearlo y dsp iniciarlo
-	//stream_take_pcb(petition,received_pcb);
+	t_pcb *received_pcb = create_pcb();
+	stream_take_pcb(petition,received_pcb);
 	pQueue_put(blockedQ,(void*) received_pcb);//faltaria poner en que momento entro en bloqueado?
 	return false;
 }
@@ -354,7 +325,7 @@ bool io(t_packet *petition, int console_socket){
 bool exitt(t_packet *petition, int console_socket){
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
-	//stream_take_pcb(petition,received_pcb);
+	stream_take_pcb(petition,received_pcb);
 	return false;
 }
 

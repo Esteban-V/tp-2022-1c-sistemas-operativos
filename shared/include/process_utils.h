@@ -19,6 +19,10 @@ typedef struct process {
 	t_list *instructions;
 } t_process;
 
+
+void stream_add_instruction(t_stream_buffer *stream, void *elem);
+void stream_take_process(t_packet *packet, t_process *process);
+void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem);
 void log_instruction_param(t_log *logger, uint32_t *param);
 void log_instruction(t_log *logger, t_instruction *inst);
 void log_process(t_log *logger, t_process *proc);

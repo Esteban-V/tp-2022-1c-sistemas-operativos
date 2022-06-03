@@ -97,11 +97,6 @@ void stream_add_process(t_packet *packet) {
 	stream_add_LIST(packet->payload, process->instructions, stream_add_instruction);
 }
 
-void stream_add_instruction(t_stream_buffer *stream, void *elem) {
-	t_instruction *instruction = (t_instruction*) elem;
-	stream_add_STRING(stream, instruction->id);
-	stream_add_LIST(stream, instruction->params, stream_add_UINT32P);
-}
 
 void terminate_console() {
 	log_destroy(logger);

@@ -98,3 +98,25 @@ void process_destroy(t_process *process) {
 	}
 }
 
+void stream_take_process(t_packet *packet, t_process *process) {
+	uint32_t *size = &(process->size);
+	stream_take_UINT32P(packet->payload, &size);
+
+	t_list *instructions = stream_take_LIST(packet->payload,
+			stream_take_instruction);
+	memcpy(process->instructions, instructions, sizeof(t_list));
+}
+
+void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem) {
+	char *id = stream_take_STRING(stream);
+	if ((*elem) == NULL) {
+		*elem = create_instruction(string_length(id));
+	}
+
+	memcpy((*elem)->id, id, string_length(id) + 1);
+
+	t_list *params = stream_take_LIST(stream, stream_take_UINT32P);
+	memcpy((*elem)->params, params, sizeof(t_list));
+
+}
+
