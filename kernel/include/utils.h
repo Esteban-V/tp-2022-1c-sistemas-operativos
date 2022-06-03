@@ -26,11 +26,11 @@ typedef struct kernelConfig {
 	char *kernelIP;
 	char *kernelPort;
 	char *memoryIP;
-	int memoryPort;
+	char* memoryPort;
 	char *cpuIP;
-	int cpuPortDispatch;
-	int cpuPortInterrupt;
-	int listenPort;
+	char* cpuPortDispatch;
+	char* cpuPortInterrupt;
+	char* listenPort;
 	char *schedulerAlgorithm;
 	int initialEstimate;
 	char *alpha;
@@ -55,26 +55,15 @@ typedef struct t_ptbr {
 } t_ptbr;
 
 
-typedef struct pcb {
-	int id;
-	int size;
-	t_list *instructions;
-	int program_counter;
-	t_ptbr page_table;
-	int burst_estimation;
-} t_pcb;
 
-t_pcb* create_pcb();
-void destroy_pcb(t_pcb *pcb);
 
 void* thread_mediumTermUnsuspenderFunc(void *args);
 
 void* thread_mediumTermFunc(void *args);
 void* thread_longTermFunc();
 bool SFJAlg(void *elem1, void *elem2);
-
-void* thread_mediumTermFunc(void *args);
 void* thread_longTermFunc();
+void* cpu_listenerFunc();
 
 int cupos_libres;
 

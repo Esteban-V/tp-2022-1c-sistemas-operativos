@@ -10,15 +10,15 @@ t_kernelConfig* getKernelConfig(char *path) {
 			"PUERTO");
 	kernelConfig->memoryIP = config_get_string_value(kernelConfig->config,
 			"IP_MEMORIA");
-	kernelConfig->memoryPort = config_get_int_value(kernelConfig->config,
+	kernelConfig->memoryPort = config_get_string_value(kernelConfig->config,
 			"PUERTO_MEMORIA");
 	kernelConfig->cpuIP = config_get_string_value(kernelConfig->config,
 			"IP_CPU");
-	kernelConfig->cpuPortDispatch = config_get_int_value(kernelConfig->config,
+	kernelConfig->cpuPortDispatch = config_get_string_value(kernelConfig->config,
 			"PUERTO_CPU_DISPATCH");
-	kernelConfig->cpuPortInterrupt = config_get_int_value(kernelConfig->config,
+	kernelConfig->cpuPortInterrupt = config_get_string_value(kernelConfig->config,
 			"PUERTO_CPU_INTERRUPT");
-	kernelConfig->listenPort = config_get_int_value(kernelConfig->config,
+	kernelConfig->listenPort = config_get_string_value(kernelConfig->config,
 			"PUERTO_ESCUCHA");
 	kernelConfig->schedulerAlgorithm = config_get_string_value(
 			kernelConfig->config, "ALGORITMO_PLANIFICACION");
@@ -35,11 +35,11 @@ t_kernelConfig* getKernelConfig(char *path) {
 void destroyKernelConfig(t_kernelConfig *kernelConfig) {
 	//Tiran Warnings
 	free(kernelConfig->memoryIP);
-	//free(kernelConfig->memoryPort);
+	free(kernelConfig->memoryPort);
 	free(kernelConfig->cpuIP);
-	//free(kernelConfig->cpuPortDispatch);
-	//free(kernelConfig->cpuPortInterrupt);
-	//free(kernelConfig->listenPort);
+	free(kernelConfig->cpuPortDispatch);
+	free(kernelConfig->cpuPortInterrupt);
+	free(kernelConfig->listenPort);
 	free(kernelConfig->schedulerAlgorithm);
 	//free(kernelConfig->initialEstimate);
 	free(kernelConfig->alpha);

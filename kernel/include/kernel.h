@@ -25,6 +25,7 @@
 
 #include"socket_headers.h"
 #include"process_utils.h"
+#include"pcb.h"
 
 #include"utils.h"
 
@@ -58,5 +59,7 @@ void* header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
 void putToReady(t_pcb *pcb);
 void terminate_kernel();
+
+void* thread_mediumTermFunc();
 
 #endif /* KERNEL_H_ */

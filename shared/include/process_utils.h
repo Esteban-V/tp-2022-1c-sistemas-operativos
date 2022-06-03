@@ -9,6 +9,10 @@
 #include<commons/string.h>
 #include<commons/collections/list.h>
 
+#include "serialization.h"
+#include "networking.h"
+
+
 typedef struct instruction {
 	char *id;
 	t_list *params;

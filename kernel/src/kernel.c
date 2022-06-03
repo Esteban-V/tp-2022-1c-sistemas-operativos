@@ -123,7 +123,7 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
-void cpu_listenerFunc(){
+void* cpu_listenerFunc(){
 	int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
 	while(1){
 		server_listen(server_cpu_socket, header_handler);
