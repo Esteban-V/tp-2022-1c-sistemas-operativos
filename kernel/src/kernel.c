@@ -28,6 +28,7 @@ int main(void) {
 	blockedQ = pQueue_create();
 	suspended_blockQ = pQueue_create();
 	suspended_readyQ = pQueue_create();
+	exitQ= pQueue_create();
 
 	 if (config == NULL) {
 		 log_error(logger, "Config failed to load");
@@ -72,7 +73,11 @@ int main(void) {
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
 
-	//memmory_server_socket = connect_to(config->memoryIP, config->memoryPort);CONEXION CON MEMORIA
+	cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
+	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
+
+
+	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 	//pid = 0;
 	while (1) {
 		server_listen(server_socket, header_handler);
@@ -119,7 +124,10 @@ int main(void) {
 }
 
 void cpu_listenerFunc(){
-
+	int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
+	while(1){
+		server_listen(server_cpu_socket, header_handler);
+	}
 }
 
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
@@ -127,17 +135,21 @@ void cpu_listenerFunc(){
 void* thread_shortTermFunc(void *args) {
 	t_pcb *pcb = NULL;
 	while(1){
-
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
+
+		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
+		stream_add_pcb(pcb_packet,pcb);
+			if (cpu_server_socket != -1) {
+				socket_send_packet(cpu_server_socket, pcb_packet);
+			}
+
+			packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Process %d to CPU", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
-
-
-		//enviar pcb a cpu
 	}
 }
 
@@ -173,6 +185,11 @@ void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y 
 		if (memory_server_socket != -1) {
 			socket_send_packet(memory_server_socket, memory_info);
 		}
+
+		packet_destroy(memory_info);
+
+
+
 
 		// Recibir valo de Tabla
 
@@ -274,7 +291,13 @@ void putToReady(t_pcb *pcb) {
 
 		 )*/
 		{
-			//enviar interrupcion a cpu
+			t_packet *int_packet = create_packet(INTERRUPT, 64);
+			stream_add_UINT32(int_packet->payload, 1);
+				if (cpu_int_server_socket != -1) {
+					socket_send_packet(cpu_int_server_socket, int_packet);
+				}
+
+				packet_destroy(int_packet);
 
 		}
 
@@ -325,7 +348,15 @@ bool io(t_packet *petition, int console_socket){
 bool exitt(t_packet *petition, int console_socket){
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
+	stream_take_pcb(petition,received_pcb);//como avisar q finaliza
+	return false;
+}
+
+bool int_ready(t_packet *petition, int console_socket){
+	sem_post(&freeCpu);
+	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition,received_pcb);
+	putToReady(received_pcb);
 	return false;
 }
 
@@ -333,7 +364,12 @@ bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
 {
 	receive_process,
 	io,
-	exitt
+	exitt,
+	true,
+	true,
+	true,
+	int_ready
+
 };
 
 void* header_handler(void *_client_socket) {

@@ -37,13 +37,15 @@ enum e_sortingAlgorithm sortingAlgorithm;
 
 struct timespec start_exec_time, last_burst_estimate, now_time;
 
-t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ;
+t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ, *exitQ;
 pthread_t thread_longTerm, thread_mediumTerm, thread_mediumTermUnsuspender, cpu_listener;
 sem_t sem_multiprogram, sem_newProcess, longTermSemCall, freeCpu;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
 pthread_cond_t cond_mediumTerm;
 
 
+int cpu_int_server_socket;
+int cpu_server_socket;
 int memory_server_socket;
 
 char *ip;
