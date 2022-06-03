@@ -57,7 +57,7 @@ bool receive_process(t_packet *petition, int console_socket);
 
 void stream_take_process(t_packet *packet, t_process *process);
 void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem);
-
+void putToReady(t_pcb *pcb);
 void terminate_kernel();
 
 #endif /* KERNEL_H_ */

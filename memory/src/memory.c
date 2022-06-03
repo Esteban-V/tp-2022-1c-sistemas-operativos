@@ -6,13 +6,13 @@ int main() {
 	config = getMemoryConfig("memory.config");
 
 	// Creacion de server
-	int server_socket = create_server(config->memoryIP, config->memoryPort);
+	//int server_socket = create_server(config->memoryIP, config->memoryPort);
 	log_info(logger, "Servidor de Memoria creado");
 
 	//tlb = createTLB();
 
 	while (1) {
-		server_listen(server_socket, header_handler);
+		//server_listen(server_socket, header_handler);
 	}
 
 	log_destroy(logger);

@@ -3,15 +3,17 @@
 
 #include<commons/config.h>
 
-typedef struct memoryConfig {
-	t_config *config;
-	int tlbEntries;
-	char *tlbReplace;
-	int delayNoOp;
-	char *memoryIP;
-	char *memoryPort;
-	int dispatchListenPort;
-	char *interruptListenPort;
+typedef struct memoryConfig{
+    t_config* config;
+    int listenPort;
+    int memorySize;
+    int pageSize;
+    int entriesPerPage;
+    int memoryDelay;
+    char* replaceAlgorithm;
+    int framesPerProcess;
+    int swapDelay;
+    char* swapPath;
 } t_memoryConfig;
 
 t_memoryConfig* getMemoryConfig(char *path);

@@ -5,9 +5,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdint.h>
-
 #include<commons/log.h>
-
 #include<commons/string.h>
 #include<commons/collections/list.h>
 
@@ -28,5 +26,6 @@ t_instruction* create_instruction(size_t id_size);
 void instruction_destroy(t_instruction *instruction);
 t_process* create_process();
 void destroy_instruction_iteratee(t_instruction *elem);
+void process_destroy(t_process *process);
 
 #endif /* INCLUDE_PROCESS_UTILS_H_ */
