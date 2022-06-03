@@ -5,6 +5,7 @@
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
 
+/*
 t_pageTable *initializePageTable(){
     t_pageTable *newTable = malloc(sizeof(t_pageTable));
     newTable->pageQuantity = 0;
@@ -66,4 +67,4 @@ int32_t pageTable_getFrame(uint32_t PID, uint32_t page){
     pthread_mutex_unlock(&pageTablesMut);
 
     return frame;
-}
+}*/

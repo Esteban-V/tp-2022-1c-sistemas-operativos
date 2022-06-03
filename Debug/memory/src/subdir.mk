@@ -9,25 +9,32 @@ C_SRCS += \
 ../memory/src/swap.c \
 ../memory/src/utils.c 
 
-OBJS += \
-./memory/src/memory.o \
-./memory/src/pageTable.o \
-./memory/src/swap.o \
-./memory/src/utils.o 
-
 C_DEPS += \
 ./memory/src/memory.d \
 ./memory/src/pageTable.d \
 ./memory/src/swap.d \
 ./memory/src/utils.d 
 
+OBJS += \
+./memory/src/memory.o \
+./memory/src/pageTable.o \
+./memory/src/swap.o \
+./memory/src/utils.o 
+
 
 # Each subdirectory must supply rules for building sources it contributes
-memory/src/%.o: ../memory/src/%.c
+memory/src/%.o: ../memory/src/%.c memory/src/subdir.mk
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
+
+clean: clean-memory-2f-src
+
+clean-memory-2f-src:
+	-$(RM) ./memory/src/memory.d ./memory/src/memory.o ./memory/src/pageTable.d ./memory/src/pageTable.o ./memory/src/swap.d ./memory/src/swap.o ./memory/src/utils.d ./memory/src/utils.o
+
+.PHONY: clean-memory-2f-src
 

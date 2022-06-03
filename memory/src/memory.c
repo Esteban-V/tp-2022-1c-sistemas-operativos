@@ -1,34 +1,32 @@
-#include"memmory.h"
+#include"memory.h"
 
-int main(){
+int main() {
+	// Initialize logger
+	logger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
+	config = getMemoryConfig("memory.config");
 
+	// Creacion de server
+	int server_socket = create_server(config->memoryIP, config->memoryPort);
+	log_info(logger, "Servidor de Memoria creado");
 
-    // Initialize logger
-    logger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
-    config = getMemoryConfig("memory.config");
+	//tlb = createTLB();
 
-    // Creacion de server
-    int server_socket = create_server(config->memoryIP, config->memoryPort);
-    log_info(logger, "Servidor de Memoria Creado");
+	while (1) {
+		server_listen(server_socket, header_handler);
+	}
 
-    //tlb = createTLB();
+	log_destroy(logger);
+	//destroyTLB(tlb);
 
-    while(1){
-    	server_listen(server_socket, header_handler);
-    }
-
-    log_destroy(logger);
-    //destroyTLB(tlb);
-
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }
 
 bool receive_memory_info(t_packet *petition, int console_socket) {
 	uint32_t *size;
-	stream_take_UINT32(petition, size);
+	stream_take_UINT32P(petition->payload, size);
 	log_info(logger, "UINT STREAM, %d", size);
 
-	if(!!size){
+	if (!!size) {
 		log_info(logger, "UINT RECEIVED, %d", size);
 	}
 
