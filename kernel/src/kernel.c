@@ -56,6 +56,9 @@ int main(void) {
 	 pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
 	 pthread_detach(cpu_listener);
 
+	 pthread_create(&io_thread, 0, io, NULL);
+	 pthread_detach(io_thread);
+
 	// Creacion de server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
 	log_info(logger, "Servidor listo para recibir al cliente");
@@ -374,3 +377,7 @@ void* io(void *args){
 	}
 }
 
+int getIO(t_pcb* pcb){
+	int n = ((t_instruction*)((pcb->instructions)[pcb->program_counter]))->params[0];
+	return n;
+}
