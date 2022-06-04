@@ -44,5 +44,6 @@ void pQueue_unlock(t_pQueue* queue);
 
 void* pQueue_takeLast(t_pQueue* queue);
 
+void *pQueue_peek(t_pQueue *queue);
 
 #endif /* P_QUEUE_H_ */

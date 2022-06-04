@@ -36,6 +36,7 @@ typedef struct pcb {
 	int program_counter;
 	int page_table;//esta mal
 	int burst_estimation;
+	int blocked_time;
 } t_pcb;
 
 void stream_take_pcb(t_packet *, t_pcb *);

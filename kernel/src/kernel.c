@@ -71,6 +71,8 @@ int main(void) {
 
 	sem_init(&exec_to_ready,0,0);
 
+	sem_init(&any_blocked,0,0);
+
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
@@ -160,6 +162,8 @@ void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y 
 	}
 }
 
+
+
 void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo que pasa a Ready a aquellos procesos en Suspended-Ready
 	t_pcb *pcb;
 	while (1) {
@@ -197,21 +201,19 @@ void* thread_mediumTermFunc(void *args) {
 	//t_packet* suspendRequest;
 
 	while (1) {
-		pthread_mutex_lock(&mutex_mediumTerm);
-		//Espera a que se cumpla la condicion para despertarse
-		pthread_mutex_lock(&mutex_cupos);
-		while (cupos_libres >= 1 || pQueue_isEmpty(newQ)
-				|| !pQueue_isEmpty(readyQ) || pQueue_isEmpty(blockedQ)) {
-			pthread_mutex_unlock(&mutex_cupos);
-			pthread_cond_wait(&cond_mediumTerm, &mutex_mediumTerm);
-			pthread_mutex_lock(&mutex_cupos);
-		}
-		pthread_mutex_unlock(&mutex_cupos);
 
-		//Sacamos al proceso de la cola de blocked y lo metemos a suspended blocked
-		pcb = (t_pcb*) pQueue_takeLast(blockedQ);
 
-		pQueue_put(suspended_readyQ, (void*) process);
+		pcb=pQueue_peek(blockedQ);//retorna el primer elemento de
+
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+
+		usleep((config->maxBlockedTime)-(toMiliSec(now)-(pcb->blocked_time)));
+
+		if(pQueue_peek(blockedQ)==pcb);
+
+		pcb = (t_pcb*) pQueue_take(blockedQ);
+
+		pQueue_put(suspended_readyQ, (void*) pcb);
 
 		sem_post(&sem_multiprogram);
 
@@ -293,6 +295,8 @@ bool io(t_packet *petition, int console_socket){
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition,received_pcb);
 	pQueue_put(blockedQ,(void*) received_pcb);//faltaria poner en que momento entro en bloqueado?
+	received_pcb->blocked_time=toMiliSec(clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now));
+	sem_post(&any_blocked);
 	return false;
 }
 
@@ -301,7 +305,6 @@ bool exitt(t_packet *petition, int console_socket){
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition,received_pcb);
 	pQueue_put(exitQ, (void*) received_pcb);
-	//como avisar q finaliza
 	return false;
 }
 
@@ -341,3 +344,33 @@ void* header_handler(void *_client_socket) {
 	}
 	return 0;
 }
+
+
+
+float toMiliSec(struct timespec time){
+	return (now->tv_sec)*1000+(now->tv_nsec)/1000000;
+}
+
+void* io(void *args){
+	t_pcb pcb;
+	while(1){
+		sem_wait(&any_blocked);
+		if(pQueue_isEmpty(suspended_blockQ)){
+		pcb = pQueue_peek(blockedQ);
+		}
+		if(!pQueue_isEmpty(suspended_blockQ)){
+		pcb = pQueue_peek(suspended_blockQ);
+		}
+		usleep(getIO(pcb));
+		if(pQueue_isEmpty(suspended_blockQ)){
+		pcb = pQueue_take(blockedQ);
+		putToReady(pcb);
+		}
+		if(!pQueue_isEmpty(suspended_blockQ)){
+		pcb = pQueue_take(suspended_blockQ);
+		pQueue_put(suspended_readyQ,(void*)pcb);
+		}
+
+	}
+}
+
