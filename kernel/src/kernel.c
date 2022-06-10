@@ -80,6 +80,7 @@ int main(void) {
 		server_listen(server_socket, header_handler);
 
 	}
+
 	destroyKernelConfig(config);
 
 	return EXIT_SUCCESS;
@@ -275,18 +276,22 @@ bool receive_process(t_packet *petition, int console_socket) {
 	if(!!received_process){
 		t_pcb *pcb = create_pcb();
 		pid++;
-		int n=0;
-		while(list_get(received_process->instructions,n) != NULL){
+		for(int i = 0 ; i< list_size(received_process->instructions); i++){
 			t_instruction* a = create_instruction(4);
-			list_add_all(a->params,((t_instruction*) list_get(received_process->instructions,n))->params);
-			a->id =((t_instruction*) list_get(received_process->instructions,n))->id;
-			log_info(logger,a->id);
+			list_add_all(a->params,((t_instruction*) list_get(received_process->instructions,i))->params);
+			a->id =((t_instruction*) list_get(received_process->instructions,i))->id;
+
+			/*void _get_instruction_param(void *elem) {
+				log_instruction_param(logger, elem);
+			}
+
+			list_iterate(a->params, _get_instruction_param);*/
+
 			list_add(pcb->instructions,a);
 			instruction_destroy(a);
-			n++;
 		}
 
-		pcb->id=pid;
+		pcb->id = pid;
 		pcb->size = received_process->size;
 		pcb->program_counter = 0;
 		pcb->burst_estimation = config -> initialEstimate;
@@ -387,8 +392,9 @@ void* io_t(void *args){
 	}
 }
 
-int getIO(t_pcb* pcb){/*
-	int n = ((t_instruction*)((pcb->instructions)[pcb->program_counter]))->params[0];
-	*/
-	return 0;
+int getIO(t_pcb* pcb){
+	t_instruction* instruccion;
+	instruccion = list_get(pcb->instructions, pcb->program_counter) ;
+	int n = (int) list_get(instruccion->params, 0);
+	return n;
 }
