@@ -76,7 +76,7 @@ int main(void) {
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 	//pid = 0;
 	while (1) {
-		log_info(logger,"PRIMERO %d",server_socket);
+
 		server_listen(server_socket, header_handler);
 
 	}
@@ -122,12 +122,13 @@ void* thread_shortTermFunc(void *args) {
 }
 
 void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
-	sem_wait(&bloquear);
 	t_pcb *pcb;
 	while (1) {
-		sem_wait(&longTermSemCall);
-		pthread_mutex_lock(&mutex_mediumTerm);
 		pcb = (t_pcb*) pQueue_take(newQ);
+
+		//sem_wait(&longTermSemCall);
+		//pthread_mutex_lock(&mutex_mediumTerm);
+		//pcb = (t_pcb*) pQueue_take(newQ);
 
 		// Message a Memoria para que cree estructuras
 		t_packet *memory_info = create_packet(MEMORY_INFO, 64);
@@ -178,11 +179,13 @@ void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo q
 
 		pcb = (t_pcb*) pQueue_take(suspended_readyQ);
 
+		putToReady(pcb);
+
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Medium Term Scheduler: process %u from Suspended Ready to Ready",pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
-		putToReady(pcb);
+
 
 		pthread_mutex_lock(&mutex_cupos);
 		cupos_libres--;
@@ -275,32 +278,19 @@ bool receive_process(t_packet *petition, int console_socket) {
 
 	if(!!received_process){
 		t_pcb *pcb = create_pcb();
+		log_info(logger,"0");
+
+		pcb->instructions=received_process->instructions;
 		pid++;
-		for(int i = 0 ; i< list_size(received_process->instructions); i++){
-			t_instruction* a = create_instruction(4);
-			list_add_all(a->params,((t_instruction*) list_get(received_process->instructions,i))->params);
-			a->id =((t_instruction*) list_get(received_process->instructions,i))->id;
-
-			/*void _get_instruction_param(void *elem) {
-				log_instruction_param(logger, elem);
-			}
-
-			list_iterate(a->params, _get_instruction_param);*/
-
-			list_add(pcb->instructions,a);
-			instruction_destroy(a);
-		}
-
 		pcb->id = pid;
 		pcb->size = received_process->size;
 		pcb->program_counter = 0;
 		pcb->burst_estimation = config -> initialEstimate;
 
-		int b = (int) list_get(((t_instruction*) list_get(pcb->instructions,0))->params,0);
-		log_info(logger, "ESTA ES MI INSTRU %d", b);
 		pQueue_put(newQ, (void*) pcb);
-		log_info(logger, "Adding process to New, %s", pcb->id);
 		sem_post(&sem_newProcess);
+		log_info(logger, "Adding process to New, %d", pcb->id);
+
 	}
 
 	process_destroy(received_process);
@@ -395,6 +385,6 @@ void* io_t(void *args){
 int getIO(t_pcb* pcb){
 	t_instruction* instruccion;
 	instruccion = list_get(pcb->instructions, pcb->program_counter) ;
-	int n = (int) list_get(instruccion->params, 0);
+	uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
 	return n;
 }

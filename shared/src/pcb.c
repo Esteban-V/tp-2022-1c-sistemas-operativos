@@ -19,9 +19,10 @@ void destroy_pcb(t_pcb *pcb) {
 
 t_pcb* create_pcb() {
 	t_pcb *pcb = malloc(sizeof(t_pcb));
-	pcb->instructions = list_create();
+	//pcb->instructions = list_create();
 	return pcb;
 }
+
 
 void stream_take_pcb(t_packet *packet, t_pcb *pcb) {
 	uint32_t *id = &(pcb->id);
