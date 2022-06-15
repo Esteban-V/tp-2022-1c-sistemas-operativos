@@ -3,22 +3,24 @@
 int main() {
 	// Initialize logger
 	logger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
-	//config = getMemoryConfig("memory.config");
+	config = getMemoryConfig("memory.config");
 
 	// Creacion de server
 	int server_socket = create_server("127.0.0.1", "8002");
 	log_info(logger, "Servidor de Memoria creado");
 
-	//tlb = createTLB();
+	memory = initializeMemory(config);
+	clock_m_counter = 0;
+	pageTables = dictionary_create();
 
 	while (1) {
-		log_info(logger, "UNO");
-
+		log_info(logger, "TEST");
 		server_listen(server_socket, header_handler);
 	}
 
-	log_destroy(logger);
-	//destroyTLB(tlb);
+	destroyMemoryConfig(config);
+    dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
+    log_destroy(logger);
 
 	return EXIT_SUCCESS;
 }
@@ -61,4 +63,13 @@ void* header_handler(void *_client_socket) {
 		packet_destroy(packet);
 	}
 	return 0;
+}
+
+/////////////////////
+
+t_memory *initializeMemory(t_memoryConfig *config){
+    t_memory *newMemory = malloc(sizeof(t_memory));
+    newMemory->memory = calloc(1,config->memorySize);
+
+    return newMemory;
 }
