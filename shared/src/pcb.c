@@ -1,14 +1,5 @@
 #include"pcb.h"
 
-/*
- * pcb.c
- *
- *  Created on: 3 jun. 2022
- *      Author: utnso
- */
-
-
-
 void destroy_pcb(t_pcb *pcb) {
 	if (pcb != NULL) {
 		list_destroy(pcb->instructions);

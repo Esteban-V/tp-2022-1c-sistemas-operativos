@@ -283,7 +283,7 @@ bool receive_process(t_packet *petition, int console_socket) {
 		pcb->burst_estimation = config -> initialEstimate;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Adding process to New, %d", pcb->id);
+		log_info(logger, "Process %d to New", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 		pQueue_put(newQ, (void*) pcb);
 		sem_post(&any_for_ready);
