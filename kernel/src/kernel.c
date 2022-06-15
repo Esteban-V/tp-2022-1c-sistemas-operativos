@@ -26,15 +26,16 @@ int main(void) {
 	 sortingAlgorithm = FIFO;
 
 	 // Inicializar Planificador de largo plazo
-	 pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
-	 pthread_detach(thread_longTerm);
+	 pthread_create(&newToReadyThread, 0, newToReady, NULL);
+	 pthread_detach(newToReadyThread);
 
-	 pthread_create(&thread_mediumTermUnsuspender, 0, thread_mediumTermUnsuspenderFunc, NULL);
-	 pthread_detach(thread_mediumTermUnsuspender);
+	 // Inicializar Planificador de largo plazo
+	 pthread_create(&readyToExecThread, 0, readyToExec, NULL);
+	 pthread_detach(readyToExecThread);
 
-	 // Inicializar Planificador de mediano plazo
-	 pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
-	 pthread_detach(thread_mediumTerm);
+	 // Finalizador de procesos
+	 pthread_create(&exitProcessThread, 0, exitProcess, NULL);
+	 pthread_detach(exitProcessThread);
 
 	 // Inicializar cpu listener
 	 pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
@@ -54,7 +55,7 @@ int main(void) {
 	cupos_libres = config->multiprogrammingLevel;
 	pthread_mutex_init(&mutex_cupos, NULL);
 
-	sem_init(&sem_newProcess, 0, 0);
+	sem_init(&any_for_ready, 0, 0);
 	sem_init(&longTermSemCall, 0, 0);
 
 	sem_init(&exec_to_ready,0,0);
@@ -97,15 +98,27 @@ void* cpu_listenerFunc(){
 	return 0;
 }
 
-// Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
-// Cuando lo pasa a blocked, recalcula el estimador de rafaga del proceso segun la cantidad de rafagas que duro
-void* thread_shortTermFunc(void *args) {
-	sem_wait(&bloquear);
+void* exitProcess(){
+	t_pcb* pcb;
+	while(1){
+		pcb = pQueue_take(exitQ);
+
+
+		//avisar a consola que rompa todo
+		//recibir respuesta de consola
+
+
+		//avisar a consola
+	}
+	return 0;
+}
+
+void* readyToExec(void *args) {
 	t_pcb *pcb = NULL;
 	while(1){
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
-
+		/*
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
 		stream_add_pcb(pcb_packet,pcb);
 			if (cpu_server_socket != -1) {
@@ -113,7 +126,7 @@ void* thread_shortTermFunc(void *args) {
 			}
 
 			packet_destroy(pcb_packet);
-
+*/
 		pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Process %d to CPU", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
@@ -121,9 +134,15 @@ void* thread_shortTermFunc(void *args) {
 	}
 }
 
-void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
+void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb;
 	while (1) {
+		sem_wait(&sem_multiprogram);
+		sem_wait(&any_for_ready);
+		if(!pQueue_isEmpty(suspended_readyQ)){
+			pcb = pQueue_take(suspended_readyQ);
+			pQueue_put(readyQ,pcb);
+		}
 		pcb = (t_pcb*) pQueue_take(newQ);
 
 		//sem_wait(&longTermSemCall);
@@ -161,85 +180,61 @@ void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y 
 	}
 }
 
-
-
-void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo que pasa a Ready a aquellos procesos en Suspended-Ready
-	sem_wait(&bloquear);
-
+void* io_t(void *args) {
 	t_pcb *pcb;
-	while (1) {
-		sem_wait(&sem_multiprogram);
-		sem_wait(&sem_newProcess);
-		pthread_mutex_lock(&mutex_mediumTerm);
-		if (pQueue_isEmpty(suspended_readyQ)) {
-			sem_post(&longTermSemCall);
-			pthread_mutex_unlock(&mutex_mediumTerm);
-			continue;
-		}
-
-		pcb = (t_pcb*) pQueue_take(suspended_readyQ);
-
-		putToReady(pcb);
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Medium Term Scheduler: process %u from Suspended Ready to Ready",pcb->id);
-		pthread_mutex_unlock(&mutex_log);
-
-
-
-		pthread_mutex_lock(&mutex_cupos);
-		cupos_libres--;
-		pthread_mutex_unlock(&mutex_cupos);
-
-		pthread_mutex_unlock(&mutex_mediumTerm);
-	}
-}
-
-// Agarra un proceso de blocked, lo pasa a suspended blocked y sube el grado de multiprogramacion
-void* thread_mediumTermFunc(void *args) {
-	sem_wait(&bloquear);
-	t_pcb *pcb;
+	int milisecs;
+	int sobra;
 
 	//int memorySocket = connectToServer(config->memoryIP, config->memoryPort);
 
 	//t_packet* suspendRequest;
 
 	while (1) {
-
-
+		sem_wait(&any_blocked);
+		if(!pQueue_isEmpty(blockedQ)){
 		pcb=pQueue_peek(blockedQ);//retorna el primer elemento de
 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 
-		usleep((config->maxBlockedTime)-(toMiliSec(now)-(pcb->blocked_time)));
+		milisecs=(config->maxBlockedTime)-(toMiliSec(now)-(pcb->blocked_time));
 
-		if(pQueue_peek(blockedQ)==pcb); // @suppress("Suspicious semicolon")
+		sobra = milisecs - pcb->nextIO;
 
-		pcb = (t_pcb*) pQueue_take(blockedQ);
+		if(sobra>=0){
+			usleep(pcb->nextIO);
+			pcb = pQueue_take(blockedQ);
+			putToReady(pcb);
+		}
+		else{
+			usleep(milisecs);
+			pcb = pQueue_take(blockedQ);
+			pcb->nextIO= pcb->nextIO - milisecs;
+			//Notifica a memoria de la suspension
+			//suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
+			//streamAdd_UINT32(suspendRequest->payload, process->pid);
+			//socket_sendPacket(memorySocket, suspendRequest);
+			//destroyPacket(suspendRequest);
+			pQueue_put(suspended_blockQ,pcb);
+			sem_post(&sem_multiprogram);
+			pthread_mutex_lock(&mutex_cupos);
+			cupos_libres++;
+			pthread_mutex_unlock(&mutex_cupos);
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
+			pthread_mutex_unlock(&mutex_log);
+		}
 
-		pQueue_put(suspended_readyQ, (void*) pcb);
+		}else{
+			pcb=pQueue_peek(suspended_blockQ);
+			usleep(pcb->nextIO);
+			pcb = pQueue_take(suspended_blockQ);
+			pQueue_put(suspended_readyQ,pcb);
+			sem_post(&any_for_ready);
+		}
 
-		sem_post(&sem_multiprogram);
-
-		pthread_mutex_lock(&mutex_cupos);
-		cupos_libres++;
-		pthread_mutex_unlock(&mutex_cupos);
-
-		//Notifica a memoria de la suspension
-		//suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
-		//streamAdd_UINT32(suspendRequest->payload, process->pid);
-		//socket_sendPacket(memorySocket, suspendRequest);
-		//destroyPacket(suspendRequest);
-
-		pthread_mutex_unlock(&mutex_mediumTerm);
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
-		pthread_mutex_unlock(&mutex_log);
 	}
 }
 
-// Funcion para poner un proceso a ready, actualiza la cola de ready y la reordena segun algoritmo
-// No hay hilo de corto plazo ya que esta funcion hace exactamente eso de un saque
 void putToReady(t_pcb *pcb) {
 
 	pQueue_put(readyQ, (void*) pcb);
@@ -287,10 +282,11 @@ bool receive_process(t_packet *petition, int console_socket) {
 		pcb->program_counter = 0;
 		pcb->burst_estimation = config -> initialEstimate;
 
-		pQueue_put(newQ, (void*) pcb);
-		sem_post(&sem_newProcess);
+		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Adding process to New, %d", pcb->id);
-
+		pthread_mutex_unlock(&mutex_log);
+		pQueue_put(newQ, (void*) pcb);
+		sem_post(&any_for_ready);
 	}
 
 	process_destroy(received_process);
@@ -302,9 +298,9 @@ bool io(t_packet *petition, int console_socket){
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition,received_pcb);
-	pQueue_put(blockedQ,(void*) received_pcb);//faltaria poner en que momento entro en bloqueado?
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 	received_pcb->blocked_time = toMiliSec(now);
+	pQueue_put(blockedQ,(void*) received_pcb);
 	sem_post(&any_blocked);
 	return false;
 }
@@ -354,33 +350,12 @@ void* header_handler(void *_client_socket) {
 	return 0;
 }
 
+
 float toMiliSec(struct timespec time){
 	return (time.tv_sec)*1000+(time.tv_nsec)/1000000;
 }
 
-void* io_t(void *args){
-	sem_wait(&bloquear);
-	t_pcb* pcb;
-	while(1){
-		sem_wait(&any_blocked);
-		if(pQueue_isEmpty(suspended_blockQ)){
-		pcb = pQueue_peek(blockedQ);
-		}
-		if(!pQueue_isEmpty(suspended_blockQ)){
-		pcb =pQueue_peek(suspended_blockQ);
-		}
-		usleep(getIO(pcb));
-		if(pQueue_isEmpty(suspended_blockQ)){
-		pcb =pQueue_take(blockedQ);
-		putToReady(pcb);
-		}
-		if(!pQueue_isEmpty(suspended_blockQ)){
-		pcb = pQueue_take(suspended_blockQ);
-		pQueue_put(suspended_readyQ,(void*)pcb);
-		}
 
-	}
-}
 
 int getIO(t_pcb* pcb){
 	t_instruction* instruccion;

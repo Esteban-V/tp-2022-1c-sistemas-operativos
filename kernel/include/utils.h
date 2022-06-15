@@ -57,10 +57,12 @@ typedef struct t_ptbr {
 
 
 
-void* thread_mediumTermUnsuspenderFunc(void *args);
+void* suspendProcess(void *args);
+void* exitProcess();
 
+void* readyToExec(void *args);
 void* thread_mediumTermFunc(void *args);
-void* thread_longTermFunc();
+void* newToReady();
 bool SFJAlg(void *elem1, void *elem2);
 void* thread_longTermFunc();
 void* cpu_listenerFunc();
