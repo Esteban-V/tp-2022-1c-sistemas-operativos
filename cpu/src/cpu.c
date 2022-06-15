@@ -16,8 +16,7 @@ int main(){
 		// Creacion de server
 		int server_dispatch_socket = create_server(config->ip,config->dispatchListenPort);
 
-
-		sem_init(&pcb_loaded, 0, 0);
+		pthread_cond_init(&pcb_loaded, NULL);
 
 		log_info(logger, "Servidor de cpu creado");
 
@@ -27,7 +26,20 @@ int main(){
 		while (1) {
 			log_info(logger, "UNO");
 			server_listen(server_dispatch_socket, header_handler);
-			sem_wait(&pcb_loaded);
+			pthread_cond_wait(&pcb_loaded);
+
+			t_instruction* instruccion;
+			instruccion = list_get(pcb->instructions, pcb->program_counter) ;
+			char* instru = instruccion->id;
+
+			switch(instru){
+			case:
+
+			}
+
+			uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
+				return n;
+
 		}
 
 		log_destroy(logger);
@@ -43,11 +55,10 @@ void* interruption(){
 }
 
 bool receivedPcb(t_packet *petition, int console_socket){
-	t_pcb *received = create_pcb();
-	stream_take_pcb(petition, received);
-
-	log_info(logger,"RECIBO PCB %d",received->id);
-	sem_post(&pcb_loaded);
+	pcb = create_pcb();
+	stream_take_pcb(petition, pcb);
+	log_info(logger,"RECIBO PCB %d",pcb->id);
+	pthread_cond_signal(&pcb_loaded);
 	return false;
 }
 

@@ -34,9 +34,8 @@ t_cpuConfig *config;
 void* interruption();
 bool receivedPcb(t_packet *petition, int console_socket);
 bool receivedInterruption(t_packet *petition, int console_socket);
-sem_t pcb_loaded;
 void* header_handler(void *_client_socket);
-
+pthread_cond_t pcb_loaded;
 
 pthread_t interruptionThread;
 

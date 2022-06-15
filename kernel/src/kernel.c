@@ -274,7 +274,11 @@ bool receive_process(t_packet *petition, int console_socket) {
 		t_pcb *pcb = create_pcb();
 		log_info(logger,"0");
 
-		pcb->instructions=received_process->instructions;
+		t_list* instrucciones = received_process->instructions;
+
+
+		memcpy(pcb->instructions,instrucciones,sizeof(t_list));
+
 		pid++;
 		pcb->id = pid;
 		pcb->size = received_process->size;
