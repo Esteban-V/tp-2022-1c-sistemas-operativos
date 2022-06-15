@@ -14,31 +14,56 @@ int main(){
 
 
 		// Creacion de server
-		int server_dispatch_socket = create_server(config->ip,config->dispatchListenPort);
+		server_dispatch_socket = create_server(config->ip,config->dispatchListenPort);
+		server_interrupt_socket = create_server(config->ip,config->interruptListenPort);
 
-		pthread_cond_init(&pcb_loaded, NULL);
+		sem_init(&pcb_loaded,0,1);
 
 		log_info(logger, "Servidor de cpu creado");
 
 		pthread_create(&interruptionThread, 0, interruption, NULL);
 		pthread_detach(interruptionThread);
-
+		server_listen(server_dispatch_socket, header_handler);
 		while (1) {
 			log_info(logger, "UNO");
 			server_listen(server_dispatch_socket, header_handler);
-			pthread_cond_wait(&pcb_loaded);
+			log_info(logger,"QEEE");
+			sem_wait(&pcb_loaded);
+			while(pcb->program_counter<list_size(pcb->instructions)){
 
-			t_instruction* instruccion;
-			instruccion = list_get(pcb->instructions, pcb->program_counter) ;
-			char* instru = instruccion->id;
+				t_instruction* instruccion;
+				instruccion = list_get(pcb->instructions, pcb->program_counter) ;
+				char* instru = instruccion->id;
+				uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
 
-			switch(instru){
-			case:
-
+				switch(getOperation(instru)){
+				case NO_OPOP:{
+					log_info(logger, "EJECUTA NO OP");
+					break;
+				}
+				case IOOP:{
+					log_info(logger, "EJECUTA I/O");
+					break;
+				}
+				case READOP:{
+					log_info(logger, "EJECUTA READ");
+					break;
+				}
+				case COPYOP:{
+					log_info(logger, "EJECUTA COPY");
+					break;
+				}
+				case WRITEOP:{
+					log_info(logger, "EJECUTA WRITE");
+					break;
+				}
+				case EXITOP:{
+					log_info(logger, "EJECUTA EXIT");
+					break;
+				}
+				}
+			pcb->program_counter=pcb->program_counter+1;
 			}
-
-			uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
-				return n;
 
 		}
 
@@ -47,9 +72,9 @@ int main(){
 }
 
 void* interruption(){
-	log_info(logger, "Servidor de interrupciones creado");
-	int server_interrupt_socket = create_server(config->ip,config->interruptListenPort);
+
 	while(1){
+		log_info(logger, "Servidor de interrupciones creado");
 		server_listen(server_interrupt_socket, header_handler);
 	}
 }
@@ -58,7 +83,7 @@ bool receivedPcb(t_packet *petition, int console_socket){
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
 	log_info(logger,"RECIBO PCB %d",pcb->id);
-	pthread_cond_signal(&pcb_loaded);
+	sem_post(&pcb_loaded);
 	return false;
 }
 
@@ -92,6 +117,30 @@ void* header_handler(void *_client_socket) {
 		packet_destroy(packet);
 	}
 	return 0;
+}
+
+enum operation getOperation(char* operation){
+	if(operation=="NO_OP"){
+		return NO_OPOP;
+	}
+	if(operation=="I/O"){
+		return IOOP;
+	}
+	if(operation=="READ"){
+		return READOP;
+	}
+	if(operation=="WRITE"){
+		return WRITEOP;
+	}
+	if(operation=="COPY"){
+		return COPYOP;
+	}
+	if(operation=="COPY"){
+		return COPYOP;
+	}
+	if(operation=="EXIT"){
+		return EXITOP;
+	}
 }
 
 

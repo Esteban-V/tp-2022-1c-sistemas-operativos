@@ -29,13 +29,19 @@
 #include "cpuConfig.h"
 #include "semaphore.h"
 
+
+enum operation{NO_OPOP,IOOP,READOP,COPYOP,WRITEOP,EXITOP};
+
+enum operation getOperation(char*);
 t_pcb *pcb;
 t_cpuConfig *config;
 void* interruption();
 bool receivedPcb(t_packet *petition, int console_socket);
 bool receivedInterruption(t_packet *petition, int console_socket);
 void* header_handler(void *_client_socket);
-pthread_cond_t pcb_loaded;
+sem_t pcb_loaded;
+int server_dispatch_socket;
+int server_interrupt_socket;
 
 pthread_t interruptionThread;
 
