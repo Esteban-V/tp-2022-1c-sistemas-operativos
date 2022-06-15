@@ -68,10 +68,10 @@ int main(void) {
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
 
-/*
+
 	cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
 	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
- */
+
 
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
@@ -118,15 +118,14 @@ void* readyToExec(void *args) {
 	while(1){
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
-		/*
+
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
 		stream_add_pcb(pcb_packet,pcb);
-			if (cpu_server_socket != -1) {
+		if (cpu_server_socket != -1) {
 				socket_send_packet(cpu_server_socket, pcb_packet);
-			}
+		}
 
-			packet_destroy(pcb_packet);
-*/
+		packet_destroy(pcb_packet);
 		pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Process %d to CPU", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
