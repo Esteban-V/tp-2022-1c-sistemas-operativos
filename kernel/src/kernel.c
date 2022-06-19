@@ -73,8 +73,9 @@ int main(void) {
 	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
 
 
-
+/*
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
+	*/
 	//pid = 0;
 	while (1) {
 
@@ -149,6 +150,9 @@ void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a
 		//pcb = (t_pcb*) pQueue_take(newQ);
 
 		// Message a Memoria para que cree estructuras
+
+
+		/*
 		t_packet *memory_info = create_packet(MEMORY_INFO, 64);
 		stream_add_UINT32(memory_info->payload, pcb->size);
 
@@ -162,7 +166,7 @@ void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a
 		// Recibir valo de Tabla
 
 		// Actualizar PCB
-
+*/
 		putToReady(pcb);
 
 				pthread_mutex_lock(&mutex_log);
