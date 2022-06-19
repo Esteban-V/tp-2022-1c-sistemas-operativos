@@ -10,20 +10,20 @@
 pthread_mutex_t pageTablesMut;
 t_dictionary* pageTables;
 
-typedef struct pageTableEntry {
+typedef struct pageTableEntry { // TODO Datos?
     bool present;
     uint32_t frame;
     bool in_use;
     bool modified;
 } t_pageTableEntry;
 
-typedef struct t_ptbr2 {
+typedef struct t_ptbr2 { // TODO Numero de Tabla
     int32_t pageQuantity;
     t_pageTableEntry *entries;
 } t_ptbr2;
 
 typedef struct t_ptbr1 {
-    int32_t pageQuantity;
+    int32_t entryQuantity;
     t_ptbr2 *entries;
 } t_ptbr1;
 

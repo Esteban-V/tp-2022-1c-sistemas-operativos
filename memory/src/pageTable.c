@@ -8,7 +8,7 @@
 
 t_ptbr1 *initializePageTable1(){
 	t_ptbr1 *newTable = malloc(sizeof(t_ptbr1));
-    newTable->pageQuantity = 0;
+    newTable->entryQuantity = 0;
     newTable->entries = NULL;
     return newTable;
 }
@@ -24,8 +24,8 @@ void _destroyPageTable(void *table){
 
 void pageTable_destroyLastEntry(t_ptbr1* pt){
     pthread_mutex_lock(&pageTablesMut);
-        (pt->pageQuantity)--;
-        pt->entries = realloc(pt->entries, sizeof(t_pageTableEntry)*(pt->pageQuantity));
+        (pt->entryQuantity)--;
+        pt->entries = realloc(pt->entries, sizeof(t_pageTableEntry)*(pt->entryQuantity));
     pthread_mutex_unlock(&pageTablesMut);
 }
 
@@ -50,7 +50,7 @@ t_ptbr1* getPageTable(uint32_t _PID, t_dictionary* pagTables) {
 bool pageTable_isEmpty(uint32_t PID) {
 	t_ptbr1 *pt = getPageTable(PID, pageTables);
     pthread_mutex_lock(&pageTablesMut);
-        bool isEmpty = pt->pageQuantity == 0;
+        bool isEmpty = pt->entryQuantity == 0;
     pthread_mutex_unlock(&pageTablesMut);
     return isEmpty;
 }

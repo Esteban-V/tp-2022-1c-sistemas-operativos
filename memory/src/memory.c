@@ -56,7 +56,9 @@ bool receive_memory_info(t_packet *petition, int console_socket) {
 
 		free(_PID);
 
-		// Enviar Confirmacion / Informacion a Kernel
+
+		// TODO Paginas?
+		// TODO Enviar Confirmacion / Informacion a Kernel
 
 	}
 
@@ -90,6 +92,7 @@ void* header_handler(void *_client_socket) {
 	}
 	return 0;
 }
+
 
 /////////////////////
 
