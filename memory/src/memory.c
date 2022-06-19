@@ -3,35 +3,61 @@
 int main() {
 	// Initialize logger
 	logger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
+	// Initialize Config
 	config = getMemoryConfig("memory.config");
 
 	// Creacion de server
 	int server_socket = create_server("127.0.0.1", "8002");
 	log_info(logger, "Servidor de Memoria creado");
 
+	// Initialize Variables
 	memory = initializeMemory(config);
 	clock_m_counter = 0;
 	pageTables = dictionary_create();
+	algoritmo = strcmp(config->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
 
 	while (1) {
 		log_info(logger, "TEST");
 		server_listen(server_socket, header_handler);
 	}
 
+	// Destroy
 	destroyMemoryConfig(config);
-    dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
+    dictionary_destroy_and_destroy_elements(pageTables,_destroyPageTable);
     log_destroy(logger);
 
 	return EXIT_SUCCESS;
 }
 
-bool receive_memory_info(t_packet *petition, int console_socket) {
-	log_info(logger, "DOS");
-	int size = (int)stream_take_UINT32(petition->payload);
-	log_info(logger, "UINT STREAM, %d", size);
+bool process_suspension(t_packet *petition, int console_socket) {
+	log_info(logger, "SUSPENSION");
+	int PID = (int)stream_take_UINT32(petition->payload);
+	// TODO size?
+	log_info(logger, "PID STREAM, %d", PID);
 
-	if (!!size) {
-		log_info(logger, "UINT RECEIVED, %d", size);
+
+	return false;
+}
+
+bool receive_memory_info(t_packet *petition, int console_socket) {
+	log_info(logger, "RECIBIR INFO PA TABLAS");
+	int PID = (int)stream_take_UINT32(petition->payload);
+	log_info(logger, "PID STREAM, %d", PID);
+
+	if (!!PID) {
+		log_info(logger, "PID RECEIVED, %d", PID);
+
+		t_ptbr1 *newPageTable = initializePageTable1();
+		char *_PID = string_itoa(PID);
+
+		pthread_mutex_lock(&pageTablesMut);
+		dictionary_put(pageTables, _PID, (void*) newPageTable);
+		pthread_mutex_unlock(&pageTablesMut);
+
+		free(_PID);
+
+		// Enviar Confirmacion / Informacion a Kernel
+
 	}
 
 	return false;
@@ -73,3 +99,4 @@ t_memory *initializeMemory(t_memoryConfig *config){
 
     return newMemory;
 }
+

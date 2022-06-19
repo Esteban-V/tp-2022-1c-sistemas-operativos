@@ -6,7 +6,7 @@ t_memoryConfig* getMemoryConfig(char* path){
     memoryConfig->listenPort = config_get_string_value(memoryConfig->config, "PUERTO_ESCUCHA");
     memoryConfig->memorySize = config_get_int_value(memoryConfig->config, "TAM_MEMORIA");
     memoryConfig->pageSize = config_get_int_value(memoryConfig->config, "TAM_PAGINA");
-    memoryConfig->entriesPerPage = config_get_int_value(memoryConfig->config, "ENTRADAS_POR_TABLA");
+    memoryConfig->entriesPerTable = config_get_int_value(memoryConfig->config, "ENTRADAS_POR_TABLA");
     memoryConfig->memoryDelay = config_get_int_value(memoryConfig->config, "RETARDO_MEMORIA");
     memoryConfig->replaceAlgorithm = config_get_string_value(memoryConfig->config, "ALGORITMO_REEMPLAZO");
     memoryConfig->framesPerProcess = config_get_int_value(memoryConfig->config, "MARCOS_POR_PROCESO");
@@ -19,7 +19,7 @@ void destroyMemoryConfig(t_memoryConfig* memoryConfig){
     free(memoryConfig->listenPort);
     free(memoryConfig->memorySize);
     free(memoryConfig->pageSize);
-    free(memoryConfig->entriesPerPage);
+    free(memoryConfig->entriesPerTable);
     free(memoryConfig->memoryDelay);
     free(memoryConfig->replaceAlgorithm);
     free(memoryConfig->framesPerProcess);
