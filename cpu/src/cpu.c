@@ -17,58 +17,82 @@ int main(){
 		server_dispatch_socket = create_server(config->ip,config->dispatchListenPort);
 		server_interrupt_socket = create_server(config->ip,config->interruptListenPort);
 
-		sem_init(&pcb_loaded,0,1);
+		sem_init(&pcb_loaded,0,0);
 
 		log_info(logger, "Servidor de cpu creado");
 
 		pthread_create(&interruptionThread, 0, interruption, NULL);
 		pthread_detach(interruptionThread);
-		server_listen(server_dispatch_socket, header_handler);
+
+		pthread_create(&execThread, 0, execution, NULL);
+		pthread_detach(execThread);
+
 		while (1) {
-			log_info(logger, "UNO");
 			server_listen(server_dispatch_socket, header_handler);
-			log_info(logger,"QEEE");
-			sem_wait(&pcb_loaded);
-			while(pcb->program_counter<list_size(pcb->instructions)){
-
-				t_instruction* instruccion;
-				instruccion = list_get(pcb->instructions, pcb->program_counter) ;
-				char* instru = instruccion->id;
-				uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
-
-				switch(getOperation(instru)){
-				case NO_OPOP:{
-					log_info(logger, "EJECUTA NO OP");
-					break;
-				}
-				case IOOP:{
-					log_info(logger, "EJECUTA I/O");
-					break;
-				}
-				case READOP:{
-					log_info(logger, "EJECUTA READ");
-					break;
-				}
-				case COPYOP:{
-					log_info(logger, "EJECUTA COPY");
-					break;
-				}
-				case WRITEOP:{
-					log_info(logger, "EJECUTA WRITE");
-					break;
-				}
-				case EXITOP:{
-					log_info(logger, "EJECUTA EXIT");
-					break;
-				}
-				}
-			pcb->program_counter=pcb->program_counter+1;
-			}
-
 		}
 
 		log_destroy(logger);
 
+}
+
+void* execution(){
+	while(1){
+		sem_wait(&pcb_loaded);
+		log_info(logger,"QUE HAGO ACA");
+		while(pcb->program_counter<list_size(pcb->instructions)){
+		t_instruction* instruccion;
+
+		instruccion = list_get(pcb->instructions, pcb->program_counter) ;
+		pcb->program_counter=pcb->program_counter+1;
+		char* instru = instruccion->id;
+		uint32_t n;
+		uint32_t m;
+		log_info(logger,"%s",instru);
+		enum operation entry = getOperation(instru);
+		switch(entry){
+		case NO_OPOP:{
+			log_info(logger, "EJECUTA NO OP");
+			n = *((uint32_t*) list_get(instruccion->params, 0));
+			noOperation(n);
+			break;
+			}
+			case IOOP:{
+				log_info(logger, "EJECUTA I/O");
+				n = *((uint32_t*) list_get(instruccion->params, 0));
+				inAndOut(n);
+				break;
+			}
+			case READOP:{
+				log_info(logger, "EJECUTA READ");
+				n = *((uint32_t*) list_get(instruccion->params, 0));
+				break;
+			}
+			case COPYOP:{
+				log_info(logger, "EJECUTA COPY");
+				n = *((uint32_t*) list_get(instruccion->params, 0));
+				m = *((uint32_t*) list_get(instruccion->params, 0));
+				break;
+			}
+			case WRITEOP:{
+				log_info(logger, "EJECUTA WRITE");
+				n = *((uint32_t*) list_get(instruccion->params, 0));
+				m = *((uint32_t*) list_get(instruccion->params, 0));
+				break;
+			}
+			case EXITOP:{
+				log_info(logger, "EJECUTA EXIT");
+				exitiando();
+				break;
+			}
+			case DEAD:{
+				log_info(logger, "MAL");
+				break;
+			}
+			}
+		log_info(logger,"CUANTA VECES");
+		}
+
+	}
 }
 
 void* interruption(){
@@ -119,28 +143,41 @@ void* header_handler(void *_client_socket) {
 	return 0;
 }
 
-enum operation getOperation(char* operation){
-	if(operation=="NO_OP"){
+enum operation getOperation(char* op){
+	log_info(logger, "%s",op);
+
+	if(!strcmp(op,"NO_OP")){
 		return NO_OPOP;
-	}
-	if(operation=="I/O"){
+	}else if(!strcmp(op,"I/O")){
 		return IOOP;
-	}
-	if(operation=="READ"){
+	}else if(!strcmp(op,"READ")){
 		return READOP;
-	}
-	if(operation=="WRITE"){
+	}else if(!strcmp(op,"WRITE")){
 		return WRITEOP;
-	}
-	if(operation=="COPY"){
+	}else if(!strcmp(op,"COPY")){
 		return COPYOP;
-	}
-	if(operation=="COPY"){
-		return COPYOP;
-	}
-	if(operation=="EXIT"){
+	}else if(!strcmp(op,"EXIT")){
 		return EXITOP;
-	}
+	}else return DEAD;
+
 }
+
+void noOperation(time){
+	usleep(time);
+	return;
+}
+void exitiando(){/*
+	t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
+	stream_add_pcb(pcb_packet,pcb);
+	if (cpu_server_socket != -1) {
+			socket_send_packet(cpu_server_socket, pcb_packet);
+	}
+	*/
+}
+void inAndOut(){
+
+}
+
+
 
 

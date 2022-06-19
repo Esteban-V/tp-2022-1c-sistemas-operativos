@@ -30,7 +30,7 @@
 #include "semaphore.h"
 
 
-enum operation{NO_OPOP,IOOP,READOP,COPYOP,WRITEOP,EXITOP};
+enum operation{NO_OPOP,IOOP,READOP,COPYOP,WRITEOP,EXITOP,DEAD};
 
 enum operation getOperation(char*);
 t_pcb *pcb;
@@ -39,10 +39,11 @@ void* interruption();
 bool receivedPcb(t_packet *petition, int console_socket);
 bool receivedInterruption(t_packet *petition, int console_socket);
 void* header_handler(void *_client_socket);
+void* execution();
 sem_t pcb_loaded;
 int server_dispatch_socket;
 int server_interrupt_socket;
 
-pthread_t interruptionThread;
+pthread_t interruptionThread, execThread;
 
 #endif /* INCLUDE_CPU_H_ */
