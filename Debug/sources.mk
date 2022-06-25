@@ -15,9 +15,11 @@ OBJS :=
 SUBDIRS := \
 console/Debug/src \
 console/src \
+cpu/Debug/src \
 cpu/src \
 kernel/Debug/src \
 kernel/src \
+memory/Debug/src \
 memory/src \
 shared/Debug/src \
 shared/src \

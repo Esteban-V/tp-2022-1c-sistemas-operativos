@@ -15,7 +15,7 @@
 #include<commons/config.h>
 
 typedef struct memoryConfig{
-    t_config* config;
+	t_config *config;
     int listenPort;
     int memorySize;
     int pageSize;

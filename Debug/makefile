@@ -11,9 +11,11 @@ RM := rm -rf
 -include shared/src/subdir.mk
 -include shared/Debug/src/subdir.mk
 -include memory/src/subdir.mk
+-include memory/Debug/src/subdir.mk
 -include kernel/src/subdir.mk
 -include kernel/Debug/src/subdir.mk
 -include cpu/src/subdir.mk
+-include cpu/Debug/src/subdir.mk
 -include console/src/subdir.mk
 -include console/Debug/src/subdir.mk
 -include objects.mk

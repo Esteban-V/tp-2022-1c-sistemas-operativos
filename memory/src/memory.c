@@ -14,7 +14,8 @@ int main() {
 	memory = initializeMemory(config);
 	clock_m_counter = 0;
 	pageTables = dictionary_create();
-	algoritmo = strcmp(config->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+	algoritmo =
+			strcmp(config->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
 
 	while (1) {
 		log_info(logger, "TEST");
@@ -23,25 +24,24 @@ int main() {
 
 	// Destroy
 	destroyMemoryConfig(config);
-    dictionary_destroy_and_destroy_elements(pageTables,_destroyPageTable);
-    log_destroy(logger);
+	dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
+	log_destroy(logger);
 
 	return EXIT_SUCCESS;
 }
 
 bool process_suspension(t_packet *petition, int console_socket) {
 	log_info(logger, "SUSPENSION");
-	int PID = (int)stream_take_UINT32(petition->payload);
+	int PID = (int) stream_take_UINT32(petition->payload);
 	// TODO size?
 	log_info(logger, "PID STREAM, %d", PID);
-
 
 	return false;
 }
 
 bool receive_memory_info(t_packet *petition, int console_socket) {
 	log_info(logger, "RECIBIR INFO PA TABLAS");
-	int PID = (int)stream_take_UINT32(petition->payload);
+	int PID = (int) stream_take_UINT32(petition->payload);
 	log_info(logger, "PID STREAM, %d", PID);
 
 	if (!!PID) {
@@ -55,7 +55,6 @@ bool receive_memory_info(t_packet *petition, int console_socket) {
 		pthread_mutex_unlock(&pageTablesMut);
 
 		free(_PID);
-
 
 		// TODO Paginas?
 		// TODO Enviar Confirmacion / Informacion a Kernel
@@ -93,13 +92,12 @@ void* header_handler(void *_client_socket) {
 	return 0;
 }
 
-
 /////////////////////
 
-t_memory *initializeMemory(t_memoryConfig *config){
-    t_memory *newMemory = malloc(sizeof(t_memory));
-    newMemory->memory = calloc(1,config->memorySize);
+t_memory* initializeMemory(t_memoryConfig *config) {
+	t_memory *newMemory = malloc(sizeof(t_memory));
+	newMemory->memory = calloc(1, config->memorySize);
 
-    return newMemory;
+	return newMemory;
 }
 

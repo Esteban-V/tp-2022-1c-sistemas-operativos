@@ -25,24 +25,24 @@ int main(void) {
 	if (!strcmp(config->schedulerAlgorithm, "FIFO"))
 		sortingAlgorithm = FIFO;
 
-	 // Inicializar Planificador de largo plazo
-	 pthread_create(&newToReadyThread, 0, newToReady, NULL);
-	 pthread_detach(newToReadyThread);
+	// Inicializar Planificador de largo plazo
+	pthread_create(&newToReadyThread, 0, newToReady, NULL);
+	pthread_detach(newToReadyThread);
 
-	 // Inicializar Planificador de largo plazo
-	 pthread_create(&readyToExecThread, 0, readyToExec, NULL);
-	 pthread_detach(readyToExecThread);
+	// Inicializar Planificador de largo plazo
+	pthread_create(&readyToExecThread, 0, readyToExec, NULL);
+	pthread_detach(readyToExecThread);
 
-	 // Finalizador de procesos
-	 pthread_create(&exitProcessThread, 0, exitProcess, NULL);
-	 pthread_detach(exitProcessThread);
+	// Finalizador de procesos
+	pthread_create(&exitProcessThread, 0, exitProcess, NULL);
+	pthread_detach(exitProcessThread);
 
 	// Inicializar cpu listener
 	pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
 	pthread_detach(cpu_listener);
 
-	 pthread_create(&io_thread, 0, io_t, NULL);
-	 pthread_detach(io_thread);
+	pthread_create(&io_thread, 0, io_t, NULL);
+	pthread_detach(io_thread);
 
 	// Creacion de server
 
@@ -60,22 +60,20 @@ int main(void) {
 
 	sem_init(&exec_to_ready, 0, 0);
 
-	sem_init(&any_blocked,0,0);
+	sem_init(&any_blocked, 0, 0);
 
-	sem_init(&bloquear,0,0);
+	sem_init(&bloquear, 0, 0);
 
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
 
+	cpu_server_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
+	cpu_int_server_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
 
-	cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
-	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
-
-
-/*
-	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
-	*/
+	/*
+	 memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
+	 */
 	//pid = 0;
 	while (1) {
 
@@ -88,26 +86,24 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
-void* cpu_listenerFunc(){
+void* cpu_listenerFunc() {
 	sem_wait(&bloquear);
 	/*
-	int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
-	while(1){
-		server_listen(server_cpu_socket, header_handler);
-	}
-*/
+	 int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
+	 while(1){
+	 server_listen(server_cpu_socket, header_handler);
+	 }
+	 */
 	return 0;
 }
 
-void* exitProcess(){
-	t_pcb* pcb;
-	while(1){
+void* exitProcess() {
+	t_pcb *pcb;
+	while (1) {
 		pcb = pQueue_take(exitQ);
-
 
 		//avisar a consola que rompa todo
 		//recibir respuesta de consola
-
 
 		//avisar a consola
 	}
@@ -121,9 +117,9 @@ void* readyToExec(void *args) {
 		pcb = pQueue_take(readyQ);
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
-		stream_add_pcb(pcb_packet,pcb);
+		stream_add_pcb(pcb_packet, pcb);
 		if (cpu_server_socket != -1) {
-				socket_send_packet(cpu_server_socket, pcb_packet);
+			socket_send_packet(cpu_server_socket, pcb_packet);
 		}
 
 		packet_destroy(pcb_packet);
@@ -139,9 +135,9 @@ void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a
 	while (1) {
 		sem_wait(&sem_multiprogram);
 		sem_wait(&any_for_ready);
-		if(!pQueue_isEmpty(suspended_readyQ)){
+		if (!pQueue_isEmpty(suspended_readyQ)) {
 			pcb = pQueue_take(suspended_readyQ);
-			pQueue_put(readyQ,pcb);
+			pQueue_put(readyQ, pcb);
 		}
 		pcb = (t_pcb*) pQueue_take(newQ);
 
@@ -151,21 +147,20 @@ void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a
 
 		// Message a Memoria para que cree estructuras
 
-
 		/*
-		t_packet *memory_info = create_packet(MEMORY_INFO, 64);
-		stream_add_UINT32(memory_info->payload, pcb->size);
+		 t_packet *memory_info = create_packet(MEMORY_INFO, 64);
+		 stream_add_UINT32(memory_info->payload, pcb->size);
 
-		if (memory_server_socket != -1) {
-			socket_send_packet(memory_server_socket, memory_info);
-		}
+		 if (memory_server_socket != -1) {
+		 socket_send_packet(memory_server_socket, memory_info);
+		 }
 
-		packet_destroy(memory_info);
+		 packet_destroy(memory_info);
 
-		// Recibir valo de Tabla
+		 // Recibir valo de Tabla
 
-		// Actualizar PCB
-*/
+		 // Actualizar PCB
+		 */
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
@@ -193,44 +188,46 @@ void* io_t(void *args) {
 
 	while (1) {
 		sem_wait(&any_blocked);
-		if(!pQueue_isEmpty(blockedQ)){
-		pcb=pQueue_peek(blockedQ);//retorna el primer elemento de
+		if (!pQueue_isEmpty(blockedQ)) {
+			pcb = pQueue_peek(blockedQ); //retorna el primer elemento de
 
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 
-		milisecs=(config->maxBlockedTime)-(toMiliSec(now)-(pcb->blocked_time));
+			milisecs = (config->maxBlockedTime)
+					- (toMiliSec(now) - (pcb->blocked_time));
 
-		sobra = milisecs - pcb->nextIO;
+			sobra = milisecs - pcb->nextIO;
 
-		if(sobra>=0){
-			usleep(pcb->nextIO);
-			pcb = pQueue_take(blockedQ);
-			putToReady(pcb);
-		}
-		else{
-			usleep(milisecs);
-			pcb = pQueue_take(blockedQ);
-			pcb->nextIO= pcb->nextIO - milisecs;
-			//Notifica a memoria de la suspension
-			//suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
-			//streamAdd_UINT32(suspendRequest->payload, process->pid);
-			//socket_sendPacket(memorySocket, suspendRequest);
-			//destroyPacket(suspendRequest);
-			pQueue_put(suspended_blockQ,pcb);
-			sem_post(&sem_multiprogram);
-			pthread_mutex_lock(&mutex_cupos);
-			cupos_libres++;
-			pthread_mutex_unlock(&mutex_cupos);
-			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
-			pthread_mutex_unlock(&mutex_log);
-		}
+			if (sobra >= 0) {
+				usleep(pcb->nextIO);
+				pcb = pQueue_take(blockedQ);
+				putToReady(pcb);
+			} else {
+				usleep(milisecs);
+				pcb = pQueue_take(blockedQ);
+				pcb->nextIO = pcb->nextIO - milisecs;
+				//Notifica a memoria de la suspension
+				//suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
+				//streamAdd_UINT32(suspendRequest->payload, process->pid);
+				//socket_sendPacket(memorySocket, suspendRequest);
+				//destroyPacket(suspendRequest);
+				pQueue_put(suspended_blockQ, pcb);
+				sem_post(&sem_multiprogram);
+				pthread_mutex_lock(&mutex_cupos);
+				cupos_libres++;
+				pthread_mutex_unlock(&mutex_cupos);
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger,
+						"Medium Term Scheduler: process %u to Suspended Blocked",
+						pcb->id);
+				pthread_mutex_unlock(&mutex_log);
+			}
 
-		}else{
-			pcb=pQueue_peek(suspended_blockQ);
+		} else {
+			pcb = pQueue_peek(suspended_blockQ);
 			usleep(pcb->nextIO);
 			pcb = pQueue_take(suspended_blockQ);
-			pQueue_put(suspended_readyQ,pcb);
+			pQueue_put(suspended_readyQ, pcb);
 			sem_post(&any_for_ready);
 		}
 
@@ -274,18 +271,17 @@ bool receive_process(t_packet *petition, int console_socket) {
 
 	if (!!received_process) {
 		t_pcb *pcb = create_pcb();
-		log_info(logger,"0");
+		log_info(logger, "0");
 
-		t_list* instrucciones = received_process->instructions;
+		t_list *instrucciones = received_process->instructions;
 
-
-		memcpy(pcb->instructions,instrucciones,sizeof(t_list));
+		memcpy(pcb->instructions, instrucciones, sizeof(t_list));
 
 		pid++;
 		pcb->id = pid;
 		pcb->size = received_process->size;
 		pcb->program_counter = 0;
-		pcb->burst_estimation = config -> initialEstimate;
+		pcb->burst_estimation = config->initialEstimate;
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Process %d to New", pcb->id);
@@ -302,10 +298,10 @@ bool receive_process(t_packet *petition, int console_socket) {
 bool io(t_packet *petition, int console_socket) {
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition,received_pcb);
+	stream_take_pcb(petition, received_pcb);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 	received_pcb->blocked_time = toMiliSec(now);
-	pQueue_put(blockedQ,(void*) received_pcb);
+	pQueue_put(blockedQ, (void*) received_pcb);
 	sem_post(&any_blocked);
 	return false;
 }
@@ -355,16 +351,13 @@ void* header_handler(void *_client_socket) {
 	return 0;
 }
 
-
-float toMiliSec(struct timespec time){
-	return (time.tv_sec)*1000+(time.tv_nsec)/1000000;
+float toMiliSec(struct timespec time) {
+	return (time.tv_sec) * 1000 + (time.tv_nsec) / 1000000;
 }
 
-
-
-int getIO(t_pcb* pcb){
-	t_instruction* instruccion;
-	instruccion = list_get(pcb->instructions, pcb->program_counter) ;
+int getIO(t_pcb *pcb) {
+	t_instruction *instruccion;
+	instruccion = list_get(pcb->instructions, pcb->program_counter);
 	uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
 	return n;
 }

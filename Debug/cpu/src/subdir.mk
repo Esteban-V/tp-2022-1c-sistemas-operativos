@@ -5,15 +5,15 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../cpu/src/cpu.c \
-../cpu/src/tlb.c 
+../cpu/src/cpuConfig.c 
 
 C_DEPS += \
 ./cpu/src/cpu.d \
-./cpu/src/tlb.d 
+./cpu/src/cpuConfig.d 
 
 OBJS += \
 ./cpu/src/cpu.o \
-./cpu/src/tlb.o 
+./cpu/src/cpuConfig.o 
 
 
 # Each subdirectory must supply rules for building sources it contributes
@@ -28,7 +28,7 @@ cpu/src/%.o: ../cpu/src/%.c cpu/src/subdir.mk
 clean: clean-cpu-2f-src
 
 clean-cpu-2f-src:
-	-$(RM) ./cpu/src/cpu.d ./cpu/src/cpu.o ./cpu/src/tlb.d ./cpu/src/tlb.o
+	-$(RM) ./cpu/src/cpu.d ./cpu/src/cpu.o ./cpu/src/cpuConfig.d ./cpu/src/cpuConfig.o
 
 .PHONY: clean-cpu-2f-src
 

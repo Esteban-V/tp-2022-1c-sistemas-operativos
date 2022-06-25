@@ -5,19 +5,19 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../memory/src/memory.c \
-../memory/src/pageTable.c \
+../memory/src/page_table.c \
 ../memory/src/swap.c \
 ../memory/src/utils.c 
 
 C_DEPS += \
 ./memory/src/memory.d \
-./memory/src/pageTable.d \
+./memory/src/page_table.d \
 ./memory/src/swap.d \
 ./memory/src/utils.d 
 
 OBJS += \
 ./memory/src/memory.o \
-./memory/src/pageTable.o \
+./memory/src/page_table.o \
 ./memory/src/swap.o \
 ./memory/src/utils.o 
 
@@ -34,7 +34,7 @@ memory/src/%.o: ../memory/src/%.c memory/src/subdir.mk
 clean: clean-memory-2f-src
 
 clean-memory-2f-src:
-	-$(RM) ./memory/src/memory.d ./memory/src/memory.o ./memory/src/pageTable.d ./memory/src/pageTable.o ./memory/src/swap.d ./memory/src/swap.o ./memory/src/utils.d ./memory/src/utils.o
+	-$(RM) ./memory/src/memory.d ./memory/src/memory.o ./memory/src/page_table.d ./memory/src/page_table.o ./memory/src/swap.d ./memory/src/swap.o ./memory/src/utils.d ./memory/src/utils.o
 
 .PHONY: clean-memory-2f-src
 

@@ -17,7 +17,7 @@
 #include"serialization.h"
 #include"socket_headers.h"
 #include"process_utils.h"
-#include"pcb.h"
+#include"pcb_utils.h"
 #include"utils.h"
 
 enum e_sortingAlgorithm {
@@ -29,9 +29,12 @@ enum e_sortingAlgorithm sortingAlgorithm;
 
 struct timespec start_exec_time, last_burst_estimate, now_time;
 
-t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ, *exitQ;
-pthread_t newToReadyThread,readyToExecThread, thread_mediumTerm, suspendProcessThread, cpu_listener,io_thread,exitProcessThread;
-sem_t sem_multiprogram, any_for_ready, longTermSemCall, freeCpu, exec_to_ready, any_blocked,bloquear;
+t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ,
+		*exitQ;
+pthread_t newToReadyThread, readyToExecThread, thread_mediumTerm,
+		suspendProcessThread, cpu_listener, io_thread, exitProcessThread;
+sem_t sem_multiprogram, any_for_ready, longTermSemCall, freeCpu, exec_to_ready,
+		any_blocked, bloquear;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
 pthread_cond_t cond_mediumTerm;
 
@@ -53,7 +56,7 @@ void putToReady(t_pcb *pcb);
 void terminate_kernel();
 void* thread_mediumTermFunc();
 void* io_t(void *args);
-int getIO(t_pcb* pcb);
+int getIO(t_pcb *pcb);
 float toMiliSec(struct timespec time);
 
 #endif /* KERNEL_H_ */

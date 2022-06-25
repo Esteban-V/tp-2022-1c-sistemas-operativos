@@ -26,11 +26,11 @@ typedef struct kernelConfig {
 	char *kernelIP;
 	char *kernelPort;
 	char *memoryIP;
-	char* memoryPort;
+	char *memoryPort;
 	char *cpuIP;
-	char* cpuPortDispatch;
-	char* cpuPortInterrupt;
-	char* listenPort;
+	char *cpuPortDispatch;
+	char *cpuPortInterrupt;
+	char *listenPort;
 	char *schedulerAlgorithm;
 	int initialEstimate;
 	char *alpha;
@@ -45,17 +45,14 @@ t_kernelConfig* getKernelConfig(char *path);
 void destroyKernelConfig(t_kernelConfig *kernelConfig);
 
 typedef struct pageTableEntry {
-    bool present;
-    uint32_t frame;
+	bool present;
+	uint32_t frame;
 } t_pageTableEntry;
 
 typedef struct t_ptbr {
-    int32_t pageQuantity;
-    t_pageTableEntry *entries;
+	int32_t pageQuantity;
+	t_pageTableEntry *entries;
 } t_ptbr;
-
-
-
 
 void* suspendProcess(void *args);
 void* exitProcess();
