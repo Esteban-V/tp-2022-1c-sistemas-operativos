@@ -76,3 +76,10 @@ void* pQueue_takeLast(t_pQueue* queue){
     pthread_mutex_unlock(&queue->mutex);
     return elem;
 }
+
+void * pQueue_peek(t_pQueue *queue){
+	pthread_mutex_lock(&queue->mutex);
+	    	void* elem = list_remove(queue->elems->elements, queue->elems->elements->elements_count - 1);
+	pthread_mutex_unlock(&queue->mutex);
+	return elem;
+}

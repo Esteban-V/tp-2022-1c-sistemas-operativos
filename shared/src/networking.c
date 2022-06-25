@@ -58,16 +58,14 @@ int accept_client(int server_socket) {
 
 	struct sockaddr_in client_address;
 	socklen_t address_size = sizeof(struct sockaddr_in);
-
 	catch_syscall_err(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size));
-
 	return client_socket;
 }
 
 void server_listen(int server_socket, void* (*client_handler)(void*)) {
+
 	int client_socket = accept_client(server_socket);
 	pthread_t client_handler_thread = 0;
-
 	catch_syscall_err(pthread_create(&client_handler_thread, NULL, client_handler, (void*) client_socket));
 	pthread_detach(client_handler_thread);
 }

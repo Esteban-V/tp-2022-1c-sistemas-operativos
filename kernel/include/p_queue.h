@@ -1,14 +1,5 @@
-/*
- * p_queue.h
- *
- *  Created on: 30 may. 2022
- *      Author: utnso
- */
-
 #ifndef P_QUEUE_H_
 #define P_QUEUE_H_
-
-
 
 #include <commons/collections/queue.h>
 #include <pthread.h>
@@ -44,5 +35,6 @@ void pQueue_unlock(t_pQueue* queue);
 
 void* pQueue_takeLast(t_pQueue* queue);
 
+void *pQueue_peek(t_pQueue *queue);
 
 #endif /* P_QUEUE_H_ */

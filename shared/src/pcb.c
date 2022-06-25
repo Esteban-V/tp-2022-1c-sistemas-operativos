@@ -1,14 +1,5 @@
 #include <pcb_utils.h>
 
-/*
- * pcb.c
- *
- *  Created on: 3 jun. 2022
- *      Author: utnso
- */
-
-
-
 void destroy_pcb(t_pcb *pcb) {
 	if (pcb != NULL) {
 		list_destroy(pcb->instructions);
@@ -22,6 +13,7 @@ t_pcb* create_pcb() {
 	pcb->instructions = list_create();
 	return pcb;
 }
+
 
 void stream_take_pcb(t_packet *packet, t_pcb *pcb) {
 	uint32_t *id = &(pcb->id);
@@ -46,7 +38,9 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb) {
 void stream_add_pcb(t_packet *packet,t_pcb *pcb) {
 	stream_add_UINT32(packet->payload, pcb->id);
 	stream_add_UINT32(packet->payload, pcb->size);
+
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);
+
 	stream_add_UINT32(packet->payload, pcb->program_counter);
 	//paginas
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);

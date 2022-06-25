@@ -1,25 +1,15 @@
 #ifndef MEMMORY_H_
 #define MEMMORY_H_
 
-#include<stdio.h>
-#include<stdlib.h>
+#include"pageTable.h"
 
-#include<string.h>
-#include<pthread.h>
-
-#include<commons/log.h>
-#include<commons/config.h>
-#include<commons/string.h>
-#include<commons/collections/list.h>
-
-#include"serialization.h"
-#include"networking.h"
-#include"socket_headers.h"
-
-#include"utils.h"
+typedef struct mem {
+    void *memory;
+} t_memory;
 
 void* header_handler(void *_client_socket);
-t_log *logger;
-t_memoryConfig *config;
+t_memory *memory;
+uint32_t clock_m_counter;
+t_memory *initializeMemory(t_memoryConfig *config);
 
 #endif /* MEMMORY_H_ */
