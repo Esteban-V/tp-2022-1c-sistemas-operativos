@@ -12,7 +12,6 @@
 #include "serialization.h"
 #include "networking.h"
 
-
 typedef struct instruction {
 	char *id;
 	t_list *params;
@@ -22,7 +21,6 @@ typedef struct process {
 	uint32_t size;
 	t_list *instructions;
 } t_process;
-
 
 void stream_add_instruction(t_stream_buffer *stream, void *elem);
 void stream_take_process(t_packet *packet, t_process *process);

@@ -28,33 +28,34 @@ int main(void) {
 	blockedQ = pQueue_create();
 	suspended_blockQ = pQueue_create();
 	suspended_readyQ = pQueue_create();
-	exitQ= pQueue_create();
+	exitQ = pQueue_create();
 
-	 if (config == NULL) {
-		 log_error(logger, "Config failed to load");
-		 return EXIT_FAILURE;
-	 }
+	if (config == NULL) {
+		log_error(logger, "Config failed to load");
+		return EXIT_FAILURE;
+	}
 
-	 // Setteo de Algoritmo de Planificacion
-	 if (!strcmp(config->schedulerAlgorithm, "SJF"))
-	 sortingAlgorithm = SRT;
-	 if (!strcmp(config->schedulerAlgorithm, "FIFO"))
-	 sortingAlgorithm = FIFO;
+	// Setteo de Algoritmo de Planificacion
+	if (!strcmp(config->schedulerAlgorithm, "SJF"))
+		sortingAlgorithm = SRT;
+	if (!strcmp(config->schedulerAlgorithm, "FIFO"))
+		sortingAlgorithm = FIFO;
 
-	 // Inicializar Planificador de largo plazo
-	 pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
-	 pthread_detach(thread_longTerm);
+	// Inicializar Planificador de largo plazo
+	pthread_create(&thread_longTerm, 0, thread_longTermFunc, NULL);
+	pthread_detach(thread_longTerm);
 
-	 pthread_create(&thread_mediumTermUnsuspender, 0, thread_mediumTermUnsuspenderFunc, NULL);
-	 pthread_detach(thread_mediumTermUnsuspender);
+	pthread_create(&thread_mediumTermUnsuspender, 0,
+			thread_mediumTermUnsuspenderFunc, NULL);
+	pthread_detach(thread_mediumTermUnsuspender);
 
-	 // Inicializar Planificador de mediano plazo
-	 pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
-	 pthread_detach(thread_mediumTerm);
+	// Inicializar Planificador de mediano plazo
+	pthread_create(&thread_mediumTerm, 0, thread_mediumTermFunc, NULL);
+	pthread_detach(thread_mediumTerm);
 
-	 // Inicializar cpu listener
-	 pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
-	 pthread_detach(cpu_listener);
+	// Inicializar cpu listener
+	pthread_create(&cpu_listener, 0, cpu_listenerFunc, NULL);
+	pthread_detach(cpu_listener);
 
 	// Creacion de server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
@@ -69,16 +70,15 @@ int main(void) {
 	sem_init(&sem_newProcess, 0, 0);
 	sem_init(&longTermSemCall, 0, 0);
 
-	sem_init(&exec_to_ready,0,0);
+	sem_init(&exec_to_ready, 0, 0);
 
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
-/*
-	cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
-	cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
- */
-
+	/*
+	 cpu_server_socket = connect_to(config->cpuIP,config->cpuPortDispatch);
+	 cpu_int_server_socket = connect_to(config->cpuIP,config->cpuPortInterrupt);
+	 */
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 	//pid = 0;
@@ -91,32 +91,32 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
-void* cpu_listenerFunc(){/*
-	int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
-	while(1){
-		server_listen(server_cpu_socket, header_handler);
-	}
-*/
+void* cpu_listenerFunc() {/*
+ int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
+ while(1){
+ server_listen(server_cpu_socket, header_handler);
+ }
+ */
 }
 
 // Hilo CPU, toma un proceso de ready y ejecuta todas sus peticiones hasta que se termine o pase a blocked
 // Cuando lo pasa a blocked, recalcula el estimador de rafaga del proceso segun la cantidad de rafagas que duro
 void* thread_shortTermFunc(void *args) {
 	t_pcb *pcb = NULL;
-	while(1){
+	while (1) {
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
 
-		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
-		stream_add_pcb(pcb_packet,pcb);
-			if (cpu_server_socket != -1) {
-				socket_send_packet(cpu_server_socket, pcb_packet);
-			}
+		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64); //implementar PCBTOCPU
+		stream_add_pcb(pcb_packet, pcb);
+		if (cpu_server_socket != -1) {
+			socket_send_packet(cpu_server_socket, pcb_packet);
+		}
 
-			packet_destroy(pcb_packet);
+		packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Process %d to CPU", pcb->id);
+		log_info(logger, "Process %d to CPU", pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
 	}
@@ -139,21 +139,20 @@ void* thread_longTermFunc() { // Hilo del largo plazo, toma un proceso de new y 
 
 		packet_destroy(memory_info);
 
-
 		// Recibir valo de Tabla
 
 		// Actualizar PCB
 
 		putToReady(pcb);
 
-				pthread_mutex_lock(&mutex_log);
-					log_info(logger, "Long Term Scheduler: process %u from New to Ready",pcb->id);
-				pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Long Term Scheduler: process %u from New to Ready",
+				pcb->id);
+		pthread_mutex_unlock(&mutex_log);
 
-				pthread_mutex_lock(&mutex_cupos);
-					cupos_libres--; // TODO Chequear bien donde se modifica
-				pthread_mutex_unlock(&mutex_cupos);
-
+		pthread_mutex_lock(&mutex_cupos);
+		cupos_libres--; // TODO Chequear bien donde se modifica
+		pthread_mutex_unlock(&mutex_cupos);
 
 		pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
@@ -175,7 +174,9 @@ void* thread_mediumTermUnsuspenderFunc(void *args) { // Hilo del mediano plazo q
 		pcb = (t_pcb*) pQueue_take(suspended_readyQ);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Medium Term Scheduler: process %u from Suspended Ready to Ready",pcb->id);
+		log_info(logger,
+				"Medium Term Scheduler: process %u from Suspended Ready to Ready",
+				pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 
 		putToReady(pcb);
@@ -227,7 +228,9 @@ void* thread_mediumTermFunc(void *args) {
 
 		pthread_mutex_unlock(&mutex_mediumTerm);
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Medium Term Scheduler: process %u to Suspended Blocked", pcb->id);
+		log_info(logger,
+				"Medium Term Scheduler: process %u to Suspended Blocked",
+				pcb->id);
 		pthread_mutex_unlock(&mutex_log);
 	}
 }
@@ -263,21 +266,21 @@ bool SFJAlg(void *elem1, void *elem2) {
 			<= ((t_pcb*) elem2)->burst_estimation;
 }
 
-
 bool receive_process(t_packet *petition, int console_socket) {
 
 	t_process *received_process = create_process();
 	stream_take_process(petition, received_process);
 	log_process(logger, received_process);
 
-	if(!!received_process){
+	if (!!received_process) {
 		t_pcb *pcb = create_pcb();
 		pid++;
-		memcpy(pcb->instructions, received_process->instructions, sizeof(t_list));
-		pcb->id=pid;
+		memcpy(pcb->instructions, received_process->instructions,
+				sizeof(t_list));
+		pcb->id = pid;
 		pcb->size = received_process->size;
 		pcb->program_counter = 0;
-		pcb->burst_estimation = config -> initialEstimate;
+		pcb->burst_estimation = config->initialEstimate;
 		pQueue_put(newQ, (void*) pcb);
 		log_info(logger, "Adding process to New, %d", pcb->id);
 		sem_post(&sem_newProcess);
@@ -288,26 +291,26 @@ bool receive_process(t_packet *petition, int console_socket) {
 	return false;
 }
 
-bool io(t_packet *petition, int console_socket){
+bool io(t_packet *petition, int console_socket) {
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition,received_pcb);
-	pQueue_put(blockedQ,(void*) received_pcb);//faltaria poner en que momento entro en bloqueado?
+	stream_take_pcb(petition, received_pcb);
+	pQueue_put(blockedQ, (void*) received_pcb);	//faltaria poner en que momento entro en bloqueado?
 	return false;
 }
 
-bool exitt(t_packet *petition, int console_socket){
+bool exitt(t_packet *petition, int console_socket) {
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition,received_pcb);
+	stream_take_pcb(petition, received_pcb);
 	pQueue_put(exitQ, (void*) received_pcb);
 	//como avisar q finaliza
 	return false;
 }
 
-bool int_ready(t_packet *petition, int console_socket){
+bool int_ready(t_packet *petition, int console_socket) {
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition,received_pcb);
+	stream_take_pcb(petition, received_pcb);
 	putToReady(received_pcb);
 	sem_post(&exec_to_ready);
 	return false;

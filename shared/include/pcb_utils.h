@@ -5,9 +5,8 @@
  *      Author: utnso
  */
 
-#ifndef INCLUDE_PCB_H_
-#define INCLUDE_PCB_H_
-
+#ifndef INCLUDE_PCB_UTILS_H_
+#define INCLUDE_PCB_UTILS_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -27,21 +26,18 @@
 #include"networking.h"
 #include"process_utils.h"
 
-
-
 typedef struct pcb {
 	int id;
 	int size;
 	t_list *instructions;
 	int program_counter;
-	int page_table;//esta mal
+	int page_table; //esta mal
 	int burst_estimation;
 } t_pcb;
 
-void stream_take_pcb(t_packet *, t_pcb *);
-void stream_add_process(t_packet *,t_pcb *);
+void stream_take_pcb(t_packet*, t_pcb*);
+void stream_add_process(t_packet*, t_pcb*);
 t_pcb* create_pcb();
-void destroy_pcb(t_pcb *);
+void destroy_pcb(t_pcb*);
 
-
-#endif /* INCLUDE_PCB_H_ */
+#endif /* INCLUDE_PCB_UTILS_H_ */
