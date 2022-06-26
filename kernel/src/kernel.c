@@ -20,10 +20,13 @@ int main(void) {
 	}
 
 	// Setteo de Algoritmo de Planificacion
-	if (!strcmp(config->schedulerAlgorithm, "SJF"))
+	if (!strcmp(config->schedulerAlgorithm, "SRT")){
 		sortingAlgorithm = SRT;
-	if (!strcmp(config->schedulerAlgorithm, "FIFO"))
+	} else if (!strcmp(config->schedulerAlgorithm, "FIFO")){
 		sortingAlgorithm = FIFO;
+	} else {
+		log_warning(logger, "Wrong scheduler algorithm set in config --> Using FIFO");
+	}
 
 	// Inicializar Planificador de largo plazo
 	pthread_create(&newToReadyThread, 0, newToReady, NULL);
@@ -45,9 +48,8 @@ int main(void) {
 	pthread_detach(io_thread);
 
 	// Creacion de server
-
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
-	log_info(logger, "Servidor listo para recibir al cliente");
+	log_info(logger, "Kernel ready for console");
 
 	// Inicializar semaforo de multiprocesamiento
 	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
@@ -68,21 +70,21 @@ int main(void) {
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
 
-	cpu_server_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
-	cpu_int_server_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
+	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	log_info(logger, "Kernel connected to CPU");
+
 
 	/*
 	 memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 	 */
+
 	//pid = 0;
 	while (1) {
-
 		server_listen(server_socket, header_handler);
-
 	}
 
 	destroyKernelConfig(config);
-
 	return EXIT_SUCCESS;
 }
 
@@ -118,8 +120,8 @@ void* readyToExec(void *args) {
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
 		stream_add_pcb(pcb_packet, pcb);
-		if (cpu_server_socket != -1) {
-			socket_send_packet(cpu_server_socket, pcb_packet);
+		if (cpu_dispatch_socket != -1) {
+			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
 
 		packet_destroy(pcb_packet);
@@ -242,8 +244,8 @@ void putToReady(t_pcb *pcb) {
 
 		t_packet *int_packet = create_packet(INTERRUPT, 64);
 		stream_add_UINT32(int_packet->payload, 1);
-		if (cpu_int_server_socket != -1) {
-			socket_send_packet(cpu_int_server_socket, int_packet);
+		if (cpu_interrupt_socket != -1) {
+			socket_send_packet(cpu_interrupt_socket, int_packet);
 		}
 
 		packet_destroy(int_packet);

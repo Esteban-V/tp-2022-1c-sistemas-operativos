@@ -1,16 +1,16 @@
 /*
- * cpuConfig.h
+ * cpu_config.h
  *
  *  Created on: 15 jun. 2022
  *      Author: utnso
  */
 
-#ifndef INCLUDE_CPUCONFIG_H_
-#define INCLUDE_CPUCONFIG_H_
+#ifndef INCLUDE_UTILS_H_
+#define INCLUDE_UTILS_H_
 
 #include<commons/config.h>
 
-typedef struct cpuConfig{
+typedef struct cpu_config{
     t_config* config;
     int tlbEntries;
     char* tlbReplace;
@@ -20,10 +20,10 @@ typedef struct cpuConfig{
     char* dispatchListenPort;
     char* interruptListenPort;
     char* ip;
-} t_cpuConfig;
+} t_cpu_config;
 
-void destroycpuConfig(t_cpuConfig* cpuConfig);
+void destroy_cpu_config(t_cpu_config* cpu_config);
 
-t_cpuConfig* getcpuConfig(char* path);
+t_cpu_config* get_cpu_config(char* path);
 
-#endif /* INCLUDE_CPUCONFIG_H_ */
+#endif /* INCLUDE_UTILS_H_ */

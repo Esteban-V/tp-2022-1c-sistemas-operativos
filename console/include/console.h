@@ -21,16 +21,15 @@ t_process *process;
 
 t_config *config;
 t_log *logger;
-int server_socket;
+int kernel_socket;
 
-char *ip;
-char *port;
+char *kernel_ip;
+char *kernel_port;
 
 void get_code(FILE *file);
 t_instruction* parse_instruction(char *string);
 
 void stream_add_process(t_packet *packet);
-
 
 void terminate_console();
 

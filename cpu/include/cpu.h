@@ -21,28 +21,38 @@
 #include<unistd.h>
 #include<netdb.h>
 #include<assert.h>
+#include <utils.h>
 #include"networking.h"
 #include"serialization.h"
 #include"socket_headers.h"
 #include"process_utils.h"
 #include"pcb_utils.h"
-#include "cpuConfig.h"
 #include "semaphore.h"
 
-
-enum operation{NO_OPOP,IOOP,READOP,COPYOP,WRITEOP,EXITOP,DEAD};
+enum operation {
+	NO_OP, IO_OP, READ, COPY, WRITE, EXIT_OP, DEAD
+};
 
 enum operation getOperation(char*);
+
 t_pcb *pcb;
-t_cpuConfig *config;
-void* interruption();
+t_cpu_config *config;
+
 bool receivedPcb(t_packet *petition, int console_socket);
 bool receivedInterruption(t_packet *petition, int console_socket);
+
 void* header_handler(void *_client_socket);
 void* execution();
+void* interruption();
+
+void execute_exit();
+void execute_no_op(uint32_t time);
+void execute_io(uint32_t time);
+
 sem_t pcb_loaded;
-int server_dispatch_socket;
-int server_interrupt_socket;
+
+int kernel_dispatch_socket;
+int kernel_interrupt_socket;
 
 pthread_t interruptionThread, execThread;
 

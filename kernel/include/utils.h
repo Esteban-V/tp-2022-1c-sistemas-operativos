@@ -15,7 +15,7 @@
 #include<unistd.h>
 #include<netdb.h>
 #include<assert.h>
-#include"p_queue.h"
+#include"queue.h"
 #include"process_utils.h"
 #include"networking.h"
 #include"socket_headers.h"

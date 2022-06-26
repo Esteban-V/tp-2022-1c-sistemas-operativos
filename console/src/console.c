@@ -20,10 +20,8 @@ int main(int argc, char **argv) {
 		log_warning(logger, "Unused params");
 	}
 
-	ip = config_get_string_value(config, "IP_KERNEL");
-	port = config_get_string_value(config, "PUERTO_KERNEL");
-
-	log_info(logger, "IP value is: %s\nPort value is: %s \n", ip, port);
+	kernel_ip = config_get_string_value(config, "IP_KERNEL");
+	kernel_port = config_get_string_value(config, "PUERTO_KERNEL");
 
 	char *code_path = argv[1];
 	uint32_t process_size = atoi(argv[2]);
@@ -41,13 +39,14 @@ int main(int argc, char **argv) {
 	process->size = process_size;
 	log_process(logger, process);
 
-	server_socket = connect_to(ip, port);
+	kernel_socket = connect_to(kernel_ip, kernel_port);
+	log_info(logger, "Console connected to kernel");
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
 	stream_add_process(process_packet);
 
-	if (server_socket != -1) {
-		socket_send_packet(server_socket, process_packet);
+	if (kernel_socket != -1) {
+		socket_send_packet(kernel_socket, process_packet);
 	}
 
 	packet_destroy(process_packet);
@@ -101,7 +100,7 @@ void stream_add_process(t_packet *packet) {
 void terminate_console() {
 	log_destroy(logger);
 	config_destroy(config);
-	close(server_socket);
+	close(kernel_socket);
 	exit(EXIT_SUCCESS);
 }
 

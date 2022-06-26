@@ -25,7 +25,7 @@ enum e_sortingAlgorithm {
 };
 #define BILLION 1E9
 
-enum e_sortingAlgorithm sortingAlgorithm;
+enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 
 struct timespec start_exec_time, last_burst_estimate, now_time;
 
@@ -40,8 +40,8 @@ pthread_cond_t cond_mediumTerm;
 
 struct timespec now;
 
-int cpu_int_server_socket;
-int cpu_server_socket;
+int cpu_interrupt_socket;
+int cpu_dispatch_socket;
 int memory_server_socket;
 
 char *ip;
