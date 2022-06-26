@@ -48,6 +48,9 @@ int main(void) {
 
 	// Creacion de server
 	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	if (!server_socket) {
+		terminate_kernel(true);
+	}
 	log_info(logger, "Kernel ready for console");
 
 	// Inicializar semaforo de multiprocesamiento
