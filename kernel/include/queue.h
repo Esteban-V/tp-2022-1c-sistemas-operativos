@@ -7,14 +7,14 @@
 #include <stdlib.h>
 
 typedef struct pQueue {
-	t_queue *elems;
+	t_queue *lib_queue;
 	pthread_mutex_t mutex;
 	sem_t sem;
 } t_pQueue;
 
 t_pQueue* pQueue_create();
 
-void pQueue_destroy(t_pQueue *queue, void (*elemDestroyer)(void*));
+void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void*));
 
 void pQueue_put(t_pQueue *queue, void *elem);
 

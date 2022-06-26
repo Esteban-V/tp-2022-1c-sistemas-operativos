@@ -101,7 +101,7 @@ void* interruption() {
 bool receivedPcb(t_packet *petition, int console_socket) {
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
-	log_info(logger, "RECIBO PCB %d", pcb->id);
+	log_info(logger, "RECIBO PCB %d", pcb->pid);
 	sem_post(&pcb_loaded);
 	return false;
 }

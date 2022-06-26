@@ -1,4 +1,4 @@
-#include <pcb_utils.h>
+#include"pcb_utils.h"
 
 void destroy_pcb(t_pcb *pcb) {
 	if (pcb != NULL) {
@@ -14,15 +14,15 @@ t_pcb* create_pcb() {
 	return pcb;
 }
 
-
 void stream_take_pcb(t_packet *packet, t_pcb *pcb) {
-	uint32_t *id = &(pcb->id);
-	stream_take_UINT32P(packet->payload, &id);
+	uint32_t *pid = &(pcb->pid);
+	stream_take_UINT32P(packet->payload, &pid);
 
 	uint32_t *size = &(pcb->size);
 	stream_take_UINT32P(packet->payload, &size);
 
-	t_list *instructions = stream_take_LIST(packet->payload, stream_take_instruction);
+	t_list *instructions = stream_take_LIST(packet->payload,
+			stream_take_instruction);
 	memcpy(pcb->instructions, instructions, sizeof(t_list));
 
 	uint32_t *program_counter = &(pcb->program_counter);
@@ -35,8 +35,8 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb) {
 
 }
 
-void stream_add_pcb(t_packet *packet,t_pcb *pcb) {
-	stream_add_UINT32(packet->payload, pcb->id);
+void stream_add_pcb(t_packet *packet, t_pcb *pcb) {
+	stream_add_UINT32(packet->payload, pcb->pid);
 	stream_add_UINT32(packet->payload, pcb->size);
 
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);

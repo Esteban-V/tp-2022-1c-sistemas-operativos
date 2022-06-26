@@ -16,10 +16,12 @@
 #include<netdb.h>
 #include<assert.h>
 #include"queue.h"
-#include"process_utils.h"
+#include"pcb_utils.h"
 #include"networking.h"
 #include"socket_headers.h"
 #include"serialization.h"
+
+#define BILLION 1E9
 
 typedef struct kernelConfig {
 	t_config *config;
@@ -54,16 +56,13 @@ typedef struct t_ptbr {
 	t_pageTableEntry *entries;
 } t_ptbr;
 
-void* suspendProcess(void *args);
-void* exitProcess();
-
 void* readyToExec(void *args);
-void* thread_mediumTermFunc(void *args);
 void* newToReady();
-bool SFJAlg(void *elem1, void *elem2);
 void* thread_longTermFunc();
-void* cpu_listenerFunc();
 
 int cupos_libres;
+
+float time_to_ms(struct timespec time);
+bool SFJ_algorithm(void *elem1, void *elem2);
 
 #endif /* UTILS_H_ */

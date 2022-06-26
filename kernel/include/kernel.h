@@ -23,7 +23,6 @@
 enum e_sortingAlgorithm {
 	FIFO = 0, SRT = 1
 };
-#define BILLION 1E9
 
 enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 
@@ -32,7 +31,7 @@ struct timespec start_exec_time, last_burst_estimate, now_time;
 t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ,
 		*exitQ;
 pthread_t newToReadyThread, readyToExecThread, thread_mediumTerm,
-		suspendProcessThread, cpu_listener, io_thread, exitProcessThread;
+		suspendProcessThread, cpuDispatchThread, io_thread, exitProcessThread;
 sem_t sem_multiprogram, any_for_ready, longTermSemCall, freeCpu, exec_to_ready,
 		any_blocked, bloquear;
 pthread_mutex_t mutex_mediumTerm, mutex_cupos;
@@ -52,11 +51,20 @@ t_log *logger;
 
 void* header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
+
 void putToReady(t_pcb *pcb);
-void terminate_kernel();
-void* thread_mediumTermFunc();
 void* io_t(void *args);
 int getIO(t_pcb *pcb);
-float toMiliSec(struct timespec time);
+
+bool exit_op(t_packet *petition, int console_socket);
+bool io_op(t_packet *petition, int console_socket);
+bool interrupt_ready(t_packet *petition, int console_socket);
+
+void* cpu_dispatch_listener();
+
+void* suspend_process(void *args);
+void* exit_process();
+
+void terminate_kernel();
 
 #endif /* KERNEL_H_ */

@@ -27,7 +27,7 @@
 #include"process_utils.h"
 
 typedef struct pcb {
-	int id;
+	int pid;
 	int size;
 	t_list *instructions;
 	int program_counter;

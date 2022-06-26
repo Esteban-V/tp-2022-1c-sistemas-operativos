@@ -20,6 +20,12 @@ int main(int argc, char **argv) {
 		log_warning(logger, "Unused params");
 	}
 
+	if (!config || !config_has_property(config, "IP_KERNEL")
+			|| !config_has_property(config, "PUERTO_KERNEL")) {
+		log_error(logger, "Config failed to load");
+		return EXIT_FAILURE;
+	}
+
 	kernel_ip = config_get_string_value(config, "IP_KERNEL");
 	kernel_port = config_get_string_value(config, "PUERTO_KERNEL");
 
@@ -37,7 +43,8 @@ int main(int argc, char **argv) {
 
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
-	log_process(logger, process);
+	log_info(logger, "Read process with %d instructions",
+					process->instructions->elements_count);
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
 	log_info(logger, "Console connected to kernel");
@@ -49,11 +56,11 @@ int main(int argc, char **argv) {
 		socket_send_packet(kernel_socket, process_packet);
 	}
 
-	packet_destroy(process_packet);
-
 	// esperar resultado
 	// tirar info/error resultado con logger
-	//process_destroy(process);
+
+	packet_destroy(process_packet);
+	process_destroy(process);
 	terminate_console();
 }
 

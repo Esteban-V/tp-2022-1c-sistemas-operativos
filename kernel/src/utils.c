@@ -47,3 +47,12 @@ void destroyKernelConfig(t_kernelConfig *kernelConfig) {
 	config_destroy(kernelConfig->config);
 	free(kernelConfig);
 }
+
+float time_to_ms(struct timespec time) {
+	return (time.tv_sec) * 1000 + (time.tv_nsec) / 1000000;
+}
+
+bool SFJ_algorithm(void *elem1, void *elem2) {
+	return ((t_pcb*) elem1)->burst_estimation
+			<= ((t_pcb*) elem2)->burst_estimation;
+}
