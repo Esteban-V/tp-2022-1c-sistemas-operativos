@@ -12,6 +12,22 @@ int main(void) {
 	suspended_readyQ = pQueue_create();
 	exitQ = pQueue_create();
 
+	// Inicializar semaforo de multiprocesamiento
+	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
+	sem_init(&freeCpu, 0, 1);
+	// cupos_libres = config->multiprogrammingLevel;
+	// pthread_mutex_init(&mutex_cupos, NULL);
+
+	sem_init(&any_for_ready, 0, 0);
+	sem_init(&ready_for_exec, 0, 0);
+	sem_init(&longTermSemCall, 0, 0);
+
+	sem_init(&exec_to_ready, 0, 0);
+
+	sem_init(&any_blocked, 0, 0);
+
+	sem_init(&bloquear, 0, 0);
+
 	if (config == NULL) {
 		log_error(logger, "Config failed to load");
 		terminate_kernel(true);
@@ -27,6 +43,22 @@ int main(void) {
 				"Wrong scheduler algorithm set in config --> Using FIFO");
 	}
 
+	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
+	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	if (!cpu_dispatch_socket || !cpu_interrupt_socket) {
+		terminate_kernel(true);
+	}
+
+	log_info(logger, "Kernel connected to CPU");
+
+	// Creacion de server
+	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	if (!server_socket) {
+		terminate_kernel(true);
+	}
+	log_info(logger, "Kernel ready for console");
+
+	// Inicializar hilos
 	// Inicializar Planificador de largo plazo
 	pthread_create(&newToReadyThread, 0, newToReady, NULL);
 	pthread_detach(newToReadyThread);
@@ -46,40 +78,9 @@ int main(void) {
 	pthread_create(&io_thread, NULL, io_t, NULL);
 	pthread_detach(io_thread);
 
-	// Creacion de server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
-	if (!server_socket) {
-		terminate_kernel(true);
-	}
-	log_info(logger, "Kernel ready for console");
-
-	// Inicializar semaforo de multiprocesamiento
-	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
-	sem_init(&freeCpu, 0, 1);
-	// cupos_libres = config->multiprogrammingLevel;
-	// pthread_mutex_init(&mutex_cupos, NULL);
-
-	sem_init(&any_for_ready, 0, 0);
-	sem_init(&ready_for_exec, 0, 0);
-	sem_init(&longTermSemCall, 0, 0);
-
-	sem_init(&exec_to_ready, 0, 0);
-
-	sem_init(&any_blocked, 0, 0);
-
-	sem_init(&bloquear, 0, 0);
-
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
-
-	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
-	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
-	if (!cpu_dispatch_socket || !cpu_interrupt_socket) {
-		terminate_kernel(true);
-	}
-
-	log_info(logger, "Kernel connected to CPU");
 
 	/*
 	 memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
@@ -120,7 +121,6 @@ void* readyToExec(void *args) {
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
 
-		printf("pid #%d\n", pcb->pid);
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64); //implementar PCBTOCPU
 		stream_add_pcb(pcb_packet, pcb);
 		if (cpu_dispatch_socket != -1) {
@@ -137,8 +137,11 @@ void* readyToExec(void *args) {
 void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb = NULL;
 	while (1) {
+		printf("new to ready threaddd\n");
 		sem_wait(&any_for_ready);
+		printf("any for ready unlock 1\n");
 		sem_wait(&sem_multiprogram);
+		printf("sem multiprogram unlock 2\n");
 
 		// pthread_mutex_lock(&mutex_cupos);
 		// cupos_libres--; // TODO Chequear bien donde se modifica
@@ -152,7 +155,9 @@ void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y
 		 pQueue_put(readyQ, pcb);
 		 }*/
 
+		printf("count %d\n", newQ->lib_queue->elements->elements_count);
 		pcb = (t_pcb*) pQueue_take(newQ);
+		printf("count2 %d\n", newQ->lib_queue->elements->elements_count);
 
 		//sem_wait(&longTermSemCall);
 		//pthread_mutex_lock(&mutex_mediumTerm);
@@ -173,7 +178,6 @@ void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y
 		 // Recibir valor de Tabla
 		 // Actualizar PCB
 		 */
-
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
