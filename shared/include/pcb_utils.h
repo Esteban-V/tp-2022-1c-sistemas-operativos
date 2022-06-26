@@ -38,6 +38,7 @@ typedef struct pcb {
 } t_pcb;
 
 void stream_take_pcb(t_packet*, t_pcb*);
+void stream_add_pcb(t_packet *packet, t_pcb *pcb);
 void stream_add_process(t_packet*, t_pcb*);
 t_pcb* create_pcb();
 void destroy_pcb(t_pcb*);

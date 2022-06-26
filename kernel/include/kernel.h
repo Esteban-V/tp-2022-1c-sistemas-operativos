@@ -21,7 +21,7 @@
 #include"utils.h"
 
 enum e_sortingAlgorithm {
-	FIFO = 1, SRT = 2
+	FIFO = 0, SRT = 1
 };
 
 enum e_sortingAlgorithm sortingAlgorithm = FIFO;
@@ -32,9 +32,10 @@ t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ,
 		*exitQ;
 pthread_t newToReadyThread, readyToExecThread, thread_mediumTerm,
 		suspendProcessThread, cpuDispatchThread, io_thread, exitProcessThread;
-sem_t sem_multiprogram, any_for_ready, longTermSemCall, freeCpu, exec_to_ready,
+sem_t sem_multiprogram, any_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready,
 		any_blocked, bloquear;
-pthread_mutex_t mutex_mediumTerm, mutex_cupos;
+pthread_mutex_t mutex_mediumTerm;
+// pthread_mutex_t mutex_cupos;
 pthread_cond_t cond_mediumTerm;
 
 struct timespec now;

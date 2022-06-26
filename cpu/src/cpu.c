@@ -107,6 +107,9 @@ bool receivedPcb(t_packet *petition, int console_socket) {
 }
 
 bool receivedInterruption(t_packet *petition, int console_socket) {
+	// recibir header interrupcion
+	// "desalojar" actual --> guardar contexto de ejecucion
+	// devolver pcb actualizado por dispatch
 	return false;
 }
 

@@ -61,7 +61,14 @@ int main(int argc, char **argv) {
 	}
 
 	packet_destroy(process_packet);
-	terminate_console(socket_receive_header(kernel_socket) != PROCESS_OK);
+	uint8_t result = socket_receive_header(kernel_socket);
+	bool error = result != PROCESS_OK;
+	if (error) {
+		log_error(logger, "Console exited with error code %d", result);
+	} else {
+		log_info(logger, "Console exited successfully");
+	}
+	terminate_console(error);
 }
 
 void get_code(FILE *file) {

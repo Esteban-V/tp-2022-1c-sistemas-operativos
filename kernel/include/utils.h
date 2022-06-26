@@ -60,9 +60,9 @@ void* readyToExec(void *args);
 void* newToReady();
 void* thread_longTermFunc();
 
-int cupos_libres;
+// int cupos_libres;
 
 float time_to_ms(struct timespec time);
-bool SFJ_algorithm(void *elem1, void *elem2);
+bool SJF_sort(void *elem1, void *elem2);
 
 #endif /* UTILS_H_ */

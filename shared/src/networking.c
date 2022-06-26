@@ -13,42 +13,76 @@ void catch_syscall_err(int code) {
 }
 
 int connect_to(char *server_ip, char *server_port) {
-    struct addrinfo hints;
-    struct addrinfo *server_info;
+	struct addrinfo hints;
+	struct addrinfo *server_info;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
 
-    catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &server_info));
+	catch_syscall_err(
+			getaddrinfo(server_ip, server_port, &hints, &server_info));
 
-    // Ahora vamos a crear el socket.
-    int socket_cliente = 0;
-    catch_syscall_err(socket_cliente =socket(AF_INET, SOCK_STREAM, 0));
-    // Ahora que tenemos el socket, vamos a conectarlo
-    catch_syscall_err(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) !=0);
-    freeaddrinfo(server_info);
-    return socket_cliente;
+	// Ahora vamos a crear el socket.
+	int socket_cliente = 0;
+	catch_syscall_err(socket_cliente = socket(AF_INET, SOCK_STREAM, 0));
+	// Ahora que tenemos el socket, vamos a conectarlo
+	catch_syscall_err(
+			connect(socket_cliente, server_info->ai_addr,
+					server_info->ai_addrlen) != 0);
+	freeaddrinfo(server_info);
+	return socket_cliente;
 }
 
-int create_server(char* server_port) {
-	int servidor=0;
-    struct sockaddr_in direccionServidor;
-    direccionServidor.sin_family = AF_INET;
-    direccionServidor.sin_addr.s_addr = INADDR_ANY;
-    direccionServidor.sin_port = htons(atoi(server_port));
+/*int create_server(char *server_port) {
+ int server_socket = 0;
 
-    catch_syscall_err(servidor = socket(AF_INET, SOCK_STREAM, 0));
+ struct sockaddr_in direccionServidor;
+ direccionServidor.sin_family = AF_INET;
+ direccionServidor.sin_addr.s_addr = INADDR_ANY;
+ direccionServidor.sin_port = htons(atoi(server_port));
 
-    //Sirve para que se puedan reutilizar los puertos mal cerrados
-    int activado = 1;
-    catch_syscall_err(setsockopt(servidor, SOL_SOCKET, SO_REUSEADDR, &activado, sizeof(activado)));
+ catch_syscall_err(server_socket = socket(AF_INET, SOCK_STREAM, 0));
 
-    catch_syscall_err(bind (servidor, (void*) &direccionServidor, sizeof(direccionServidor)) != 0);
-    catch_syscall_err(listen(servidor, SOMAXCONN));
-    log_info(logger, "Servidor listo para recibir al cliente.");
-    return servidor;
+ //Sirve para que se puedan reutilizar los puertos mal cerrados
+ int activado = 1;
+ catch_syscall_err(
+ setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &activado,
+ sizeof(activado)));
+
+ catch_syscall_err(
+ bind(server_socket, (void*) &direccionServidor,
+ sizeof(direccionServidor)) != 0);
+ catch_syscall_err(listen(server_socket, SOMAXCONN));
+ return server_socket;
+ }*/
+
+int create_server(char *server_ip, char *server_port) {
+	int server_socket = 0;
+
+	struct addrinfo hints;
+	struct addrinfo *serv_info;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
+	catch_syscall_err(
+			server_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
+					serv_info->ai_protocol));
+	catch_syscall_err(
+			setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &(int ) { 1 },
+					sizeof(int)));
+	catch_syscall_err(
+			bind(server_socket, serv_info->ai_addr, serv_info->ai_addrlen));
+	// TODO: replace SOMAXCONN -> MAX_BACKLOG
+	catch_syscall_err(listen(server_socket, SOMAXCONN));
+
+	freeaddrinfo(serv_info);
+	return server_socket;
 }
 
 int accept_client(int server_socket) {
@@ -56,7 +90,9 @@ int accept_client(int server_socket) {
 
 	struct sockaddr_in client_address;
 	socklen_t address_size = sizeof(struct sockaddr_in);
-	catch_syscall_err(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size));
+	catch_syscall_err(
+			client_socket = accept(server_socket,
+					(struct sockaddr*) &client_address, &address_size));
 
 	return client_socket;
 }
@@ -65,7 +101,9 @@ void server_listen(int server_socket, void* (*client_handler)(void*)) {
 
 	int client_socket = accept_client(server_socket);
 	pthread_t client_handler_thread = 0;
-	catch_syscall_err(pthread_create(&client_handler_thread, NULL, client_handler, (void*) client_socket));
+	catch_syscall_err(
+			pthread_create(&client_handler_thread, NULL, client_handler,
+					(void*) client_socket));
 	pthread_detach(client_handler_thread);
 }
 
