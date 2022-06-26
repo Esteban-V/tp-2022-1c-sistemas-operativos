@@ -58,6 +58,8 @@ dkms.conf
 
 /RemoteSystemsTempFiles
 
+/Debug/*
+/Debug/**/*
 **/Debug/
 **/.settings/
 *.log
