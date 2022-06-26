@@ -338,7 +338,6 @@ void* header_handler(void *_client_socket) {
 		serve = kernel_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
-	return 0;
 }
 
 int getIO(t_pcb *pcb) {
@@ -351,5 +350,8 @@ int getIO(t_pcb *pcb) {
 void terminate_kernel(bool error) {
 	log_destroy(logger);
 	config_destroy(config);
+	close(cpu_interrupt_socket);
+	close(cpu_dispatch_socket);
+	close(memory_server_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
