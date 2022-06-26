@@ -43,7 +43,7 @@ int main(void) {
 	pthread_create(&cpuDispatchThread, 0, cpu_dispatch_listener, NULL);
 	pthread_detach(cpuDispatchThread);
 
-	pthread_create(&io_thread, 0, io_t, NULL);
+	pthread_create(&io_thread, NULL, io_t, NULL);
 	pthread_detach(io_thread);
 
 	// Creacion de server
@@ -90,7 +90,7 @@ int main(void) {
 	terminate_kernel(false);
 }
 
-void* cpu_dispatch_listener() {
+void* cpu_dispatch_listener(void* args) {
 	sem_wait(&bloquear);
 	//listen cpu_dispatch_socket
 	/*
@@ -101,7 +101,7 @@ void* cpu_dispatch_listener() {
 	 */
 }
 
-void* exit_process() {
+void* exit_process(void* args) {
 	t_pcb *pcb;
 	while (1) {
 		pcb = pQueue_take(exitQ);
@@ -123,21 +123,22 @@ void* readyToExec(void *args) {
 
 		packet_destroy(pcb_packet);
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Process %d to CPU", pcb->pid);
+		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
-
 	}
 }
 
-void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
+void* newToReady(void* args) { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb;
 	while (1) {
 		sem_wait(&sem_multiprogram);
 		sem_wait(&any_for_ready);
+
 		if (!pQueue_isEmpty(suspended_readyQ)) {
 			pcb = pQueue_take(suspended_readyQ);
 			pQueue_put(readyQ, pcb);
 		}
+
 		pcb = (t_pcb*) pQueue_take(newQ);
 
 		//sem_wait(&longTermSemCall);
@@ -156,14 +157,14 @@ void* newToReady() { // Hilo del largo plazo, toma un proceso de new y lo pasa a
 
 		 packet_destroy(memory_info);
 
-		 // Recibir valo de Tabla
+		 // Recibir valor de Tabla
 
 		 // Actualizar PCB
 		 */
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: process %u from New to Ready",
+		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue",
 				pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
@@ -214,8 +215,9 @@ void* io_t(void *args) {
 				cupos_libres++;
 				pthread_mutex_unlock(&mutex_cupos);
 				pthread_mutex_lock(&mutex_log);
+
 				log_info(logger,
-						"Medium Term Scheduler: process %u to Suspended Blocked",
+						"Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
 						pcb->pid);
 				pthread_mutex_unlock(&mutex_log);
 			}
@@ -231,31 +233,24 @@ void* io_t(void *args) {
 }
 
 void putToReady(t_pcb *pcb) {
-
 	pQueue_put(readyQ, (void*) pcb);
 
-	if (sortingAlgorithm) {
-
-		t_packet *int_packet = create_packet(INTERRUPT, 64);
-		stream_add_UINT32(int_packet->payload, 1);
+	if (!!sortingAlgorithm) {
 		if (cpu_interrupt_socket != -1) {
-			socket_send_packet(cpu_interrupt_socket, int_packet);
+			socket_send_header(cpu_interrupt_socket, INTERRUPT);
 		}
-
-		packet_destroy(int_packet);
 
 		sem_wait(&exec_to_ready);
 
 		pQueue_sort(readyQ, SFJ_algorithm);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Corto Plazo: Cola Ready replanificada:");
+		log_info(logger, "Short Term Scheduler: Ready replan");
 		pthread_mutex_unlock(&mutex_log);
 	}
 }
 
 bool receive_process(t_packet *petition, int console_socket) {
-
 	t_process *received_process = create_process();
 	stream_take_process(petition, received_process);
 
@@ -281,6 +276,7 @@ bool receive_process(t_packet *petition, int console_socket) {
 		sem_post(&any_for_ready);
 	}
 
+	socket_send_header(console_socket, PROCESS_OK);
 	process_destroy(received_process);
 	return false;
 }
@@ -335,6 +331,7 @@ void* header_handler(void *_client_socket) {
 				break;
 			}
 		}
+
 		serve = kernel_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}

@@ -59,6 +59,7 @@ int accept_client(int server_socket) {
 	struct sockaddr_in client_address;
 	socklen_t address_size = sizeof(struct sockaddr_in);
 	catch_syscall_err(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size));
+
 	return client_socket;
 }
 

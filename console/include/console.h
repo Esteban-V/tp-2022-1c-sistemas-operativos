@@ -33,6 +33,4 @@ void stream_add_process(t_packet *packet);
 
 void terminate_console(bool error);
 
-// void serializacion_process(t_process* procces);
-
 #endif /* CONSOLE_H_ */

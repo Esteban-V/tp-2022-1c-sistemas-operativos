@@ -21,7 +21,7 @@
 #include"utils.h"
 
 enum e_sortingAlgorithm {
-	FIFO = 0, SRT = 1
+	FIFO = 1, SRT = 2
 };
 
 enum e_sortingAlgorithm sortingAlgorithm = FIFO;
@@ -60,10 +60,10 @@ bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);
 bool interrupt_ready(t_packet *petition, int console_socket);
 
-void* cpu_dispatch_listener();
-
+void* newToReady(void* args);
+void* cpu_dispatch_listener(void* args);
 void* suspend_process(void *args);
-void* exit_process();
+void* exit_process(void* args);
 
 void terminate_kernel(bool error);
 
