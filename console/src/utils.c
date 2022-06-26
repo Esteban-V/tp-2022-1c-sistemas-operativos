@@ -1,10 +1,3 @@
-/*
- * utils.c
- *
- *  Created on: May 9, 2022
- *      Author: utn-so
- */
-
 #include"utils.h"
 
 FILE* open_file(char *path) {

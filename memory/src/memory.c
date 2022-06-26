@@ -2,50 +2,95 @@
 
 int main() {
 	// Initialize logger
-	logger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
+	memoryLogger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
 	// Initialize Config
-	config = getMemoryConfig("memory.config");
+	memoryConfig = getMemoryConfig("memory.config");
+	// Initialize Metadata
+	metadata = initializeMemoryMetadata(memoryConfig);
 
 	// Creacion de server
-	int server_socket = create_server("127.0.0.1", "8002");
+	int server_socket = create_server(memoryConfig->listenPort);
 	log_info(logger, "Servidor de Memoria creado");
 
 	// Initialize Variables
-	memory = initializeMemory(config);
+	memory = initializeMemory(memoryConfig);
 	clock_m_counter = 0;
 	pageTables = dictionary_create();
-	algoritmo =
-			strcmp(config->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+	//algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
 
 	while (1) {
-		log_info(logger, "TEST");
+		log_info(memoryLogger, "TEST");
 		server_listen(server_socket, header_handler);
+
 	}
 
 	// Destroy
-	destroyMemoryConfig(config);
-	dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
-	log_destroy(logger);
+	destroyMemoryConfig(memoryConfig);
+    dictionary_destroy_and_destroy_elements(pageTables,_destroyPageTable);
+    log_destroy(memoryLogger);
 
 	return EXIT_SUCCESS;
 }
 
-bool process_suspension(t_packet *petition, int console_socket) {
-	log_info(logger, "SUSPENSION");
-	int PID = (int) stream_take_UINT32(petition->payload);
-	// TODO size?
-	log_info(logger, "PID STREAM, %d", PID);
+bool memory_write(t_packet *petition, int console_socket) {
+
+
 
 	return false;
 }
 
+bool memory_read(t_packet *petition, int console_socket) {
+
+
+
+	return false;
+}
+
+bool end_process(t_packet *petition, int console_socket) {
+
+
+	return false;
+}
+
+/*bool process_suspension(t_packet *petition, int console_socket) { // TODO ADAPTAR A LO NUESTRO, CON 2 TABLAS
+    uint32_t PID = stream_take_UINT32(petition->payload);
+
+    pthread_mutex_lock(&pageTablesMut); // TODO: Revisar posibilidad de deadlock, verificar logica.
+        t_ptbr1 *pt = getPageTable(PID, pageTables);
+        //TODO TABLE NUMBER?
+        uint32_t pages = (pt->entries)->pageQuantity;
+        for (uint32_t i = 0; i < pages; i++){
+            if ((pt->entries)->pageTableEntres[i].present){
+                void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->pageTableEntres[i].frame);
+                swapInterface_savePage(swapInterface, PID, i, pageContent);
+                pthread_mutex_lock(&metadataMut);
+                    metadata->entries[(pt->entries)->pageTableEntres[i].frame].isFree = true;
+                pthread_mutex_unlock(&metadataMut);
+                (pt->entries)->pageTableEntres[i].present = false;
+            }
+        }
+    pthread_mutex_unlock(&pageTablesMut); 
+
+    if(metadata->firstFrame){
+        pthread_mutex_lock(&metadataMut);
+            for (uint32_t i = 0; i < memoryConfig->entriesPerTable / memoryConfig->framesPerProcess; i++){
+                if(metadata->firstFrame[i] == PID) metadata->firstFrame[i] = -1;
+            }
+        pthread_mutex_unlock(&metadataMut);
+    }
+    
+    freeProcessEntries(PID);
+
+    return false;
+}*/
+
 bool receive_memory_info(t_packet *petition, int console_socket) {
-	log_info(logger, "RECIBIR INFO PA TABLAS");
-	int PID = (int) stream_take_UINT32(petition->payload);
-	log_info(logger, "PID STREAM, %d", PID);
+	log_info(memoryLogger, "RECIBIR INFO PA TABLAS");
+	int PID = (int)stream_take_UINT32(petition->payload);
+	log_info(memoryLogger, "PID STREAM, %d", PID);
 
 	if (!!PID) {
-		log_info(logger, "PID RECEIVED, %d", PID);
+		log_info(memoryLogger, "PID RECEIVED, %d", PID);
 
 		t_ptbr1 *newPageTable = initializePageTable1();
 		char *_PID = string_itoa(PID);
@@ -72,6 +117,7 @@ bool (*memory_handlers[7])(t_packet *petition, int console_socket) =
 	receive_memory_info,
 	true,
 	true,
+	true,
 	true
 };
 
@@ -92,6 +138,44 @@ void* header_handler(void *_client_socket) {
 	return 0;
 }
 
+t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config){
+    t_memoryMetadata *newMetadata = malloc(sizeof(t_memoryMetadata));
+    newMetadata->entryQty = config->entriesPerTable;
+    newMetadata->counter = 0;
+    newMetadata->entries = calloc(newMetadata->entryQty, sizeof(t_frameMetadata));
+    newMetadata->clock_m_Counter = NULL;
+    newMetadata->firstFrame = NULL;
+
+
+	uint32_t blockQuantity = config->entriesPerTable / config->framesPerProcess;
+
+	newMetadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
+	memset(newMetadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
+
+	newMetadata->clock_m_Counter = calloc(blockQuantity, sizeof(uint32_t));
+	for(int i = 0; i < blockQuantity; i++){
+		newMetadata->clock_m_Counter[i] = i * config->framesPerProcess;
+	}
+
+    for (int i = 0; i < newMetadata->entryQty; i++){
+        ((newMetadata->entries)[i]).isFree = true;
+        ((newMetadata->entries)[i]).timeStamp = 0;
+    }
+
+    return newMetadata;
+}
+
+void destroyMemoryMetadata(t_memoryMetadata *meta){
+
+    if(meta->firstFrame){
+        free(meta->firstFrame);
+        free(meta->clock_m_Counter);
+    }
+
+    free(meta->entries);
+    free(meta);
+}
+
 /////////////////////
 
 t_memory* initializeMemory(t_memoryConfig *config) {
@@ -100,4 +184,3 @@ t_memory* initializeMemory(t_memoryConfig *config) {
 
 	return newMemory;
 }
-

@@ -1,10 +1,3 @@
-/*
- * page_table.c
- *
- *  Created on: Jun 25, 2022
- *      Author: utn-so
- */
-
 #include"page_table.h"
 
 t_ptbr1* initializePageTable1() {
@@ -32,10 +25,10 @@ void pageTable_destroyLastEntry(t_ptbr1 *pt) {
 
 int32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame) {
 	pthread_mutex_lock(&pageTablesMut);
-	table->entries = realloc(table->entries,
+	table->pageTableEntres = realloc(table->pageTableEntres,
 			sizeof(t_pageTableEntry) * (table->pageQuantity + 1));
-	(table->entries)[table->pageQuantity].frame = newFrame;
-	(table->entries)[table->pageQuantity].present = false;
+	(table->pageTableEntres)[table->pageQuantity].frame = newFrame;
+	(table->pageTableEntres)[table->pageQuantity].present = false;
 	(table->pageQuantity)++;
 	int32_t pgQty = table->pageQuantity - 1;
 	pthread_mutex_unlock(&pageTablesMut);
@@ -74,7 +67,7 @@ t_swapFile* swapFile_create(char *path, int pageSize) {
 	t_swapFile *self = malloc(sizeof(t_swapFile));
 	self->path = string_duplicate(path);
 	self->pageSize = pageSize;
-	self->maxPages = config->memorySize / pageSize;
+	self->maxPages = memoryConfig->memorySize / pageSize;
 	/*
 	 self->fd = open(self->path, O_RDWR|O_CREAT, S_IRWXU);
 	 ftruncate(self->fd, self->size);
@@ -100,7 +93,7 @@ int32_t createPage(uint32_t PID) {
 
 	//log_info(logger, "Creando pagina %i, para carpincho de PID %u.", pageNumber, PID);
 
-	void *newPageContents = calloc(1, config->pageSize);
+	void *newPageContents = calloc(1, memoryConfig->pageSize);
 	/*if(swapInterface_savePage(swapInterface, PID, pageNumber, newPageContents)){
 	 free(newPageContents);
 	 return pageNumber;
@@ -158,7 +151,7 @@ void swapFile_register(t_swapFile *sf, uint32_t pid, int32_t pageNumber,
 
 // Encuentra el indice de comienzo de un chunk libre (acorde a asignacion fija)
 int findFreeChunk(t_swapFile *sf) {
-	for (int i = 0; i < sf->maxPages; i += config->framesPerProcess) {
+	for (int i = 0; i < sf->maxPages; i += memoryConfig->framesPerProcess) {
 		if (!(sf->entries[i].used)) {
 			return i;
 		}
@@ -172,7 +165,7 @@ int getChunk(t_swapFile *sf, uint32_t pid) {
 	while (sf->entries[i].pid != pid) {
 		if (i >= sf->maxPages)
 			return -1;
-		i += config->framesPerProcess;
+		i += memoryConfig->framesPerProcess;
 	}
 	if (!sf->entries[i].used)
 		return -1;
@@ -182,7 +175,7 @@ int getChunk(t_swapFile *sf, uint32_t pid) {
 // Se fija si en un dado swapFile hay un "chunk" libre (acorde a asignacion fija)
 bool hasFreeChunk(t_swapFile* sf){
     bool hasFreeChunk = false;
-    for(int i = 0; i < sf->maxPages; i += config->framesPerProcess)
+    for(int i = 0; i < sf->maxPages; i += memoryConfig->framesPerProcess)
         if(!sf->entries[i].used){
             hasFreeChunk = true;
             break;
@@ -190,49 +183,77 @@ bool hasFreeChunk(t_swapFile* sf){
     return hasFreeChunk;
 }
 
+
 // Algoritmo de asignacion fija.
 // Si el proceso existe en algun archivo, y hay lugar para una pagina mas en su chunk, se asigna.
 // Si el proceso existe en algun archivo, y no hay mas lugar, no se asigna.
 // Si el proceso NO existe en ningun archivo, pero hay un archivo con un chunk disponible, se asigna.
 // Si el proceso NO existe en ningun archivo, y no hay ningun archivo con un chunk disponible, no se asigna.
-bool fija(uint32_t pid, int32_t page, void *pageContent) {
-	t_swapFile *file = pidExists(pid);
-	bool _hasFreeChunk(void *elem) {
-		return hasFreeChunk((t_swapFile*) elem);
-	}
-	;
-	if (file == NULL)
-		file = list_find(swapFiles, _hasFreeChunk);
-	if (file == NULL)
-		return false;
+/*bool fija(uint32_t pid, int32_t page, void* pageContent){
+    t_swapFile* file = pidExists(pid);
+    bool _hasFreeChunk(void* elem){
+        return hasFreeChunk((t_swapFile*)elem);
+    };
+    if (file == NULL)
+        file = list_find(swapFiles, _hasFreeChunk);
+    if (file == NULL)
+        return false;
 
-	int assignedIndex = swapFile_getIndex(file, pid, page);
-	if (assignedIndex == -1) {
-		int base = getChunk(file, pid);
-		if (base == -1)
-			base = findFreeChunk(file);
-		if (base == -1)
-			return false;
-		int offset = swapFile_countPidPages(file, pid);
-		if (offset == config->framesPerProcess)
-			return false;
-		assignedIndex = base + offset;
-	}
-	// swapFile_writeAtIndex(file, assignedIndex, pageContent);
-	// swapFile_register(file, pid, page, assignedIndex);
+    int assignedIndex = swapFile_getIndex(file, pid, page);
+    if (assignedIndex == -1){
+        int base = getChunk(file, pid);
+        if (base == -1) base = findFreeChunk(file);
+        if (base == -1) return false;
+        int offset = swapFile_countPidPages(file, pid);
+        if (offset == config->framesPerProcess) return false;
+        assignedIndex = base + offset;
+    }
+    swapFile_writeAtIndex(file, assignedIndex, pageContent);
+    swapFile_register(file, pid, page, assignedIndex);
 
-	log_info(logger,
-			"Archivo %s: se almaceno la pagina %i del proceso %u en el indice %i",
-			file->path, page, pid, assignedIndex);
+    log_info(logger, "Archivo %s: se almaceno la pagina %i del proceso %u en el indice %i", file->path, page, pid, assignedIndex);
 
-	return true;
-}
+    return true;
+}*/
 
-uint32_t clock_m_alg(int32_t start, int32_t end) {
+/*uint32_t clock_m_alg(int32_t start, int32_t end){
+    int32_t frame = getFreeFrame(start, end);
 
-}
+    if (frame != -1) {
+        return frame;
+    }
 
-uint32_t clock_alg(int32_t start, int32_t end) {
+    uint32_t total = end - start;
+
+    pthread_mutex_lock(&metadataMut);
+    uint32_t *counter = metadata->firstFrame ? &(metadata->clock_m_Counter[start / memoryConfig->framesPerProcess]) : &clock_m_Counter;
+
+    while(1){
+        for (uint32_t i = 0; i < total; i++){
+            if (!metadata->entries[*counter].u && !metadata->entries[*counter].modified){
+                pthread_mutex_unlock(&metadataMut);
+                frame = *counter;
+                *counter = start + ((*counter + 1) % total);
+                return frame;
+            }
+            *counter = start + ((*counter + 1) % total);
+        }
+        for (uint32_t i = 0; i < total; i++){
+            if (! metadata->entries[*counter].u){
+                pthread_mutex_unlock(&metadataMut);
+                frame = *counter;
+                *counter = start + ((*counter + 1) % total);
+                return frame;
+            }
+            metadata->entries[*counter].u = false;
+            *counter = start + ((*counter + 1) % total);
+        }
+    }
+}*/
+
+
+uint32_t clock_alg(int32_t start, int32_t end){
+    
 
 }
 

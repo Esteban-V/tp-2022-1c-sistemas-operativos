@@ -47,7 +47,7 @@ int main(void) {
 	pthread_detach(io_thread);
 
 	// Creacion de server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	int server_socket = create_server(config->kernelPort);
 	log_info(logger, "Kernel ready for console");
 
 	// Inicializar semaforo de multiprocesamiento

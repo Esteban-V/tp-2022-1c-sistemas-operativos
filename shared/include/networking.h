@@ -22,7 +22,7 @@ pthread_mutex_t mutex_log;
 void catch_syscall_err(int code);
 
 int connect_to(char *server_ip, char *server_port);
-int create_server(char *server_ip, char *server_port);
+int create_server(char *server_port);
 
 int accept_client(int server_socket);
 void server_listen(int server_socket, void* (*client_handler)(void*));

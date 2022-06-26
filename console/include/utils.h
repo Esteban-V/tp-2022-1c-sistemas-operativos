@@ -1,10 +1,3 @@
-/*
- * utils.h
- *
- *  Created on: May 9, 2022
- *      Author: utn-so
- */
-
 #ifndef INCLUDE_UTILS_H_
 #define INCLUDE_UTILS_H_
 

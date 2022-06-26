@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
-#include"utils.h"
+#include"memoryUtils.h"
 
 pthread_mutex_t pageTablesMut;
 t_dictionary* pageTables;
@@ -17,9 +17,10 @@ typedef struct pageTableEntry { // TODO Datos?
     bool modified;
 } t_pageTableEntry;
 
-typedef struct t_ptbr2 { // TODO Numero de Tabla
+typedef struct t_ptbr2 {
+	int32_t tableNumber;
     int32_t pageQuantity;
-    t_pageTableEntry *entries;
+    t_pageTableEntry *pageTableEntres;
 } t_ptbr2;
 
 typedef struct t_ptbr1 {
@@ -51,10 +52,10 @@ typedef struct swapFile{
     t_pageMetadata* entries;
 } t_swapFile;
 
-t_memoryConfig *config;
 t_list* swapFiles;
 t_swapFile* swapFile_create(char* path, int pageSize);
 
+void *memory_getFrame(t_memory *mem, uint32_t frame);
 uint32_t clock_m_alg(int32_t start, int32_t end);
 uint32_t clock_alg(int32_t start, int32_t end);
 bool fija(uint32_t pid, int32_t page, void* pageContent);
