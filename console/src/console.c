@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
 		log_error(logger, "Missing params");
 		return EXIT_FAILURE;
 	}
+
 	if (argc > 3) {
 		log_warning(logger, "Unused params");
 	}
@@ -47,6 +48,7 @@ int main(int argc, char **argv) {
 			process->instructions->elements_count);
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
+
 	if (!kernel_socket) {
 		terminate_console(true);
 	}
@@ -63,11 +65,13 @@ int main(int argc, char **argv) {
 	packet_destroy(process_packet);
 	uint8_t result = socket_receive_header(kernel_socket);
 	bool error = result != PROCESS_OK;
+
 	if (error) {
 		log_error(logger, "Console exited with error code %d", result);
 	} else {
 		log_info(logger, "Console exited successfully");
 	}
+
 	terminate_console(error);
 }
 
