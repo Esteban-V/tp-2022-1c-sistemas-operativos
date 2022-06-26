@@ -44,9 +44,13 @@ int main(int argc, char **argv) {
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
 	log_info(logger, "Read process with %d instructions",
-					process->instructions->elements_count);
+			process->instructions->elements_count);
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
+	if (!kernel_socket) {
+		terminate_console(true);
+	}
+
 	log_info(logger, "Console connected to kernel");
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
@@ -60,8 +64,7 @@ int main(int argc, char **argv) {
 	// tirar info/error resultado con logger
 
 	packet_destroy(process_packet);
-	process_destroy(process);
-	terminate_console();
+	terminate_console(false);
 }
 
 void get_code(FILE *file) {
@@ -104,10 +107,11 @@ void stream_add_process(t_packet *packet) {
 			stream_add_instruction);
 }
 
-void terminate_console() {
+void terminate_console(bool error) {
 	log_destroy(logger);
 	config_destroy(config);
+	process_destroy(process);
 	close(kernel_socket);
-	exit(EXIT_SUCCESS);
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 

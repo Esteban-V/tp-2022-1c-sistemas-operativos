@@ -65,6 +65,6 @@ void* cpu_dispatch_listener();
 void* suspend_process(void *args);
 void* exit_process();
 
-void terminate_kernel();
+void terminate_kernel(bool error);
 
 #endif /* KERNEL_H_ */

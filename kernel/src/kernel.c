@@ -14,7 +14,7 @@ int main(void) {
 
 	if (config == NULL) {
 		log_error(logger, "Config failed to load");
-		return EXIT_FAILURE;
+		terminate_kernel(true);
 	}
 
 	// Setteo de Algoritmo de Planificacion
@@ -71,6 +71,10 @@ int main(void) {
 
 	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
 	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	if (!cpu_dispatch_socket || !cpu_interrupt_socket) {
+		terminate_kernel(true);
+	}
+
 	log_info(logger, "Kernel connected to CPU");
 
 	/*
@@ -83,7 +87,7 @@ int main(void) {
 	}
 
 	destroyKernelConfig(config);
-	return EXIT_SUCCESS;
+	terminate_kernel(false);
 }
 
 void* cpu_dispatch_listener() {
@@ -342,4 +346,10 @@ int getIO(t_pcb *pcb) {
 	instruccion = list_get(pcb->instructions, pcb->program_counter);
 	uint32_t n = *((uint32_t*) list_get(instruccion->params, 0));
 	return n;
+}
+
+void terminate_kernel(bool error) {
+	log_destroy(logger);
+	config_destroy(config);
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
