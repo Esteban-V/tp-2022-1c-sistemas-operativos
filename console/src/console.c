@@ -60,11 +60,8 @@ int main(int argc, char **argv) {
 		socket_send_packet(kernel_socket, process_packet);
 	}
 
-	// esperar resultado
-	// tirar info/error resultado con logger
-
 	packet_destroy(process_packet);
-	terminate_console(false);
+	terminate_console(socket_receive_header(kernel_socket) != PROCESS_OK);
 }
 
 void get_code(FILE *file) {
