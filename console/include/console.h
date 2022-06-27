@@ -29,8 +29,6 @@ char *kernel_port;
 void get_code(FILE *file);
 t_instruction* parse_instruction(char *string);
 
-void stream_add_process(t_packet *packet);
-
 void terminate_console(bool error);
 
 #endif /* CONSOLE_H_ */

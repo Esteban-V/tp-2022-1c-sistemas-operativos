@@ -22,24 +22,25 @@
 #include<commons/log.h>
 #include<errno.h>
 
-#include"serialization.h"
-#include"networking.h"
 #include"process_utils.h"
 
+#include"serialization.h"
+#include"networking.h"
+
 typedef struct pcb {
-	int pid;
-	int size;
+	uint32_t pid;
+	uint32_t size;
 	t_list *instructions;
-	int program_counter;
-	int page_table; //esta mal
-	int burst_estimation;
-	int blocked_time;
-	int nextIO;
+	uint32_t program_counter;
+	uint32_t page_table; //esta mal
+	uint32_t burst_estimation;
+	uint32_t blocked_time;
+	uint32_t nextIO;
 } t_pcb;
 
 void stream_take_pcb(t_packet*, t_pcb*);
 void stream_add_pcb(t_packet *packet, t_pcb *pcb);
-void stream_add_process(t_packet*, t_pcb*);
+
 t_pcb* create_pcb();
 void destroy_pcb(t_pcb*);
 

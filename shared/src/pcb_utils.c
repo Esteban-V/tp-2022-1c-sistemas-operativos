@@ -9,8 +9,76 @@ void destroy_pcb(t_pcb *pcb) {
 }
 
 t_pcb* create_pcb() {
+	// Try to allocate pcb structure.
 	t_pcb *pcb = malloc(sizeof(t_pcb));
+	if (pcb == NULL) {
+		return NULL;
+	}
+
+	// Try to allocate pcb properties and instructions, free structure if fail.
+	pcb->pid = malloc(sizeof(uint32_t));
+	if (pcb->pid == NULL) {
+		free(pcb);
+		return NULL;
+	}
+
+	pcb->size = malloc(sizeof(uint32_t));
+	if (pcb->size == NULL) {
+		free(pcb->pid);
+		free(pcb);
+		return NULL;
+	}
+
 	pcb->instructions = list_create();
+	if (pcb->instructions == NULL) {
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb);
+		return NULL;
+	}
+
+	pcb->program_counter = malloc(sizeof(uint32_t));
+	if (pcb->program_counter == NULL) {
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb->instructions);
+		free(pcb);
+		return NULL;
+	}
+
+	pcb->burst_estimation = malloc(sizeof(uint32_t));
+	if (pcb->burst_estimation == NULL) {
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb->instructions);
+		free(pcb->program_counter);
+		free(pcb);
+		return NULL;
+	}
+
+	pcb->blocked_time = malloc(sizeof(uint32_t));
+	if (pcb->blocked_time == NULL) {
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb->instructions);
+		free(pcb->program_counter);
+		free(pcb->burst_estimation);
+		free(pcb);
+		return NULL;
+	}
+
+	pcb->nextIO = malloc(sizeof(uint32_t));
+	if (pcb->nextIO == NULL) {
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb->instructions);
+		free(pcb->program_counter);
+		free(pcb->burst_estimation);
+		free(pcb->blocked_time);
+		free(pcb);
+		return NULL;
+	}
+
 	return pcb;
 }
 
@@ -39,10 +107,11 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb) {
 	stream_add_UINT32(packet->payload, pcb->pid);
 	stream_add_UINT32(packet->payload, pcb->size);
 
+	// ESTO ROMPE PORQUE LAS INSTRUCTIONS SE COPIARON MAL
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);
+	printf("3: pcb instructions added\n");
 
 	stream_add_UINT32(packet->payload, pcb->program_counter);
 	//paginas
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
-
 }

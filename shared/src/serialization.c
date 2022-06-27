@@ -58,7 +58,7 @@ void stream_add_LIST(t_stream_buffer *stream, t_list *source,
 		stream_add_ELEMP(stream, elem);
 	}
 
-	uint32_t size = source->elements_count;
+	uint32_t size = list_size(source);
 	stream_add_UINT32(stream, size);
 	list_iterate(source, _stream_add_ELEMP);
 }

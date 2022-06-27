@@ -20,8 +20,6 @@ void log_process(t_log *logger, t_process *proc) {
 
 	log_info(logger, "Size: %d\n", proc->size);
 	log_info(logger, "Instructions:\n");
-
-	list_iterate(proc->instructions, _log_instruction);
 }
 
 t_instruction* create_instruction(size_t id_size) {
@@ -76,11 +74,6 @@ t_process* create_process() {
 		return NULL;
 	}
 
-	if (process->size == NULL) {
-		free(process);
-		return NULL;
-	}
-
 	return process;
 }
 
@@ -96,6 +89,12 @@ void process_destroy(t_process *process) {
 				(void*) destroy_instruction_iteratee);
 		free(process->instructions);
 	}
+}
+
+void stream_add_process(t_packet *packet, t_process *process) {
+	stream_add_UINT32(packet->payload, process->size);
+	stream_add_LIST(packet->payload, process->instructions,
+			stream_add_instruction);
 }
 
 void stream_take_process(t_packet *packet, t_process *process) {

@@ -34,7 +34,7 @@ typedef struct kernelConfig {
 	char *cpuPortInterrupt;
 	char *listenPort;
 	char *schedulerAlgorithm;
-	int initialEstimate;
+	uint32_t initialEstimate;
 	char *alpha;
 	int multiprogrammingLevel;
 	int maxBlockedTime;

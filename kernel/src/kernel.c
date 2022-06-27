@@ -121,8 +121,10 @@ void* readyToExec(void *args) {
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
 
-		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64); //implementar PCBTOCPU
+		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);
+		printf("pcb packet created\n");
 		stream_add_pcb(pcb_packet, pcb);
+		printf("pcb added to stream\n");
 		if (cpu_dispatch_socket != -1) {
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
@@ -137,11 +139,8 @@ void* readyToExec(void *args) {
 void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb = NULL;
 	while (1) {
-		printf("new to ready threaddd\n");
 		sem_wait(&any_for_ready);
-		printf("any for ready unlock 1\n");
 		sem_wait(&sem_multiprogram);
-		printf("sem multiprogram unlock 2\n");
 
 		// pthread_mutex_lock(&mutex_cupos);
 		// cupos_libres--; // TODO Chequear bien donde se modifica
@@ -155,9 +154,7 @@ void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y
 		 pQueue_put(readyQ, pcb);
 		 }*/
 
-		printf("count %d\n", newQ->lib_queue->elements->elements_count);
 		pcb = (t_pcb*) pQueue_take(newQ);
-		printf("count2 %d\n", newQ->lib_queue->elements->elements_count);
 
 		//sem_wait(&longTermSemCall);
 		//pthread_mutex_lock(&mutex_mediumTerm);
@@ -264,20 +261,29 @@ void putToReady(t_pcb *pcb) {
 }
 
 bool receive_process(t_packet *petition, int console_socket) {
+	void _log_instruction(void *elem) {
+		log_instruction(logger, elem);
+	}
+
 	t_process *received_process = create_process();
 	stream_take_process(petition, received_process);
 
 	if (!!received_process) {
-		t_list *instructions = received_process->instructions;
-		log_info(logger, "Received process with %d instructions",
-				instructions->elements_count);
-
 		t_pcb *pcb = create_pcb();
-		memcpy(pcb->instructions, instructions, sizeof(t_list));
+
+		t_list *listaa = received_process->instructions;
+		list_add_all(pcb->instructions, listaa);
+		pcb->size = received_process->size;
+		list_iterate(received_process->instructions, _log_instruction);
+		process_destroy(received_process);
+
+		log_info(logger, "Received process sized %d with %d instructions",
+				pcb->size, list_size(pcb->instructions));
+		// ESTO ROMPE PORQUE LAS INSTRUCTIONS SE COPIARON MAL
+		// list_iterate(pcb->instructions, _log_instruction);
 
 		pid++;
 		pcb->pid = pid;
-		pcb->size = received_process->size;
 		pcb->program_counter = 0;
 		pcb->burst_estimation = config->initialEstimate;
 
@@ -290,7 +296,6 @@ bool receive_process(t_packet *petition, int console_socket) {
 	}
 
 	socket_send_header(console_socket, PROCESS_OK);
-	process_destroy(received_process);
 	return false;
 }
 

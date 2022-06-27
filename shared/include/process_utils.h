@@ -23,15 +23,20 @@ typedef struct process {
 } t_process;
 
 void stream_add_instruction(t_stream_buffer *stream, void *elem);
-void stream_take_process(t_packet *packet, t_process *process);
 void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem);
+
+void stream_add_process(t_packet *packet, t_process *process);
+void stream_take_process(t_packet *packet, t_process *process);
+
 void log_instruction_param(t_log *logger, uint32_t *param);
 void log_instruction(t_log *logger, t_instruction *inst);
 void log_process(t_log *logger, t_process *proc);
+
 t_instruction* create_instruction(size_t id_size);
-void instruction_destroy(t_instruction *instruction);
 t_process* create_process();
+
 void destroy_instruction_iteratee(t_instruction *elem);
+void instruction_destroy(t_instruction *instruction);
 void process_destroy(t_process *process);
 
 #endif /* INCLUDE_PROCESS_UTILS_H_ */

@@ -38,13 +38,14 @@ int main(int argc, char **argv) {
 	get_code(instruction_file);
 
 	process = create_process();
-	if (!process)
-		return EXIT_FAILURE;
+	if (!process) {
+		terminate_console(true);
+	}
 
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
 	log_info(logger, "Read process with %d instructions",
-			process->instructions->elements_count);
+			list_size(process->instructions));
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
 	if (!kernel_socket) {
@@ -54,7 +55,7 @@ int main(int argc, char **argv) {
 	log_info(logger, "Console connected to kernel");
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
-	stream_add_process(process_packet);
+	stream_add_process(process_packet, process);
 
 	if (kernel_socket != -1) {
 		socket_send_packet(kernel_socket, process_packet);
@@ -103,12 +104,6 @@ t_instruction* parse_instruction(char *string) {
 	}
 
 	return instruction;
-}
-
-void stream_add_process(t_packet *packet) {
-	stream_add_UINT32(packet->payload, process->size);
-	stream_add_LIST(packet->payload, process->instructions,
-			stream_add_instruction);
 }
 
 void terminate_console(bool error) {

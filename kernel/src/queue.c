@@ -73,7 +73,7 @@ void pQueue_unlock(t_pQueue *queue) {
 void* pQueue_takeLast(t_pQueue *queue) {
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = list_remove(queue->lib_queue->elements,
-			queue->lib_queue->elements->elements_count - 1);
+			list_size(queue->lib_queue->elements) - 1);
 	pthread_mutex_unlock(&queue->mutex);
 	return elem;
 }
@@ -81,7 +81,7 @@ void* pQueue_takeLast(t_pQueue *queue) {
 void* pQueue_peek(t_pQueue *queue) {
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = list_remove(queue->lib_queue->elements,
-			queue->lib_queue->elements->elements_count - 1);
+			list_size(queue->lib_queue->elements) - 1);
 	pthread_mutex_unlock(&queue->mutex);
 	return elem;
 }
