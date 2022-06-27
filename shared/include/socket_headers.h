@@ -12,6 +12,7 @@ typedef enum headers {
 	// Respuestas a consola
 	PROCESS_OK = 7,
 	PROCESS_FAILURE = 8,
+	PCB_TO_KERNEL = 9,
 } headers;
 
 #endif /* SOCKET_HEADERS_H_ */

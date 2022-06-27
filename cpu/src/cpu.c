@@ -83,7 +83,7 @@ void* execution() {
 				break;
 			}
 			case DEAD: {
-				log_info(logger, "MAL");
+				log_info(logger, "PROCESS DEATH");
 				break;
 			}
 			}
@@ -103,14 +103,27 @@ bool receivedPcb(t_packet *petition, int console_socket) {
 	stream_take_pcb(petition, pcb);
 	log_info(logger, "RECIBO PCB %d", pcb->pid);
 	sem_post(&pcb_loaded);
-	return false;
+	return true;
 }
 
 bool receivedInterruption(t_packet *petition, int console_socket) {
 	// recibir header interrupcion
 	// "desalojar" actual --> guardar contexto de ejecucion
 	// devolver pcb actualizado por dispatch
+
 	return false;
+}
+
+bool sendPcbToKernel(headers header) {
+	t_packet *pcb_packet = create_packet(header, 64);
+	stream_add_pcb(pcb_packet, pcb);
+	if (kernel_dispatch_socket != -1) {
+		socket_send_packet(kernel_dispatch_socket, pcb_packet);
+	}
+	packet_destroy(pcb_packet);
+
+	sem_wait(&pcb_loaded);
+	return true;
 }
 
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
@@ -166,13 +179,8 @@ void execute_no_op(uint32_t time) {
 	return;
 }
 
-void execute_exit() {/*
- t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);//implementar PCBTOCPU
- stream_add_pcb(pcb_packet,pcb);
- if (cpu_server_socket != -1) {
- socket_send_packet(cpu_server_socket, pcb_packet);
- }
- */
+void execute_exit() {
+	sendPcbToKernel(EXIT);
 }
 
 void execute_io(uint32_t time) {
