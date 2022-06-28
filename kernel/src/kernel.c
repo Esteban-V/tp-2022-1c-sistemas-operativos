@@ -122,9 +122,8 @@ void* readyToExec(void *args) {
 		pcb = pQueue_take(readyQ);
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);
-		printf("pcb packet created\n");
 		stream_add_pcb(pcb_packet, pcb);
-		printf("pcb added to stream\n");
+
 		if (cpu_dispatch_socket != -1) {
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
@@ -271,15 +270,15 @@ bool receive_process(t_packet *petition, int console_socket) {
 	if (!!received_process) {
 		t_pcb *pcb = create_pcb();
 
-		t_list *listaa = received_process->instructions;
-		list_add_all(pcb->instructions, listaa);
+		list_add_all(pcb->instructions, received_process->instructions);
 		pcb->size = received_process->size;
-		list_iterate(received_process->instructions, _log_instruction);
-		process_destroy(received_process);
+		// NO DESTRUIR HASTA QUE ENCONTREMOS LA FORMA DE COPIAR CORRECTAMENTE
+		// process_destroy(received_process);
 
 		log_info(logger, "Received process sized %d with %d instructions",
 				pcb->size, list_size(pcb->instructions));
-		// ESTO ROMPE PORQUE LAS INSTRUCTIONS SE COPIARON MAL
+
+		// ESTO ROMPERIA SI DESTRUIMOS EL RECEIVED_PROCESS PORQUE LAS INSTRUCTIONS SE COPIAN MAL
 		// list_iterate(pcb->instructions, _log_instruction);
 
 		pid++;

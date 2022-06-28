@@ -46,7 +46,8 @@ void* execution() {
 			char *op_code = instruccion->id;
 			uint32_t fst_param = -1, snd_param = -1;
 
-			log_info(logger, "%s", op_code);
+			log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
+					pcb->program_counter, op_code);
 			enum operation entry = getOperation(op_code);
 			switch (entry) {
 			case NO_OP: {
@@ -101,7 +102,8 @@ void* interruption() {
 bool receivedPcb(t_packet *petition, int console_socket) {
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
-	log_info(logger, "RECIBO PCB %d", pcb->pid);
+	log_info(logger, "Received pcb PID #%d with %d instructions", pcb->pid,
+			list_size(pcb->instructions));
 	sem_post(&pcb_loaded);
 	return true;
 }
@@ -155,8 +157,6 @@ void* header_handler(void *_client_socket) {
 }
 
 enum operation getOperation(char *op) {
-	log_info(logger, "%s", op);
-
 	if (!strcmp(op, "NO_OP")) {
 		return NO_OP;
 	} else if (!strcmp(op, "I/O")) {

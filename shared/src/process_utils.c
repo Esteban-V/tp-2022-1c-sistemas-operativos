@@ -77,17 +77,13 @@ t_process* create_process() {
 	return process;
 }
 
-void destroy_instruction_iteratee(t_instruction *elem) {
-	instruction_destroy(elem);
-}
-
 void process_destroy(t_process *process) {
 	if (process != NULL) {
 		//Tira Warning
 		//free(process->size);
 		list_iterate(process->instructions,
-				(void*) destroy_instruction_iteratee);
-		free(process->instructions);
+				(t_instruction*) instruction_destroy);
+		list_destroy(process->instructions);
 	}
 }
 

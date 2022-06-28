@@ -107,9 +107,8 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb) {
 	stream_add_UINT32(packet->payload, pcb->pid);
 	stream_add_UINT32(packet->payload, pcb->size);
 
-	// ESTO ROMPE PORQUE LAS INSTRUCTIONS SE COPIARON MAL
+	// ESTO ROMPERIA PORQUE LAS INSTRUCTIONS SE COPIAN MAL
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);
-	printf("3: pcb instructions added\n");
 
 	stream_add_UINT32(packet->payload, pcb->program_counter);
 	//paginas
