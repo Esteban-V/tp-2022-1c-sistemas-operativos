@@ -86,7 +86,6 @@ int main(void) {
 	 memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 	 */
 
-	//pid = 0;
 	while (1) {
 		server_listen(server_socket, header_handler);
 	}
@@ -98,6 +97,10 @@ int main(void) {
 void* cpu_dispatch_listener(void *args) {
 	sem_wait(&bloquear);
 	//listen cpu_dispatch_socket
+	while (1) {
+		server_listen(cpu_dispatch_socket, header_handler);
+	}
+
 	/*
 	 int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
 	 while(1){
@@ -260,10 +263,6 @@ void putToReady(t_pcb *pcb) {
 }
 
 bool receive_process(t_packet *petition, int console_socket) {
-	void _log_instruction(void *elem) {
-		log_instruction(logger, elem);
-	}
-
 	t_process *received_process = create_process();
 	stream_take_process(petition, received_process);
 
@@ -295,7 +294,7 @@ bool receive_process(t_packet *petition, int console_socket) {
 	}
 
 	socket_send_header(console_socket, PROCESS_OK);
-	return false;
+	return true;
 }
 
 bool io_op(t_packet *petition, int console_socket) {
@@ -310,11 +309,12 @@ bool io_op(t_packet *petition, int console_socket) {
 }
 
 bool exit_op(t_packet *petition, int console_socket) {
-	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
+	log_info(logger, "Received pcb #%d from CPU", received_pcb->pid);
 	pQueue_put(exitQ, (void*) received_pcb);
-	return false;
+	sem_post(&freeCpu);
+	return true;
 }
 
 bool interrupt_ready(t_packet *petition, int console_socket) {

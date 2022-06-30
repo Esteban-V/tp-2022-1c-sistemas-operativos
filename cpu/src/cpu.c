@@ -80,6 +80,7 @@ void* execution() {
 				break;
 			}
 			case EXIT_OP: {
+				log_info(logger, "EJECUTA EXIT");
 				execute_exit();
 				break;
 			}
@@ -116,16 +117,18 @@ bool receivedInterruption(t_packet *petition, int console_socket) {
 	return false;
 }
 
-bool sendPcbToKernel(headers header) {
+void sendPcbToKernel(headers header) {
 	t_packet *pcb_packet = create_packet(header, 64);
+	printf("1 header: %d\n", header);
 	stream_add_pcb(pcb_packet, pcb);
+	printf("2 %d\n", pcb_packet == NULL);
 	if (kernel_dispatch_socket != -1) {
+		printf("3 %d\n", kernel_dispatch_socket);
 		socket_send_packet(kernel_dispatch_socket, pcb_packet);
+		printf("4\n");
+
 	}
 	packet_destroy(pcb_packet);
-
-	sem_wait(&pcb_loaded);
-	return true;
 }
 
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =

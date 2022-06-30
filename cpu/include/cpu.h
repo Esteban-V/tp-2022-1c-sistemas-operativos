@@ -49,6 +49,8 @@ void execute_exit();
 void execute_no_op(uint32_t time);
 void execute_io(uint32_t time);
 
+void sendPcbToKernel(headers header);
+
 sem_t pcb_loaded;
 
 int kernel_dispatch_socket;
