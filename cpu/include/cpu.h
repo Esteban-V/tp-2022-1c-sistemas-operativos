@@ -41,7 +41,7 @@ t_cpu_config *config;
 bool receivedPcb(t_packet *petition, int console_socket);
 bool receivedInterruption(t_packet *petition, int console_socket);
 
-void* header_handler(void *_client_socket);
+void* header_handler(void *_kernel_client_socket);
 void* execution();
 void* interruption();
 
@@ -49,7 +49,9 @@ void execute_exit();
 void execute_no_op(uint32_t time);
 void execute_io(uint32_t time);
 
-void sendPcbToKernel(headers header);
+void pcb_to_kernel(headers header);
+
+int kernel_client_socket;
 
 sem_t pcb_loaded;
 t_log *logger;

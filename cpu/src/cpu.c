@@ -6,7 +6,8 @@
  */
 #include "cpu.h"
 
-int main() {
+int main()
+{
 	// Initialize logger
 	logger = log_create("./cfg/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("cpu.config");
@@ -24,17 +25,21 @@ int main() {
 	pthread_create(&execThread, 0, execution, NULL);
 	pthread_detach(execThread);
 
-	while (1) {
+	while (1)
+	{
 		server_listen(kernel_dispatch_socket, header_handler);
 	}
 
 	log_destroy(logger);
 }
 
-void* execution() {
-	while (1) {
+void *execution()
+{
+	while (1)
+	{
 		sem_wait(&pcb_loaded);
-		while (pcb->program_counter < list_size(pcb->instructions)) {
+		while (pcb->program_counter < list_size(pcb->instructions))
+		{
 			t_instruction *instruccion;
 
 			instruccion = list_get(pcb->instructions, pcb->program_counter);
@@ -44,69 +49,80 @@ void* execution() {
 			uint32_t fst_param = -1, snd_param = -1;
 
 			log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
-					pcb->program_counter, op_code);
+					 pcb->program_counter, op_code);
 			enum operation entry = getOperation(op_code);
-			switch (entry) {
-			case NO_OP: {
+			switch (entry)
+			{
+			case NO_OP:
+			{
 				log_info(logger, "EJECUTA NO OP");
-				fst_param = *((uint32_t*) list_get(instruccion->params, 0));
+				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
 				execute_no_op(fst_param);
 				break;
 			}
-			case IO_OP: {
+			case IO_OP:
+			{
 				log_info(logger, "EJECUTA I/O");
-				fst_param = *((uint32_t*) list_get(instruccion->params, 0));
+				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
 				execute_io(fst_param);
 				break;
 			}
-			case READ: {
+			case READ:
+			{
 				log_info(logger, "EJECUTA READ");
-				fst_param = *((uint32_t*) list_get(instruccion->params, 0));
+				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
 				break;
 			}
-			case COPY: {
+			case COPY:
+			{
 				log_info(logger, "EJECUTA COPY");
-				fst_param = *((uint32_t*) list_get(instruccion->params, 0));
-				snd_param = *((uint32_t*) list_get(instruccion->params, 1));
+				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
+				snd_param = *((uint32_t *)list_get(instruccion->params, 1));
 				break;
 			}
-			case WRITE: {
+			case WRITE:
+			{
 				log_info(logger, "EJECUTA WRITE");
-				fst_param = *((uint32_t*) list_get(instruccion->params, 0));
-				snd_param = *((uint32_t*) list_get(instruccion->params, 1));
+				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
+				snd_param = *((uint32_t *)list_get(instruccion->params, 1));
 				break;
 			}
-			case EXIT_OP: {
+			case EXIT_OP:
+			{
 				log_info(logger, "EJECUTA EXIT");
 				execute_exit();
 				break;
 			}
-			case DEAD: {
+			case DEAD:
+			{
 				log_info(logger, "PROCESS DEATH");
 				break;
 			}
 			}
 		}
-
 	}
 }
 
-void* interruption() {
-	while (1) {
+void *interruption()
+{
+	while (1)
+	{
 		server_listen(kernel_interrupt_socket, header_handler);
 	}
 }
 
-bool receivedPcb(t_packet *petition, int console_socket) {
+bool receivedPcb(t_packet *petition, int kernel_socket)
+{
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
-	log_info(logger, "Received pcb PID #%d with %d instructions", pcb->pid,
-			list_size(pcb->instructions));
+	log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
+			 list_size(pcb->instructions));
 	sem_post(&pcb_loaded);
 	return true;
 }
 
-bool receivedInterruption(t_packet *petition, int console_socket) {
+bool receivedInterruption(t_packet *petition, int kernel_socket)
+{
 	// recibir header interrupcion
 	// "desalojar" actual --> guardar contexto de ejecucion
 	// devolver pcb actualizado por dispatch
@@ -114,75 +130,89 @@ bool receivedInterruption(t_packet *petition, int console_socket) {
 	return false;
 }
 
-void sendPcbToKernel(headers header) {
+void pcb_to_kernel(headers header)
+{
 	t_packet *pcb_packet = create_packet(header, 64);
 	stream_add_pcb(pcb_packet, pcb);
-	if (kernel_dispatch_socket != -1) {
-		log_info(logger, "Sending pcb PID #%d with %d instructions", pcb->pid,
-				list_size(pcb->instructions));
-		socket_send_packet(kernel_dispatch_socket, pcb_packet);
-		log_info(logger, "Sent pcb PID #%d with %d instructions", pcb->pid,
-				list_size(pcb->instructions));
+	if (kernel_client_socket != -1)
+	{
+		socket_send_packet(kernel_client_socket, pcb_packet);
 	}
 	packet_destroy(pcb_packet);
 }
 
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
-{
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	receivedPcb,
-	receivedInterruption,
-	NULL
-};
+	{
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		receivedPcb,
+		receivedInterruption,
+		NULL};
 
-void* header_handler(void *_client_socket) {
-	int client_socket = (int) _client_socket;
+void *header_handler(void *_kernel_client_socket)
+{
+	kernel_client_socket = (int)_kernel_client_socket;
 	bool serve = true;
-	while (serve) {
-		t_packet *packet = socket_receive_packet(client_socket);
-		if (packet == NULL) {
-			if (!socket_retry_packet(client_socket, &packet)) {
-				close(client_socket);
+	while (serve)
+	{
+		t_packet *packet = socket_receive_packet(kernel_client_socket);
+		if (packet == NULL)
+		{
+			if (!socket_retry_packet(kernel_client_socket, &packet))
+			{
+				close(kernel_client_socket);
 				break;
 			}
 		}
-		serve = kernel_handlers[packet->header](packet, client_socket);
+		serve = kernel_handlers[packet->header](packet, kernel_client_socket);
 		packet_destroy(packet);
 	}
 	return 0;
 }
 
-enum operation getOperation(char *op) {
-	if (!strcmp(op, "NO_OP")) {
+enum operation getOperation(char *op)
+{
+	if (!strcmp(op, "NO_OP"))
+	{
 		return NO_OP;
-	} else if (!strcmp(op, "I/O")) {
+	}
+	else if (!strcmp(op, "I/O"))
+	{
 		return IO_OP;
-	} else if (!strcmp(op, "READ")) {
+	}
+	else if (!strcmp(op, "READ"))
+	{
 		return READ;
-	} else if (!strcmp(op, "WRITE")) {
+	}
+	else if (!strcmp(op, "WRITE"))
+	{
 		return WRITE;
-	} else if (!strcmp(op, "COPY")) {
+	}
+	else if (!strcmp(op, "COPY"))
+	{
 		return COPY;
-	} else if (!strcmp(op, "EXIT")) {
+	}
+	else if (!strcmp(op, "EXIT"))
+	{
 		return EXIT_OP;
-	} else
+	}
+	else
 		return DEAD;
-
 }
 
-void execute_no_op(uint32_t time) {
-	usleep((time_t) time);
+void execute_no_op(uint32_t time)
+{
+	usleep((time_t)time);
 	return;
 }
 
-void execute_exit() {
-	sendPcbToKernel(EXIT);
+void execute_exit()
+{
+	pcb_to_kernel(EXIT);
 }
 
-void execute_io(uint32_t time) {
-
+void execute_io(uint32_t time)
+{
 }
-

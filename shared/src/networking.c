@@ -77,7 +77,6 @@ int accept_client(int server_socket) {
 
 void server_listen(int server_socket, void* (*client_handler)(void*)) {
 	int client_socket = accept_client(server_socket);
-	printf("ESCUCHANDO %d\n", client_socket);
 	pthread_t client_handler_thread = 0;
 	catch_syscall_err(
 			pthread_create(&client_handler_thread, NULL, client_handler,
