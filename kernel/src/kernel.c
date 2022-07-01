@@ -46,15 +46,14 @@ int main(void) {
 	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
 	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
 
-	if (!cpu_dispatch_socket || cpu_dispatch_socket == -1
-			|| !cpu_interrupt_socket || cpu_interrupt_socket == -1) {
+	if (!cpu_dispatch_socket || !cpu_interrupt_socket) {
 		terminate_kernel(true);
 	}
 
 	log_info(logger, "Kernel connected to CPU");
 
 	// Creacion de server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	int server_socket = create_server(config->kernelPort);
 	if (!server_socket) {
 		terminate_kernel(true);
 	}
@@ -92,7 +91,6 @@ int main(void) {
 		server_listen(server_socket, header_handler);
 	}
 
-	destroyKernelConfig(config);
 	terminate_kernel(false);
 }
 
@@ -104,13 +102,6 @@ void* cpu_dispatch_listener(void *args) {
 	while (1) {
 		server_listen(cpu_dispatch_socket, header_handler);
 	}
-
-	/*
-	 int server_cpu_socket = create_server(config->kernelIP, config->cpuPortDispatch);
-	 while(1){
-	 server_listen(server_cpu_socket, header_handler);
-	 }
-	 */
 }
 
 void* exit_process(void *args) {
@@ -371,9 +362,9 @@ int getIO(t_pcb *pcb) {
 
 void terminate_kernel(bool error) {
 	log_destroy(logger);
-	config_destroy(config);
-	close(cpu_interrupt_socket);
-	close(cpu_dispatch_socket);
-	close(memory_server_socket);
+	destroyKernelConfig(config);
+	!cpu_interrupt_socket && close(cpu_interrupt_socket);
+	!cpu_dispatch_socket && close(cpu_dispatch_socket);
+	!memory_server_socket && close(memory_server_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }

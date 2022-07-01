@@ -12,10 +12,8 @@ int main() {
 	config = get_cpu_config("cpu.config");
 
 	// Creacion de server
-	kernel_dispatch_socket = create_server(config->ip,
-			config->dispatchListenPort);
-	kernel_interrupt_socket = create_server(config->ip,
-			config->interruptListenPort);
+	kernel_dispatch_socket = create_server(config->dispatchListenPort);
+	kernel_interrupt_socket = create_server(config->interruptListenPort);
 	log_info(logger, "CPU ready for kernel");
 
 	sem_init(&pcb_loaded, 0, 0);
@@ -120,9 +118,11 @@ void sendPcbToKernel(headers header) {
 	t_packet *pcb_packet = create_packet(header, 64);
 	stream_add_pcb(pcb_packet, pcb);
 	if (kernel_dispatch_socket != -1) {
-		log_info(logger, "Sending pcb PID #%d with %d instructions", pcb->pid, list_size(pcb->instructions));
+		log_info(logger, "Sending pcb PID #%d with %d instructions", pcb->pid,
+				list_size(pcb->instructions));
 		socket_send_packet(kernel_dispatch_socket, pcb_packet);
-		log_info(logger, "Sent pcb PID #%d with %d instructions", pcb->pid, list_size(pcb->instructions));
+		log_info(logger, "Sent pcb PID #%d with %d instructions", pcb->pid,
+				list_size(pcb->instructions));
 	}
 	packet_destroy(pcb_packet);
 }

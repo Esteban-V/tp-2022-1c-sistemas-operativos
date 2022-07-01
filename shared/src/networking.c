@@ -1,6 +1,6 @@
 #include"networking.h"
 
-void catch_syscall_err(int code) {
+bool catch_syscall_err(int code) {
 	if (code == -1) {
 		int error = errno;
 		char *buf = malloc(100);
@@ -9,55 +9,57 @@ void catch_syscall_err(int code) {
 		log_error(logger, "Error: %s", buf);
 		pthread_mutex_unlock(&mutex_log);
 		free(buf);
+		return true;
 	}
+	return false;
 }
 
 int connect_to(char *server_ip, char *server_port) {
 	int client_socket = 0;
 
 	struct addrinfo hints;
-	struct addrinfo *serv_info;
+	struct addrinfo *server_info;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
 	catch_syscall_err(
-			client_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
-					serv_info->ai_protocol));
+			getaddrinfo(server_ip, server_port, &hints, &server_info));
 	catch_syscall_err(
-			connect(client_socket, serv_info->ai_addr, serv_info->ai_addrlen));
+			client_socket = socket(server_info->ai_family,
+					server_info->ai_socktype, server_info->ai_protocol));
+	if (catch_syscall_err(
+			connect(client_socket, server_info->ai_addr,
+					server_info->ai_addrlen))) {
+		freeaddrinfo(server_info);
+		return 0;
+	}
 
-	freeaddrinfo(serv_info);
+	freeaddrinfo(server_info);
 	return client_socket;
 }
 
-int create_server(char *server_ip, char *server_port) {
+int create_server(char *server_port) {
 	int server_socket = 0;
 
-	struct addrinfo hints;
-	struct addrinfo *serv_info;
+	struct sockaddr_in server_address;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
+	server_address.sin_family = AF_INET;
+	server_address.sin_addr.s_addr = INADDR_ANY;
+	server_address.sin_port = htons(atoi(server_port));
 
-	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
+	catch_syscall_err(server_socket = socket(AF_INET, SOCK_STREAM, 0));
+	//Sirve para que se puedan reutilizar los puertos mal cerrados
+	int on = 1;
 	catch_syscall_err(
-			server_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
-					serv_info->ai_protocol));
+			setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on,
+					sizeof(on)));
 	catch_syscall_err(
-			setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &(int ) { 1 },
-					sizeof(int)));
-	catch_syscall_err(
-			bind(server_socket, serv_info->ai_addr, serv_info->ai_addrlen));
-	// TODO: replace SOMAXCONN -> MAX_BACKLOG
+			bind(server_socket, (void*) &server_address, sizeof(server_address))
+					!= 0);
 	catch_syscall_err(listen(server_socket, SOMAXCONN));
-
-	freeaddrinfo(serv_info);
 	return server_socket;
 }
 
@@ -74,7 +76,6 @@ int accept_client(int server_socket) {
 }
 
 void server_listen(int server_socket, void* (*client_handler)(void*)) {
-
 	int client_socket = accept_client(server_socket);
 	printf("ESCUCHANDO %d\n", client_socket);
 	pthread_t client_handler_thread = 0;

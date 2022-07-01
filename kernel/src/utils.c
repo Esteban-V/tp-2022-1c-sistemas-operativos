@@ -32,18 +32,6 @@ t_kernelConfig* getKernelConfig(char *path) {
 }
 
 void destroyKernelConfig(t_kernelConfig *kernelConfig) {
-	//Tiran Warnings
-	free(kernelConfig->memoryIP);
-	free(kernelConfig->memoryPort);
-	free(kernelConfig->cpuIP);
-	free(kernelConfig->cpuPortDispatch);
-	free(kernelConfig->cpuPortInterrupt);
-	free(kernelConfig->listenPort);
-	free(kernelConfig->schedulerAlgorithm);
-	//free(kernelConfig->initialEstimate);
-	free(kernelConfig->alpha);
-	//free(kernelConfig->multiprogrammingLevel);
-	//free(kernelConfig->maxBlockedTime);
 	config_destroy(kernelConfig->config);
 	free(kernelConfig);
 }

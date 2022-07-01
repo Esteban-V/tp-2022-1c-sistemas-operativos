@@ -32,55 +32,50 @@ int main() {
 
 bool memory_write(t_packet *petition, int console_socket) {
 
-
-
 	return false;
 }
 
 bool memory_read(t_packet *petition, int console_socket) {
-
-
 
 	return false;
 }
 
 bool end_process(t_packet *petition, int console_socket) {
 
-
 	return false;
 }
 
 /*bool process_suspension(t_packet *petition, int console_socket) { // TODO ADAPTAR A LO NUESTRO, CON 2 TABLAS
-    uint32_t PID = stream_take_UINT32(petition->payload);
+ uint32_t PID = stream_take_UINT32(petition->payload);
 
-    pthread_mutex_lock(&pageTablesMut); // TODO: Revisar posibilidad de deadlock, verificar logica.
-        t_ptbr1 *pt = getPageTable(PID, pageTables);
-        //TODO TABLE NUMBER?
-        uint32_t pages = (pt->entries)->pageQuantity;
-        for (uint32_t i = 0; i < pages; i++){
-            if ((pt->entries)->pageTableEntres[i].present){
-                void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->pageTableEntres[i].frame);
-                swapInterface_savePage(swapInterface, PID, i, pageContent);
-                pthread_mutex_lock(&metadataMut);
-                    metadata->entries[(pt->entries)->pageTableEntres[i].frame].isFree = true;
-                pthread_mutex_unlock(&metadataMut);
-                (pt->entries)->pageTableEntres[i].present = false;
-            }
-        }
-    pthread_mutex_unlock(&pageTablesMut); 
+ pthread_mutex_lock(&pageTablesMut); // TODO: Revisar posibilidad de deadlock, verificar logica.
+ t_ptbr1 *pt = getPageTable(PID, pageTables);
+ //TODO TABLE NUMBER?
+ uint32_t pages = (pt->entries)->pageQuantity;
+ for (uint32_t i = 0; i < pages; i++){
+ if ((pt->entries)->pageTableEntres[i].present){
+ void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->pageTableEntres[i].frame);
+ swapInterface_savePage(swapInterface, PID, i, pageContent);
+ pthread_mutex_lock(&metadataMut);
+ metadata->entries[(pt->entries)->pageTableEntres[i].frame].isFree = true;
+ pthread_mutex_unlock(&metadataMut);
+ (pt->entries)->pageTableEntres[i].present = false;
+ }
+ }
+ pthread_mutex_unlock(&pageTablesMut);
 
-    if(metadata->firstFrame){
-        pthread_mutex_lock(&metadataMut);
-            for (uint32_t i = 0; i < memoryConfig->entriesPerTable / memoryConfig->framesPerProcess; i++){
-                if(metadata->firstFrame[i] == PID) metadata->firstFrame[i] = -1;
-            }
-        pthread_mutex_unlock(&metadataMut);
-    }
-    
-    freeProcessEntries(PID);
+ if(metadata->firstFrame){
+ pthread_mutex_lock(&metadataMut);
+ for (uint32_t i = 0; i < memoryConfig->entriesPerTable / memoryConfig->framesPerProcess; i++){
+ if(metadata->firstFrame[i] == PID) metadata->firstFrame[i] = -1;
+ }
+ pthread_mutex_unlock(&metadataMut);
+ }
 
-    return false;
-}*/
+ freeProcessEntries(PID);
+
+ return false;
+ }*/
 
 bool receive_memory_info(t_packet *petition, int console_socket) {
 	log_info(logger, "RECIBIR INFO PA TABLAS");
@@ -155,12 +150,12 @@ t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config){
 		newMetadata->clock_m_counter[i] = i * config->framesPerProcess;
 	}
 
-    for (int i = 0; i < newMetadata->entryQty; i++){
-        ((newMetadata->entries)[i]).isFree = true;
-        ((newMetadata->entries)[i]).timeStamp = 0;
-    }
+	for (int i = 0; i < newMetadata->entryQty; i++) {
+		((newMetadata->entries)[i]).isFree = true;
+		((newMetadata->entries)[i]).timeStamp = 0;
+	}
 
-    return newMetadata;
+	return newMetadata;
 }
 
 void destroyMemoryMetadata(t_memoryMetadata *meta){
@@ -169,8 +164,8 @@ void destroyMemoryMetadata(t_memoryMetadata *meta){
         free(meta->clock_m_counter);
     }
 
-    free(meta->entries);
-    free(meta);
+	free(meta->entries);
+	free(meta);
 }
 
 t_memory* initializeMemory(t_memoryConfig *config) {
