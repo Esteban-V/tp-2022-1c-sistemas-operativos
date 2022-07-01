@@ -95,6 +95,7 @@ t_instruction* parse_instruction(char *string) {
 
 	char **instruction_text = string_split(string, " ");
 	char *id = instruction_text[0];
+	string_trim(&id);
 	t_instruction *instruction = create_instruction(string_length(id));
 	memcpy(instruction->id, id, string_length(id) + 1);
 

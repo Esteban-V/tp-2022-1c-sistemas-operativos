@@ -45,7 +45,9 @@ int main(void) {
 
 	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
 	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
-	if (!cpu_dispatch_socket || !cpu_interrupt_socket) {
+
+	if (!cpu_dispatch_socket || cpu_dispatch_socket == -1
+			|| !cpu_interrupt_socket || cpu_interrupt_socket == -1) {
 		terminate_kernel(true);
 	}
 
@@ -95,7 +97,9 @@ int main(void) {
 }
 
 void* cpu_dispatch_listener(void *args) {
+	printf("BLOQUEAR\n");
 	sem_wait(&bloquear);
+	printf("DESBLOQUEAR\n");
 	//listen cpu_dispatch_socket
 	while (1) {
 		server_listen(cpu_dispatch_socket, header_handler);
@@ -180,8 +184,7 @@ void* newToReady(void *args) { // Hilo del largo plazo, toma un proceso de new y
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue",
-				pcb->pid);
+		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -246,6 +249,11 @@ void* io_t(void *args) {
 
 void putToReady(t_pcb *pcb) {
 	pQueue_put(readyQ, (void*) pcb);
+	if (sortingAlgorithm == FIFO) {
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Short Term Scheduler: FIFO, skipping");
+		pthread_mutex_unlock(&mutex_log);
+	}
 
 	if (sortingAlgorithm == SRT) {
 		if (cpu_interrupt_socket != -1) {

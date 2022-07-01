@@ -9,7 +9,7 @@
 t_cpu_config* get_cpu_config(char *path) {
 	t_cpu_config *cpu_config = malloc(sizeof(t_cpu_config));
 	cpu_config->config = config_create(path);
-	cpu_config->ip = config_get_string_value(cpu_config->config, "CPU_IP");
+	cpu_config->ip = config_get_string_value(cpu_config->config, "IP_CPU");
 	cpu_config->tlbEntries = config_get_int_value(cpu_config->config,
 			"ENTRADAS_TLB");
 	cpu_config->tlbReplace = config_get_string_value(cpu_config->config,

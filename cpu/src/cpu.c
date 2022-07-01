@@ -31,7 +31,6 @@ int main() {
 	}
 
 	log_destroy(logger);
-
 }
 
 void* execution() {
@@ -119,14 +118,11 @@ bool receivedInterruption(t_packet *petition, int console_socket) {
 
 void sendPcbToKernel(headers header) {
 	t_packet *pcb_packet = create_packet(header, 64);
-	printf("1 header: %d\n", header);
 	stream_add_pcb(pcb_packet, pcb);
-	printf("2 %d\n", pcb_packet == NULL);
 	if (kernel_dispatch_socket != -1) {
-		printf("3 %d\n", kernel_dispatch_socket);
+		log_info(logger, "Sending pcb PID #%d with %d instructions", pcb->pid, list_size(pcb->instructions));
 		socket_send_packet(kernel_dispatch_socket, pcb_packet);
-		printf("4\n");
-
+		log_info(logger, "Sent pcb PID #%d with %d instructions", pcb->pid, list_size(pcb->instructions));
 	}
 	packet_destroy(pcb_packet);
 }
