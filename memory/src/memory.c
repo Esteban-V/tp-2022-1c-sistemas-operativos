@@ -1,8 +1,8 @@
-#include"memory.h"
+#include"memmory.h"
 
 int main() {
 	// Initialize logger
-	memoryLogger = log_create("./memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
+	logger = log_create("./cfg/memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
 	// Initialize Config
 	memoryConfig = getMemoryConfig("memory.config");
 	// Initialize Metadata
@@ -14,20 +14,18 @@ int main() {
 
 	// Initialize Variables
 	memory = initializeMemory(memoryConfig);
-	clock_m_counter = 0;
+	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
 	//algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
 
 	while (1) {
-		log_info(memoryLogger, "TEST");
 		server_listen(server_socket, header_handler);
-
 	}
 
 	// Destroy
 	destroyMemoryConfig(memoryConfig);
-    dictionary_destroy_and_destroy_elements(pageTables,_destroyPageTable);
-    log_destroy(memoryLogger);
+    dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
+    log_destroy(logger);
 
 	return EXIT_SUCCESS;
 }
@@ -85,12 +83,12 @@ bool end_process(t_packet *petition, int console_socket) {
 }*/
 
 bool receive_memory_info(t_packet *petition, int console_socket) {
-	log_info(memoryLogger, "RECIBIR INFO PA TABLAS");
+	log_info(logger, "RECIBIR INFO PA TABLAS");
 	int PID = (int)stream_take_UINT32(petition->payload);
-	log_info(memoryLogger, "PID STREAM, %d", PID);
+	log_info(logger, "PID STREAM, %d", PID);
 
 	if (!!PID) {
-		log_info(memoryLogger, "PID RECEIVED, %d", PID);
+		log_info(logger, "PID RECEIVED, %d", PID);
 
 		t_ptbr1 *newPageTable = initializePageTable1();
 		char *_PID = string_itoa(PID);
@@ -143,7 +141,7 @@ t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config){
     newMetadata->entryQty = config->entriesPerTable;
     newMetadata->counter = 0;
     newMetadata->entries = calloc(newMetadata->entryQty, sizeof(t_frameMetadata));
-    newMetadata->clock_m_Counter = NULL;
+    newMetadata->clock_m_counter = NULL;
     newMetadata->firstFrame = NULL;
 
 
@@ -152,9 +150,9 @@ t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config){
 	newMetadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
 	memset(newMetadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
 
-	newMetadata->clock_m_Counter = calloc(blockQuantity, sizeof(uint32_t));
+	newMetadata->clock_m_counter = calloc(blockQuantity, sizeof(uint32_t));
 	for(int i = 0; i < blockQuantity; i++){
-		newMetadata->clock_m_Counter[i] = i * config->framesPerProcess;
+		newMetadata->clock_m_counter[i] = i * config->framesPerProcess;
 	}
 
     for (int i = 0; i < newMetadata->entryQty; i++){
@@ -166,17 +164,14 @@ t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config){
 }
 
 void destroyMemoryMetadata(t_memoryMetadata *meta){
-
     if(meta->firstFrame){
         free(meta->firstFrame);
-        free(meta->clock_m_Counter);
+        free(meta->clock_m_counter);
     }
 
     free(meta->entries);
     free(meta);
 }
-
-/////////////////////
 
 t_memory* initializeMemory(t_memoryConfig *config) {
 	t_memory *newMemory = malloc(sizeof(t_memory));

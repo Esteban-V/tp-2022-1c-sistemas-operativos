@@ -16,15 +16,6 @@ t_memoryConfig* getMemoryConfig(char* path){
 }
 
 void destroyMemoryConfig(t_memoryConfig* memoryConfig){
-    free(memoryConfig->listenPort);
-    free(memoryConfig->memorySize);
-    free(memoryConfig->pageSize);
-    free(memoryConfig->entriesPerTable);
-    free(memoryConfig->memoryDelay);
-    free(memoryConfig->replaceAlgorithm);
-    free(memoryConfig->framesPerProcess);
-    free(memoryConfig->swapDelay);
-    free(memoryConfig->swapPath);
     config_destroy(memoryConfig->config);
     free(memoryConfig);
 }

@@ -1,7 +1,7 @@
 #include "kernel.h"
 
 int main(void) {
-	logger = log_create("kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+	logger = log_create("./cfg/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 	config = getKernelConfig("kernel.config");
 
 	// Inicializar estructuras de estado

@@ -7,13 +7,3 @@ FILE* open_file(char *path) {
 	}
 	return file;
 }
-
-t_log* create_logger() {
-	new_logger = log_create("console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
-	return new_logger;
-}
-
-t_config* create_config() {
-	new_config = config_create("console.config");
-	return new_config;
-}

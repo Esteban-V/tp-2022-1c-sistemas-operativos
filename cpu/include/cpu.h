@@ -52,6 +52,7 @@ void execute_io(uint32_t time);
 void sendPcbToKernel(headers header);
 
 sem_t pcb_loaded;
+t_log *logger;
 
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;

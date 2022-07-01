@@ -8,7 +8,7 @@
 
 int main() {
 	// Initialize logger
-	logger = log_create("./cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+	logger = log_create("./cfg/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("cpu.config");
 
 	// Creacion de server

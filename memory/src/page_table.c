@@ -226,7 +226,7 @@ bool hasFreeChunk(t_swapFile* sf){
     uint32_t total = end - start;
 
     pthread_mutex_lock(&metadataMut);
-    uint32_t *counter = metadata->firstFrame ? &(metadata->clock_m_Counter[start / memoryConfig->framesPerProcess]) : &clock_m_Counter;
+    uint32_t *counter = metadata->firstFrame ? &(metadata->clock_m_counter[start / memoryConfig->framesPerProcess]) : &clock_m_counter;
 
     while(1){
         for (uint32_t i = 0; i < total; i++){

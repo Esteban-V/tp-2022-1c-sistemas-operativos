@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"process_utils.h": "c",
+			"utils.h": "c",
+			"kernel.h": "c",
+			"queue.h": "c",
+			"cpu.h": "c"
+		}
+	}
+}

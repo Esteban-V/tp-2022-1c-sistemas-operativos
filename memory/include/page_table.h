@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
-#include"memoryUtils.h"
+#include"utils.h"
 
 pthread_mutex_t pageTablesMut;
 t_dictionary* pageTables;

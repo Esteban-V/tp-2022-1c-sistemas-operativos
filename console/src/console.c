@@ -9,8 +9,8 @@
  */
 
 int main(int argc, char **argv) {
-	logger = create_logger();
-	config = create_config();
+	logger = log_create("./cfg/console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
+	config = config_create("console.config");
 
 	if (argc < 3) {
 		log_error(logger, "Missing params");

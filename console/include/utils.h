@@ -9,12 +9,6 @@
 #include<commons/config.h>
 #include<commons/log.h>
 
-t_log *new_logger;
-t_config *new_config;
-
 FILE* open_file(char *path);
-
-t_log* create_logger();
-t_config* create_config();
 
 #endif /* INCLUDE_UTILS_H_ */
