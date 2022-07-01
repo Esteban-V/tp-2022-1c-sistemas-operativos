@@ -137,6 +137,7 @@ void pcb_to_kernel(headers header)
 	if (kernel_client_socket != -1)
 	{
 		socket_send_packet(kernel_client_socket, pcb_packet);
+		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
 	}
 	packet_destroy(pcb_packet);
 }
