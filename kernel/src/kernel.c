@@ -53,7 +53,7 @@ int main(void) {
 	log_info(logger, "Kernel connected to CPU");
 
 	// Creacion de server
-	int server_socket = create_server(config->kernelIP, config->kernelPort);
+	int server_socket = create_server(config->kernelPort);
 	if (!server_socket) {
 		terminate_kernel(true);
 	}

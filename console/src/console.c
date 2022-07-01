@@ -38,7 +38,6 @@ int main(int argc, char **argv) {
 
 	log_info(logger, "Console connected to kernel");
 
-
 	char *code_path = argv[1];
 	uint32_t process_size = atoi(argv[2]);
 
