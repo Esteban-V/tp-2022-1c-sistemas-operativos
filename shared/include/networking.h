@@ -19,7 +19,7 @@ typedef struct t_packet {
 t_log *logger;
 pthread_mutex_t mutex_log;
 
-void catch_syscall_err(int code);
+bool catch_syscall_err(int code);
 
 int connect_to(char *server_ip, char *server_port);
 // int create_server(char *server_port);

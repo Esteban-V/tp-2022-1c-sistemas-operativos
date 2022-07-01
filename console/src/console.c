@@ -30,6 +30,15 @@ int main(int argc, char **argv) {
 	kernel_ip = config_get_string_value(config, "IP_KERNEL");
 	kernel_port = config_get_string_value(config, "PUERTO_KERNEL");
 
+	kernel_socket = connect_to(kernel_ip, kernel_port);
+
+	if (!kernel_socket) {
+		terminate_console(true);
+	}
+
+	log_info(logger, "Console connected to kernel");
+
+
 	char *code_path = argv[1];
 	uint32_t process_size = atoi(argv[2]);
 
@@ -47,14 +56,6 @@ int main(int argc, char **argv) {
 	process->size = process_size;
 	log_info(logger, "Read process with %d instructions",
 			list_size(process->instructions));
-
-	kernel_socket = connect_to(kernel_ip, kernel_port);
-
-	if (!kernel_socket) {
-		terminate_console(true);
-	}
-
-	log_info(logger, "Console connected to kernel");
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
 	stream_add_process(process_packet, process);

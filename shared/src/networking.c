@@ -1,6 +1,6 @@
 #include"networking.h"
 
-void catch_syscall_err(int code) {
+bool catch_syscall_err(int code) {
 	if (code == -1) {
 		int error = errno;
 		char *buf = malloc(100);
@@ -9,28 +9,33 @@ void catch_syscall_err(int code) {
 		log_error(logger, "Error: %s", buf);
 		pthread_mutex_unlock(&mutex_log);
 		free(buf);
+		return true;
 	}
+	return false;
 }
 
 int connect_to(char *server_ip, char *server_port) {
 	int client_socket = 0;
 
 	struct addrinfo hints;
-	struct addrinfo *serv_info;
+	struct addrinfo *server_info;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &serv_info));
+	catch_syscall_err(getaddrinfo(server_ip, server_port, &hints, &server_info));
 	catch_syscall_err(
-			client_socket = socket(serv_info->ai_family, serv_info->ai_socktype,
-					serv_info->ai_protocol));
-	catch_syscall_err(
-			connect(client_socket, serv_info->ai_addr, serv_info->ai_addrlen));
+			client_socket = socket(server_info->ai_family, server_info->ai_socktype,
+					server_info->ai_protocol));
+	if(catch_syscall_err(
+			connect(client_socket, server_info->ai_addr, server_info->ai_addrlen))) {
+		freeaddrinfo(server_info);
+		return 0;
+	}
 
-	freeaddrinfo(serv_info);
+	freeaddrinfo(server_info);
 	return client_socket;
 }
 
@@ -74,7 +79,6 @@ int accept_client(int server_socket) {
 }
 
 void server_listen(int server_socket, void* (*client_handler)(void*)) {
-
 	int client_socket = accept_client(server_socket);
 	printf("ESCUCHANDO %d\n", client_socket);
 	pthread_t client_handler_thread = 0;
