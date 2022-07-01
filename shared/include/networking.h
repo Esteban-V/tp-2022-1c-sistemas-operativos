@@ -15,6 +15,7 @@ typedef struct t_packet {
 	t_stream_buffer *payload;
 } t_packet;
 
+t_log* logger;
 
 pthread_mutex_t mutex_log;
 bool catch_syscall_err(int code);
