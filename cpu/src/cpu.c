@@ -114,10 +114,14 @@ bool receivedPcb(t_packet *petition, int kernel_socket)
 {
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
-	log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
-			 list_size(pcb->instructions));
-	sem_post(&pcb_loaded);
-	return true;
+	if (!!pcb)
+	{
+		log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
+				 list_size(pcb->instructions));
+		sem_post(&pcb_loaded);
+		return true;
+	}
+	return false;
 }
 
 bool receivedInterruption(t_packet *petition, int kernel_socket)

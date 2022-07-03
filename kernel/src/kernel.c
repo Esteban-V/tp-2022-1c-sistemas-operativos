@@ -110,7 +110,14 @@ void *cpu_dispatch_listener(void *args)
 	// sem_wait(&bloquear);
 	while (1)
 	{
-		header_handler(cpu_dispatch_socket);
+		if (cpu_dispatch_socket != -1)
+		{
+			header_handler(cpu_dispatch_socket);
+		}
+		else
+		{
+			terminate_kernel(true);
+		}
 	}
 }
 
@@ -324,6 +331,7 @@ bool receive_process(t_packet *petition, int console_socket)
 
 		pid++;
 		pcb->pid = pid;
+		pcb->client_socket = console_socket;
 		pcb->program_counter = 0;
 		pcb->burst_estimation = config->initialEstimate;
 
@@ -335,7 +343,6 @@ bool receive_process(t_packet *petition, int console_socket)
 		sem_post(&new_for_ready);
 	}
 
-	socket_send_header(console_socket, PROCESS_OK);
 	return true;
 }
 
@@ -365,8 +372,10 @@ bool exit_op(t_packet *petition, int cpu_socket)
 		log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
 		pQueue_put(exitQ, (void *)received_pcb);
 		sem_post(&freeCpu);
+		socket_send_header(received_pcb->client_socket, PROCESS_OK);
+		return true;
 	}
-	return true;
+	return false;
 }
 
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
@@ -409,8 +418,11 @@ void terminate_kernel(bool error)
 {
 	log_destroy(logger);
 	destroyKernelConfig(config);
-	!cpu_interrupt_socket &&close(cpu_interrupt_socket);
-	!cpu_dispatch_socket &&close(cpu_dispatch_socket);
-	!memory_server_socket &&close(memory_server_socket);
+	if (cpu_interrupt_socket)
+		close(cpu_interrupt_socket);
+	if (cpu_dispatch_socket)
+		close(cpu_dispatch_socket);
+	if (memory_server_socket)
+		close(memory_server_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
