@@ -10,7 +10,8 @@
 			"utils.h": "c",
 			"kernel.h": "c",
 			"queue.h": "c",
-			"cpu.h": "c"
+			"cpu.h": "c",
+			"console.h": "c"
 		},
 		"files.autoSave": "afterDelay",
 		"editor.formatOnSave": true,

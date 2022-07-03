@@ -11,7 +11,7 @@
 int main(int argc, char **argv)
 {
 	logger = log_create("./cfg/console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
-	config = config_create("console.config");
+	config = config_create("./cfg/console.config");
 
 	if (argc < 3)
 	{
@@ -47,8 +47,15 @@ int main(int argc, char **argv)
 
 	instruction_list = list_create();
 
-	FILE *instruction_file = open_file(code_path);
+	FILE *instruction_file = open_file(code_path, error_opening_file);
 	get_code(instruction_file);
+	fclose(instruction_file);
+
+	if (!list_size(instruction_list))
+	{
+		log_warning(logger, "Provided code has no instructions");
+		terminate_console(true);
+	}
 
 	process = create_process();
 	if (!process)
@@ -74,11 +81,11 @@ int main(int argc, char **argv)
 
 	if (result)
 	{
-		log_error(logger, "Console exited with error code %d", result);
+		log_error(logger, "Process exited with error code %d", result);
 	}
 	else
 	{
-		log_info(logger, "Console exited successfully");
+		log_info(logger, "Process exited successfully");
 	}
 
 	terminate_console(result);
@@ -96,8 +103,6 @@ void get_code(FILE *file)
 		list_add(instruction_list, parse_instruction(line_buf));
 		lines_read = getline(&line_buf, &line_buf_size, file);
 	}
-
-	fclose(file);
 }
 
 t_instruction *parse_instruction(char *string)
@@ -121,6 +126,12 @@ t_instruction *parse_instruction(char *string)
 	}
 
 	return instruction;
+}
+
+void error_opening_file()
+{
+	log_error(logger, "Provided file path does not exist");
+	terminate_console(true);
 }
 
 void terminate_console(bool error)

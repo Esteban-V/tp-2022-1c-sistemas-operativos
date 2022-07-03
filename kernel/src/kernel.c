@@ -3,7 +3,7 @@
 int main(void)
 {
 	logger = log_create("./cfg/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
-	config = getKernelConfig("kernel.config");
+	config = getKernelConfig("./cfg/kernel.config");
 
 	// Inicializar estructuras de estado
 	newQ = pQueue_create();
@@ -110,14 +110,8 @@ void *cpu_dispatch_listener(void *args)
 	// sem_wait(&bloquear);
 	while (1)
 	{
-		if (cpu_dispatch_socket != -1)
-		{
-			header_handler(cpu_dispatch_socket);
-		}
-		else
-		{
-			terminate_kernel(true);
-		}
+		// printf("a\n");
+		header_handler(cpu_dispatch_socket);
 	}
 }
 
@@ -372,13 +366,17 @@ bool exit_op(t_packet *petition, int cpu_socket)
 		log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
 		pQueue_put(exitQ, (void *)received_pcb);
 		sem_post(&freeCpu);
+		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
+		// y recien ahi se libere el multiprogram
+		sem_post(&sem_multiprogram);
+
 		socket_send_header(received_pcb->client_socket, PROCESS_OK);
 		return true;
 	}
 	return false;
 }
 
-bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
+bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
 	{
 		receive_process,
 		io_op,
@@ -392,6 +390,7 @@ void *header_handler(void *_client_socket)
 	while (serve)
 	{
 		t_packet *packet = socket_receive_packet(client_socket);
+
 		if (packet == NULL)
 		{
 			if (!socket_retry_packet(client_socket, &packet))
@@ -400,7 +399,6 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
-
 		serve = kernel_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}

@@ -5,7 +5,7 @@ int main()
 	// Initialize logger
 	logger = log_create("./cfg/memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
 	// Initialize Config
-	memoryConfig = getMemoryConfig("memory.config");
+	memoryConfig = getMemoryConfig("./cfg/memory.config");
 	// Initialize Metadata
 	metadata = create_memory_metadata(memoryConfig);
 

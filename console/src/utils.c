@@ -1,9 +1,11 @@
-#include"utils.h"
+#include "utils.h"
 
-FILE* open_file(char *path) {
+FILE *open_file(char *path, void (*error_clb)())
+{
 	FILE *file = fopen(path, "r");
-	if (file == NULL) {
-		exit(-1);
+	if (file == NULL)
+	{
+		error_clb();
 	}
 	return file;
 }

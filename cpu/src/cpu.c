@@ -10,7 +10,7 @@ int main()
 {
 	// Initialize logger
 	logger = log_create("./cfg/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
-	config = get_cpu_config("cpu.config");
+	config = get_cpu_config("./cfg/cpu.config");
 
 	// Creacion de server
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
