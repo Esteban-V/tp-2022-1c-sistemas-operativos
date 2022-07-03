@@ -1,6 +1,6 @@
 #include "pcb_utils.h"
 
-void destroy_pcb(t_pcb *pcb)
+void pcb_destroy(t_pcb *pcb)
 {
 	if (pcb != NULL)
 	{

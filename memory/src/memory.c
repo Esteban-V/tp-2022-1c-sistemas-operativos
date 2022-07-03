@@ -7,7 +7,7 @@ int main()
 	// Initialize Config
 	memoryConfig = getMemoryConfig("memory.config");
 	// Initialize Metadata
-	metadata = initializeMemoryMetadata(memoryConfig);
+	metadata = create_memory_metadata(memoryConfig);
 
 	// Creacion de server
 	int server_socket = create_server(memoryConfig->listenPort);
@@ -26,28 +26,10 @@ int main()
 
 	// Destroy
 	destroyMemoryConfig(memoryConfig);
-	dictionary_destroy_and_destroy_elements(pageTables, _destroyPageTable);
+	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
 	log_destroy(logger);
 
 	return EXIT_SUCCESS;
-}
-
-bool memory_write(t_packet *petition, int console_socket)
-{
-
-	return false;
-}
-
-bool memory_read(t_packet *petition, int console_socket)
-{
-
-	return false;
-}
-
-bool end_process(t_packet *petition, int console_socket)
-{
-
-	return false;
 }
 
 /*bool process_suspension(t_packet *petition, int console_socket) { // TODO ADAPTAR A LO NUESTRO, CON 2 TABLAS
@@ -58,13 +40,13 @@ bool end_process(t_packet *petition, int console_socket)
  //TODO TABLE NUMBER?
  uint32_t pages = (pt->entries)->pageQuantity;
  for (uint32_t i = 0; i < pages; i++){
- if ((pt->entries)->pageTableEntres[i].present){
- void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->pageTableEntres[i].frame);
+ if ((pt->entries)->entries[i].present){
+ void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->entries[i].frame);
  swapInterface_savePage(swapInterface, PID, i, pageContent);
  pthread_mutex_lock(&metadataMut);
- metadata->entries[(pt->entries)->pageTableEntres[i].frame].isFree = true;
+ metadata->entries[(pt->entries)->entries[i].frame].isFree = true;
  pthread_mutex_unlock(&metadataMut);
- (pt->entries)->pageTableEntres[i].present = false;
+ (pt->entries)->entries[i].present = false;
  }
  }
  pthread_mutex_unlock(&pageTablesMut);
@@ -82,35 +64,9 @@ bool end_process(t_packet *petition, int console_socket)
  return false;
  }*/
 
-bool receive_memory_info(t_packet *petition, int console_socket)
-{
-	log_info(logger, "RECIBIR INFO PA TABLAS");
-	int PID = (int)stream_take_UINT32(petition->payload);
-	log_info(logger, "PID STREAM, %d", PID);
-
-	if (!!PID)
+bool (*memory_handlers[7])(t_packet *petition, int socket) =
 	{
-		log_info(logger, "PID RECEIVED, %d", PID);
-
-		t_ptbr1 *newPageTable = initializePageTable1();
-		char *_PID = string_itoa(PID);
-
-		pthread_mutex_lock(&pageTablesMut);
-		dictionary_put(pageTables, _PID, (void *)newPageTable);
-		pthread_mutex_unlock(&pageTablesMut);
-
-		free(_PID);
-
-		// TODO Paginas?
-		// TODO Enviar Confirmacion / Informacion a Kernel
-	}
-
-	return false;
-}
-
-bool (*memory_handlers[7])(t_packet *petition, int console_socket) =
-	{
-		receive_memory_info};
+		receive_pid};
 
 void *header_handler(void *_client_socket)
 {
@@ -133,36 +89,75 @@ void *header_handler(void *_client_socket)
 	return 0;
 }
 
-t_memoryMetadata *initializeMemoryMetadata(t_memoryConfig *config)
+bool receive_pid(t_packet *petition, int kernel_socket)
 {
-	t_memoryMetadata *newMetadata = malloc(sizeof(t_memoryMetadata));
-	newMetadata->entryQty = config->entriesPerTable;
-	newMetadata->counter = 0;
-	newMetadata->entries = calloc(newMetadata->entryQty, sizeof(t_frameMetadata));
-	newMetadata->clock_m_counter = NULL;
-	newMetadata->firstFrame = NULL;
+	int pid = (int)stream_take_UINT32(petition->payload);
+
+	if (!!pid)
+	{
+		t_ptbr1 *newPageTable = initializePageTable();
+
+		log_info(logger, "PID #%d", pid);
+		char *pid_key = string_itoa(pid);
+
+		pthread_mutex_lock(&pageTablesMut);
+		dictionary_put(pageTables, pid_key, (void *)newPageTable);
+		pthread_mutex_unlock(&pageTablesMut);
+
+		// free(pid_key);
+
+		// TODO: Paginas
+		// TODO: Enviar confirmacion / informacion a kernel
+	}
+
+	return false;
+}
+
+bool memory_write(t_packet *petition, int cpu_socket)
+{
+	return false;
+}
+
+bool memory_read(t_packet *petition, int cpu_socket)
+{
+	return false;
+}
+
+bool end_process(t_packet *petition, int cpu_socket)
+{
+	return false;
+}
+
+t_mem_metadata *create_memory_metadata(t_memoryConfig *config)
+{
+	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
+	metadata->entryQty = config->entriesPerTable;
+	metadata->counter = 0;
+	metadata->entries = calloc(metadata->entryQty, sizeof(t_fr_metadata));
+	metadata->clock_m_counter = NULL;
+	metadata->firstFrame = NULL;
 
 	uint32_t blockQuantity = config->entriesPerTable / config->framesPerProcess;
 
-	newMetadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
-	memset(newMetadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
+	metadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
+	memset(metadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
 
-	newMetadata->clock_m_counter = calloc(blockQuantity, sizeof(uint32_t));
+	metadata->clock_m_counter = calloc(blockQuantity, sizeof(uint32_t));
 	for (int i = 0; i < blockQuantity; i++)
 	{
-		newMetadata->clock_m_counter[i] = i * config->framesPerProcess;
+		metadata->clock_m_counter[i] = i * config->framesPerProcess;
 	}
 
-	for (int i = 0; i < newMetadata->entryQty; i++)
+	for (int i = 0; i < metadata->entryQty; i++)
 	{
-		((newMetadata->entries)[i]).isFree = true;
-		((newMetadata->entries)[i]).timeStamp = 0;
+		((metadata->entries)[i]).isFree = true;
+		((metadata->entries)[i]).timeStamp = 0;
 	}
 
-	return newMetadata;
+	return metadata;
 }
 
-void destroyMemoryMetadata(t_memoryMetadata *meta)
+void memory_metadata_destroy(t_mem_metadata *meta)
 {
 	if (meta->firstFrame)
 	{

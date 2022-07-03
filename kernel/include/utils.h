@@ -49,11 +49,11 @@ void destroyKernelConfig(t_kernelConfig *kernelConfig);
 typedef struct pageTableEntry {
 	bool present;
 	uint32_t frame;
-} t_pageTableEntry;
+} t_page_entry;
 
 typedef struct t_ptbr {
-	int32_t pageQuantity;
-	t_pageTableEntry *entries;
+	uint32_t pageQuantity;
+	t_page_entry *entries;
 } t_ptbr;
 
 void* readyToExec(void *args);

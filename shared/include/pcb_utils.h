@@ -44,6 +44,6 @@ void stream_take_pcb(t_packet *, t_pcb *);
 void stream_add_pcb(t_packet *packet, t_pcb *pcb);
 
 t_pcb *create_pcb();
-void destroy_pcb(t_pcb *);
+void pcb_destroy(t_pcb *);
 
 #endif /* INCLUDE_PCB_UTILS_H_ */

@@ -27,22 +27,22 @@ typedef struct memoryConfig{
     char* swapPath;
 } t_memoryConfig;
 
-typedef struct frameMetadata {
+typedef struct t_fr_metadata {
     bool isFree;
     bool modified;
     bool u;         // Para Clock-M
     uint32_t PID;
     uint32_t page;
     uint32_t timeStamp;
-} t_frameMetadata;
+} t_fr_metadata;
 
-typedef struct memoryMetadata{
+typedef struct t_mem_metadata{
     uint32_t entryQty;
     uint32_t *firstFrame; // Array de PIDS donde el indice es el numero de "bloque" asignado en asig fija.
     uint32_t *clock_m_counter;
     uint32_t counter;
-    t_frameMetadata *entries;
-} t_memoryMetadata;
+    t_fr_metadata *entries;
+} t_mem_metadata;
 
 typedef struct swapInterface {
     int pageSize;
@@ -56,7 +56,7 @@ typedef struct mem {
 
 t_memoryConfig *memoryConfig;
 t_log *logger;
-t_memoryMetadata* metadata;
+t_mem_metadata* metadata;
 
 t_memoryConfig* getMemoryConfig(char *path);
 void destroyMemoryConfig(t_memoryConfig *memoryConfig);
@@ -64,9 +64,9 @@ void destroyMemoryConfig(t_memoryConfig *memoryConfig);
 pthread_mutex_t memoryMut, metadataMut, pageTablesMut;
 
 // Algoritmo toma un frame de inicio y un frame final y eligen la victima dentro del rango.
-uint32_t (*algoritmo)(int32_t start, int32_t end);
+uint32_t (*algoritmo)(uint32_t start, uint32_t end);
 
 // Asignacion fija o global, devuelven en los parametros un rango de frames entre los cuales se puede elegir una victima.
-bool (*asignacion)(int32_t *start, int32_t *end, uint32_t PID);
+bool (*asignacion)(uint32_t *start, uint32_t *end, uint32_t PID);
 
 #endif /* UTILS_H_ */
