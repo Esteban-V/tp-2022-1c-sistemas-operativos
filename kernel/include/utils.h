@@ -57,7 +57,6 @@ typedef struct t_ptbr {
 } t_ptbr;
 
 void* readyToExec(void *args);
-void* newToReady();
 void* thread_longTermFunc();
 
 // int cupos_libres;

@@ -30,10 +30,10 @@ struct timespec start_exec_time, last_burst_estimate, now_time;
 
 t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ,
 		*exitQ;
-pthread_t newToReadyThread, readyToExecThread, thread_mediumTerm,
-		suspendProcessThread, cpuDispatchThread, io_thread, exitProcessThread;
-sem_t sem_multiprogram, any_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready,
-		any_blocked, bloquear;
+pthread_t newToReadyThread, suspendedToReadyThread, readyToExecThread, thread_mediumTerm,
+	suspendProcessThread, cpuDispatchThread, io_thread, exitProcessThread;
+sem_t sem_multiprogram, new_for_ready, suspended_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready,
+	any_blocked, bloquear;
 pthread_mutex_t mutex_mediumTerm;
 // pthread_mutex_t mutex_cupos;
 pthread_cond_t cond_mediumTerm;
@@ -59,9 +59,9 @@ int getIO(t_pcb *pcb);
 
 bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);
-bool interrupt_ready(t_packet *petition, int console_socket);
 
 void* newToReady(void* args);
+void *suspendedToReady(void *args);
 void* cpu_dispatch_listener(void* args);
 void* suspend_process(void *args);
 void* exit_process(void* args);

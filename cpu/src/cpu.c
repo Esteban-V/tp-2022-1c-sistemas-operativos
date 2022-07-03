@@ -56,8 +56,7 @@ void *execution()
 			case NO_OP:
 			{
 				log_info(logger, "EJECUTA NO OP");
-				fst_param = *((uint32_t *)list_get(instruccion->params, 0));
-				execute_no_op(fst_param);
+				execute_no_op(config->delayNoOp);
 				break;
 			}
 			case IO_OP:
@@ -130,7 +129,7 @@ bool receivedInterruption(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-void pcb_to_kernel(headers header)
+void pcb_to_kernel(kernel_headers header)
 {
 	t_packet *pcb_packet = create_packet(header, 64);
 	stream_add_pcb(pcb_packet, pcb);
@@ -142,15 +141,11 @@ void pcb_to_kernel(headers header)
 	packet_destroy(pcb_packet);
 }
 
-bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
+bool (*cpu_handlers[7])(t_packet *petition, int console_socket) =
 	{
-		NULL,
-		NULL,
-		NULL,
-		NULL,
 		receivedPcb,
 		receivedInterruption,
-		NULL};
+};
 
 void *header_handler(void *_kernel_client_socket)
 {
@@ -167,7 +162,7 @@ void *header_handler(void *_kernel_client_socket)
 				break;
 			}
 		}
-		serve = kernel_handlers[packet->header](packet, kernel_client_socket);
+		serve = cpu_handlers[packet->header](packet, kernel_client_socket);
 		packet_destroy(packet);
 	}
 	return 0;
@@ -206,14 +201,14 @@ enum operation getOperation(char *op)
 void execute_no_op(uint32_t time)
 {
 	usleep((time_t)time);
-	return;
 }
 
 void execute_exit()
 {
-	pcb_to_kernel(EXIT);
+	pcb_to_kernel(EXIT_CALL);
 }
 
 void execute_io(uint32_t time)
 {
+	pcb_to_kernel(IO_CALL);
 }

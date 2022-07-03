@@ -1,18 +1,29 @@
 #ifndef SOCKET_HEADERS_H_
 #define SOCKET_HEADERS_H_
 
-typedef enum headers {
+typedef enum console_headers
+{
+	PROCESS_OK = 0,
+	PROCESS_FAILURE = 1,
+} console_headers;
+
+typedef enum kernel_headers
+{
 	NEW_PROCESS = 0,
-	IOCALL = 1,
-	EXIT = 2,
-	MEMORY_INFO = 3,
-	PCB_TO_CPU = 4,
-	INTERRUPT = 5,
-	INTERRUPT_READY = 6,
-	// Respuestas a consola
-	PROCESS_OK = 7,
-	PROCESS_FAILURE = 8,
-	PCB_TO_KERNEL = 9,
-} headers;
+	IO_CALL = 1,
+	EXIT_CALL = 2,
+} kernel_headers;
+
+typedef enum cpu_headers
+{
+	PCB_TO_CPU = 0,
+	INTERRUPT = 1,
+} cpu_headers;
+
+typedef enum memory_headers
+{
+	MEMORY_INFO = 0,
+
+} memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

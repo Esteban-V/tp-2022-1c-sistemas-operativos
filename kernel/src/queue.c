@@ -1,6 +1,7 @@
-#include"queue.h"
+#include "queue.h"
 
-t_pQueue* pQueue_create() {
+t_pQueue *pQueue_create()
+{
 	t_pQueue *queue = malloc(sizeof(t_pQueue));
 	queue->lib_queue = queue_create();
 	pthread_mutexattr_t mta;
@@ -12,7 +13,8 @@ t_pQueue* pQueue_create() {
 	return queue;
 }
 
-void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void*)) {
+void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void *))
+{
 	pthread_mutex_lock(&queue->mutex);
 	queue_destroy_and_destroy_elements(queue->lib_queue, destroyer);
 	pthread_mutex_unlock(&queue->mutex);
@@ -21,14 +23,16 @@ void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void*)) {
 	free(queue);
 }
 
-void pQueue_put(t_pQueue *queue, void *elem) {
+void pQueue_put(t_pQueue *queue, void *elem)
+{
 	pthread_mutex_lock(&queue->mutex);
-	queue_push(queue->lib_queue, (void*) elem);
+	queue_push(queue->lib_queue, (void *)elem);
 	pthread_mutex_unlock(&queue->mutex);
 	sem_post(&queue->sem);
 }
 
-void* pQueue_take(t_pQueue *queue) {
+void *pQueue_take(t_pQueue *queue)
+{
 	sem_wait(&queue->sem);
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = queue_pop(queue->lib_queue);
@@ -36,52 +40,60 @@ void* pQueue_take(t_pQueue *queue) {
 	return elem;
 }
 
-bool pQueue_isEmpty(t_pQueue *queue) {
+bool pQueue_isEmpty(t_pQueue *queue)
+{
 	pthread_mutex_lock(&queue->mutex);
 	int result = queue_is_empty(queue->lib_queue);
 	pthread_mutex_unlock(&queue->mutex);
 	return result;
 }
 
-void pQueue_iterate(t_pQueue *queue, void (*closure)(void*)) {
+void pQueue_iterate(t_pQueue *queue, void (*closure)(void *))
+{
 	pthread_mutex_lock(&queue->mutex);
 	list_iterate(queue->lib_queue->elements, closure);
 	pthread_mutex_unlock(&queue->mutex);
 }
 
-void pQueue_sort(t_pQueue *queue, bool (*algorithm)(void*, void*)) {
+void pQueue_sort(t_pQueue *queue, bool (*algorithm)(void *, void *))
+{
 	pthread_mutex_lock(&queue->mutex);
 	list_sort(queue->lib_queue->elements, algorithm);
 	pthread_mutex_unlock(&queue->mutex);
 }
 
-void* pQueue_removeBy(t_pQueue *queue, bool (*condition)(void*)) {
+void *pQueue_removeBy(t_pQueue *queue, bool (*condition)(void *))
+{
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = list_remove_by_condition(queue->lib_queue->elements, condition);
 	pthread_mutex_unlock(&queue->mutex);
 	return elem;
 }
 
-void pQueue_lock(t_pQueue *queue) {
+void pQueue_lock(t_pQueue *queue)
+{
 	pthread_mutex_lock(&queue->mutex);
 }
 
-void pQueue_unlock(t_pQueue *queue) {
+void pQueue_unlock(t_pQueue *queue)
+{
 	pthread_mutex_unlock(&queue->mutex);
 }
 
-void* pQueue_takeLast(t_pQueue *queue) {
+void *pQueue_takeLast(t_pQueue *queue)
+{
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = list_remove(queue->lib_queue->elements,
-			list_size(queue->lib_queue->elements) - 1);
+							 list_size(queue->lib_queue->elements) - 1);
 	pthread_mutex_unlock(&queue->mutex);
 	return elem;
 }
 
-void* pQueue_peek(t_pQueue *queue) {
+void *pQueue_peek(t_pQueue *queue)
+{
+	sem_wait(&queue->sem);
 	pthread_mutex_lock(&queue->mutex);
-	void *elem = list_remove(queue->lib_queue->elements,
-			list_size(queue->lib_queue->elements) - 1);
+	void *elem = queue_peek(queue->lib_queue);
 	pthread_mutex_unlock(&queue->mutex);
 	return elem;
 }

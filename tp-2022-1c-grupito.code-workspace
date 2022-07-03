@@ -11,6 +11,9 @@
 			"kernel.h": "c",
 			"queue.h": "c",
 			"cpu.h": "c"
-		}
+		},
+		"files.autoSave": "afterDelay",
+		"editor.formatOnSave": true,
+		"editor.formatOnSaveMode": "modificationsIfAvailable"
 	}
 }

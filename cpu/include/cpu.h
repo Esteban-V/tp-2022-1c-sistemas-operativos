@@ -49,7 +49,7 @@ void execute_exit();
 void execute_no_op(uint32_t time);
 void execute_io(uint32_t time);
 
-void pcb_to_kernel(headers header);
+void pcb_to_kernel(kernel_headers header);
 
 int kernel_client_socket;
 

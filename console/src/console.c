@@ -8,21 +8,24 @@
  EXIT: 0 parámetros
  */
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 	logger = log_create("./cfg/console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
 	config = config_create("console.config");
 
-	if (argc < 3) {
+	if (argc < 3)
+	{
 		log_error(logger, "Missing params");
 		return EXIT_FAILURE;
 	}
 
-	if (argc > 3) {
+	if (argc > 3)
+	{
 		log_warning(logger, "Unused params");
 	}
 
-	if (!config || !config_has_property(config, "IP_KERNEL")
-			|| !config_has_property(config, "PUERTO_KERNEL")) {
+	if (!config || !config_has_property(config, "IP_KERNEL") || !config_has_property(config, "PUERTO_KERNEL"))
+	{
 		log_error(logger, "Config failed to load");
 		return EXIT_FAILURE;
 	}
@@ -32,7 +35,8 @@ int main(int argc, char **argv) {
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
 
-	if (!kernel_socket) {
+	if (!kernel_socket)
+	{
 		terminate_console(true);
 	}
 
@@ -47,42 +51,48 @@ int main(int argc, char **argv) {
 	get_code(instruction_file);
 
 	process = create_process();
-	if (!process) {
+	if (!process)
+	{
 		terminate_console(true);
 	}
 
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
 	log_info(logger, "Read process with %d instructions",
-			list_size(process->instructions));
+			 list_size(process->instructions));
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
 	stream_add_process(process_packet, process);
 
-	if (kernel_socket != -1) {
+	if (kernel_socket != -1)
+	{
 		socket_send_packet(kernel_socket, process_packet);
 	}
 
 	packet_destroy(process_packet);
 	uint8_t result = socket_receive_header(kernel_socket);
-	bool error = result != PROCESS_OK;
 
-	if (error) {
+	if (result)
+	{
 		log_error(logger, "Console exited with error code %d", result);
-	} else {
+	}
+	else
+	{
 		log_info(logger, "Console exited successfully");
 	}
 
-	terminate_console(error);
+	terminate_console(result);
 }
 
-void get_code(FILE *file) {
+void get_code(FILE *file)
+{
 	char *line_buf = NULL;
 	size_t line_buf_size = 0;
 	ssize_t lines_read;
 
 	lines_read = getline(&line_buf, &line_buf_size, file);
-	while (lines_read != -1) {
+	while (lines_read != -1)
+	{
 		list_add(instruction_list, parse_instruction(line_buf));
 		lines_read = getline(&line_buf, &line_buf_size, file);
 	}
@@ -90,7 +100,8 @@ void get_code(FILE *file) {
 	fclose(file);
 }
 
-t_instruction* parse_instruction(char *string) {
+t_instruction *parse_instruction(char *string)
+{
 	int i = 0;
 
 	char **instruction_text = string_split(string, " ");
@@ -100,7 +111,8 @@ t_instruction* parse_instruction(char *string) {
 	memcpy(instruction->id, id, string_length(id) + 1);
 
 	char *next_param;
-	while ((next_param = instruction_text[i + 1]) != NULL) {
+	while ((next_param = instruction_text[i + 1]) != NULL)
+	{
 		int param = atoi(next_param);
 		int *param_pointer = malloc(sizeof(int));
 		memcpy(param_pointer, &param, sizeof(int));
@@ -111,11 +123,11 @@ t_instruction* parse_instruction(char *string) {
 	return instruction;
 }
 
-void terminate_console(bool error) {
+void terminate_console(bool error)
+{
 	log_destroy(logger);
 	config_destroy(config);
 	process_destroy(process);
 	close(kernel_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
-

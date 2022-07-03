@@ -19,11 +19,10 @@ int main(void)
 	// cupos_libres = config->multiprogrammingLevel;
 	// pthread_mutex_init(&mutex_cupos, NULL);
 
-	sem_init(&any_for_ready, 0, 0);
+	sem_init(&new_for_ready, 0, 0);
+	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 	sem_init(&longTermSemCall, 0, 0);
-
-	sem_init(&exec_to_ready, 0, 0);
 
 	sem_init(&any_blocked, 0, 0);
 
@@ -72,6 +71,8 @@ int main(void)
 	// Inicializar Planificador de largo plazo
 	pthread_create(&newToReadyThread, 0, newToReady, NULL);
 	pthread_detach(newToReadyThread);
+	pthread_create(&suspendedToReadyThread, 0, newToReady, NULL);
+	pthread_detach(suspendedToReadyThread);
 
 	// Inicializar Planificador de corto plazo
 	pthread_create(&readyToExecThread, 0, readyToExec, NULL);
@@ -152,20 +153,8 @@ void *newToReady(void *args)
 	t_pcb *pcb = NULL;
 	while (1)
 	{
-		sem_wait(&any_for_ready);
+		sem_wait(&new_for_ready);
 		sem_wait(&sem_multiprogram);
-
-		// pthread_mutex_lock(&mutex_cupos);
-		// cupos_libres--; // TODO Chequear bien donde se modifica
-		// pthread_mutex_unlock(&mutex_cupos);
-
-		// TODO: Ver como vuelven de suspended, pero no hacerlo en newToReady
-		// porque estariamos sumando 2 (el suspendido y el new) a la cola de ready
-		/*
-		 if (!pQueue_isEmpty(suspended_readyQ)) {
-		 pcb = pQueue_take(suspended_readyQ);
-		 pQueue_put(readyQ, pcb);
-		 }*/
 
 		pcb = (t_pcb *)pQueue_take(newQ);
 
@@ -173,7 +162,7 @@ void *newToReady(void *args)
 		// pthread_mutex_lock(&mutex_mediumTerm);
 		// pcb = (t_pcb*) pQueue_take(newQ);
 
-		// Message a Memoria para que cree estructuras
+		// manejar memoria, creacion de estructuras
 
 		/*
 		 t_packet *memory_info = create_packet(MEMORY_INFO, 64);
@@ -188,10 +177,32 @@ void *newToReady(void *args)
 		 // Recibir valor de Tabla
 		 // Actualizar PCB
 		 */
+
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		pthread_cond_signal(&cond_mediumTerm);
+		pthread_mutex_unlock(&mutex_mediumTerm);
+	}
+}
+
+void *suspendedToReady(void *args)
+{ // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
+	t_pcb *pcb = NULL;
+	while (1)
+	{
+		sem_wait(&suspended_for_ready);
+		sem_wait(&sem_multiprogram);
+
+		pcb = pQueue_take(suspended_readyQ);
+		// manejar memoria, sacar de suspendido y traer a "ram"
+		putToReady(pcb);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -214,7 +225,7 @@ void *io_t(void *args)
 		sem_wait(&any_blocked);
 		if (!pQueue_isEmpty(blockedQ))
 		{
-			pcb = pQueue_peek(blockedQ); // retorna el primer elemento de
+			pcb = pQueue_peek(blockedQ);
 
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 			milisecs = (config->maxBlockedTime) - (time_to_ms(now) - (pcb->blocked_time));
@@ -253,11 +264,16 @@ void *io_t(void *args)
 		{
 			pcb = pQueue_peek(suspended_blockQ);
 			usleep(pcb->nextIO);
-			pcb = pQueue_take(suspended_blockQ);
-			pQueue_put(suspended_readyQ, pcb);
-			sem_post(&any_for_ready);
+			blocked_to_ready(suspended_blockQ, suspended_readyQ);
 		}
 	}
+}
+
+void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
+{
+	t_pcb *pcb = pQueue_take(origin);
+	pQueue_put(destination, pcb);
+	sem_post(&suspended_for_ready);
 }
 
 void putToReady(t_pcb *pcb)
@@ -266,7 +282,7 @@ void putToReady(t_pcb *pcb)
 	if (sortingAlgorithm == FIFO)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: FIFO, skipping");
+		log_info(logger, "Short Term Scheduler: FIFO, skipping replan...");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
@@ -277,12 +293,11 @@ void putToReady(t_pcb *pcb)
 			socket_send_header(cpu_interrupt_socket, INTERRUPT);
 		}
 
-		sem_wait(&exec_to_ready);
-		pQueue_sort(readyQ, SJF_sort);
-
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: Ready replan");
+		log_info(logger, "Short Term Scheduler: SJF, replanning...");
 		pthread_mutex_unlock(&mutex_log);
+
+		pQueue_sort(readyQ, SJF_sort);
 	}
 	sem_post(&ready_for_exec);
 }
@@ -317,26 +332,30 @@ bool receive_process(t_packet *petition, int console_socket)
 		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		sem_post(&any_for_ready);
+		sem_post(&new_for_ready);
 	}
 
 	socket_send_header(console_socket, PROCESS_OK);
 	return true;
 }
 
-bool io_op(t_packet *petition, int console_socket)
+bool io_op(t_packet *petition, int cpu_socket)
 {
 	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-	received_pcb->blocked_time = time_to_ms(now);
-	pQueue_put(blockedQ, (void *)received_pcb);
-	sem_post(&any_blocked);
-	return false;
+
+	if (!!received_pcb)
+	{
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+		received_pcb->blocked_time = time_to_ms(now);
+		pQueue_put(blockedQ, (void *)received_pcb);
+		sem_post(&any_blocked);
+	}
+	return true;
 }
 
-bool exit_op(t_packet *petition, int console_socket)
+bool exit_op(t_packet *petition, int cpu_socket)
 {
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
@@ -350,24 +369,11 @@ bool exit_op(t_packet *petition, int console_socket)
 	return true;
 }
 
-bool interrupt_ready(t_packet *petition, int console_socket)
-{
-	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition, received_pcb);
-	putToReady(received_pcb);
-	sem_post(&exec_to_ready);
-	return false;
-}
-
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
 	{
 		receive_process,
 		io_op,
 		exit_op,
-		NULL,
-		NULL,
-		NULL,
-		interrupt_ready,
 };
 
 void *header_handler(void *_client_socket)
