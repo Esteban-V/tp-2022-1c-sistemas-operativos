@@ -166,7 +166,7 @@ void *newToReady(void *args)
 		// manejar memoria, creacion de estructuras
 
 		/*
-		 t_packet *memory_info = create_packet(MEMORY_INFO, 64);
+		 t_packet *memory_info = create_packet(MEMORY_PID, 64);
 		 stream_add_UINT32(memory_info->payload, pcb->size);
 
 		 if (memory_server_socket != -1) {

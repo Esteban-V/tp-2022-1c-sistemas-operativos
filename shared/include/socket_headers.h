@@ -12,6 +12,7 @@ typedef enum kernel_headers
 	NEW_PROCESS = 0,
 	IO_CALL = 1,
 	EXIT_CALL = 2,
+	INTERRUPT_DISPATCH = 3,
 } kernel_headers;
 
 typedef enum cpu_headers
@@ -22,7 +23,7 @@ typedef enum cpu_headers
 
 typedef enum memory_headers
 {
-	MEMORY_INFO = 0,
+	MEMORY_PID = 0,
 
 } memory_headers;
 

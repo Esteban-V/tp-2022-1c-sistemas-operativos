@@ -118,6 +118,7 @@ t_instruction *parse_instruction(char *string)
 	char *next_param;
 	while ((next_param = instruction_text[i + 1]) != NULL)
 	{
+		string_trim(&next_param);
 		int param = atoi(next_param);
 		int *param_pointer = malloc(sizeof(int));
 		memcpy(param_pointer, &param, sizeof(int));

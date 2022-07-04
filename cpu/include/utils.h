@@ -1,14 +1,21 @@
-/*
- * cpu_config.h
- *
- *  Created on: 15 jun. 2022
- *      Author: utnso
- */
+#ifndef UTILS_H_
+#define UTILS_H_
 
-#ifndef INCLUDE_UTILS_H_
-#define INCLUDE_UTILS_H_
+#include <commons/config.h>
+#include "pcb_utils.h"
 
-#include<commons/config.h>
+enum operation
+{
+    NO_OP,
+    IO_OP,
+    READ,
+    COPY,
+    WRITE,
+    EXIT_OP,
+    DEAD
+};
+
+enum operation get_op(char *);
 
 typedef struct cpu_config{
     t_config* config;
@@ -26,4 +33,4 @@ void destroy_cpu_config(t_cpu_config* cpu_config);
 
 t_cpu_config* get_cpu_config(char* path);
 
-#endif /* INCLUDE_UTILS_H_ */
+#endif /* UTILS_H_ */
