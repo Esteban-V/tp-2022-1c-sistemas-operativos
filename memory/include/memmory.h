@@ -4,8 +4,6 @@
 #include"utils.h"
 #include"page_table.h"
 
-t_memory* memory;
-
 bool receive_pid(t_packet *petition, int kernel_socket);
 bool memory_write(t_packet *petition, int cpu_socket);
 bool memory_read(t_packet *petition, int cpu_socket);

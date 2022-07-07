@@ -1,6 +1,11 @@
 #ifndef SOCKET_HEADERS_H_
 #define SOCKET_HEADERS_H_
 
+typedef enum messages {
+	OK = 0,
+	ERROR = 1
+} messages;
+
 typedef enum console_headers
 {
 	PROCESS_OK = 0,
@@ -24,7 +29,8 @@ typedef enum cpu_headers
 typedef enum memory_headers
 {
 	MEMORY_PID = 0,
-
+	SWAP_OK = 1,
+	SWAP_ERROR = 2
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

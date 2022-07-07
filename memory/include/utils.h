@@ -2,6 +2,7 @@
 #define UTILS_H_
 
 #include<stdio.h>
+#include<unistd.h>
 #include<stdlib.h>
 #include<string.h>
 #include<pthread.h>
@@ -12,6 +13,7 @@
 #include"serialization.h"
 #include"networking.h"
 #include"socket_headers.h"
+#include<sys/mman.h>
 #include<commons/config.h>
 
 typedef struct memoryConfig{
@@ -29,8 +31,8 @@ typedef struct memoryConfig{
 
 typedef struct t_fr_metadata {
     bool isFree;
-    bool modified;
-    bool u;         // Para Clock-M
+    bool modified;	// Clock-M
+    bool u;         // Clock / Clock-M
     uint32_t PID;
     uint32_t page;
     uint32_t timeStamp;
@@ -54,19 +56,25 @@ typedef struct mem {
     void *memory;
 } t_memory;
 
+typedef struct pageMetadata{
+    uint32_t pid;
+    int32_t pageNumber;
+    bool used;
+} t_pageMetadata;
+
+t_memory* memory;
 t_memoryConfig *memoryConfig;
 t_log *logger;
 t_mem_metadata* metadata;
+uint32_t clock_m_counter;
 
+int32_t getFreeFrame(int32_t start, int32_t end);
 t_memoryConfig* getMemoryConfig(char *path);
 void destroyMemoryConfig(t_memoryConfig *memoryConfig);
 
 pthread_mutex_t memoryMut, metadataMut, pageTablesMut;
 
-// Algoritmo toma un frame de inicio y un frame final y eligen la victima dentro del rango.
+// Algoritmo de Reemplazo
 uint32_t (*algoritmo)(uint32_t start, uint32_t end);
-
-// Asignacion fija o global, devuelven en los parametros un rango de frames entre los cuales se puede elegir una victima.
-bool (*asignacion)(uint32_t *start, uint32_t *end, uint32_t PID);
 
 #endif /* UTILS_H_ */
