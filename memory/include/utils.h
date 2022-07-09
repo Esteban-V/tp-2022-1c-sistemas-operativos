@@ -15,6 +15,8 @@
 #include"socket_headers.h"
 #include<sys/mman.h>
 #include<commons/config.h>
+#include<sys/stat.h>
+#include<fcntl.h>
 
 typedef struct memoryConfig{
     t_config* config;
@@ -27,23 +29,24 @@ typedef struct memoryConfig{
     int framesPerProcess;
     int swapDelay;
     char* swapPath;
+    int frameQty;
 } t_memoryConfig;
 
-typedef struct t_fr_metadata {
+typedef struct t_frame_metadata {
     bool isFree;
     bool modified;	// Clock-M
     bool u;         // Clock / Clock-M
     uint32_t PID;
     uint32_t page;
     uint32_t timeStamp;
-} t_fr_metadata;
+} t_frame_metadata;
 
 typedef struct t_mem_metadata{
     uint32_t entryQty;
     uint32_t *firstFrame; // Array de PIDS donde el indice es el numero de "bloque" asignado en asig fija.
     uint32_t *clock_m_counter;
     uint32_t counter;
-    t_fr_metadata *entries;
+    t_frame_metadata *entries;
 } t_mem_metadata;
 
 typedef struct swapInterface {
@@ -62,6 +65,7 @@ typedef struct pageMetadata{
     bool used;
 } t_pageMetadata;
 
+int server_socket;
 t_memory* memory;
 t_memoryConfig *memoryConfig;
 t_log *logger;

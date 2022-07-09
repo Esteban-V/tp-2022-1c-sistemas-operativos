@@ -25,7 +25,7 @@ void server_listen(int server_socket, void* (*client_handler)(void*));
 
 t_packet* create_packet(uint8_t header, size_t size);
 void packet_destroy(t_packet *packet);
-
+int create_server(char *server_port);
 // int receive_wrapper(int socket, void *dest, size_t size);
 // bool socket_receive(int socket, void *dest, size_t size);
 

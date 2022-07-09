@@ -38,7 +38,7 @@ void _page_table_destroy(void *table)
 	pthread_mutex_unlock(&pageTablesMut);
 }*/
 
-/*uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
+uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
 {
 	pthread_mutex_lock(&pageTablesMut);
 	table->entries = realloc(table->entries,
@@ -53,7 +53,7 @@ void _page_table_destroy(void *table)
 
 	(table->pageQuantity)++;
 	return pgQty;
-}*/
+}
 
 t_ptbr1 *getPageTable(uint32_t _PID, t_dictionary *pageTables)
 {
@@ -92,13 +92,13 @@ bool pageTable1_isEmpty(uint32_t PID)
 	return isEmpty;
 }*/
 
-uint32_t pageTable_getFrame(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t page)
+uint32_t pageTable_getFrame(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry)
 {
 	uint32_t frame;
 
 	pthread_mutex_lock(&pageTablesMut);
 		t_ptbr2 *pt2 = getPageTable2(PID, pt1_entry, pageTables);
-		frame = /*no se si usar page aca o pt2_entry*/ page < pt2->pageQuantity ? ((t_page_entry*)list_get(pt2->entries, pt2_entry))->frame : -1;
+		frame = pt2_entry < pt2->pageQuantity ? ((t_page_entry*)list_get(pt2->entries, pt2_entry))->frame : -1;
 	pthread_mutex_unlock(&pageTablesMut);
 
 	return frame;
@@ -119,15 +119,17 @@ int32_t getFreeFrame(int32_t start, int32_t end){
     return -1;
 }
 
-void readPage(uint32_t pid, uint32_t pageNumber){
+void* readPage(uint32_t pid, uint32_t pageNumber){
+
     t_swapFile* file = pidExists(pid);
+
     if(file == NULL){
 
     	pthread_mutex_lock(&mutex_log);
     	    	log_info(logger, "File PID Not Found");
     	pthread_mutex_unlock(&mutex_log);
 
-        return;
+        return 0;
     }
     int index = swapFile_getIndex(file, pid, pageNumber);
     if(index == -1){
@@ -136,29 +138,26 @@ void readPage(uint32_t pid, uint32_t pageNumber){
     		log_info(logger, "File Index Out of Bounds");
     	pthread_mutex_unlock(&mutex_log);
 
-        return;
+        return 0;
     }
-    void* pageData = swapFile_readAtIndex(file, index);
-
-    free(pageData);
 
     pthread_mutex_lock(&mutex_log);
     	log_info(logger, "File %s: Page %i Recovered ; Process %i ; Index %i", file->path, pageNumber, pid, index);
     pthread_mutex_unlock(&mutex_log);
+
+    return swapFile_readAtIndex(file, index); //Page Data
+
 }
 
-void savePage(uint32_t pid, int32_t pageNumber, void* pageContent){
-	for (int i = 0; i < memoryConfig->swapDelay; i++) {
-		usleep(1000);
-	}
+bool savePage(uint32_t pid, int32_t pageNumber, void* pageContent){
 
     void* pageData = NULL;
 
-    bool rc = fija(pid, pageNumber, pageContent);
+    bool rc = fija_swap(pid, pageNumber, pageContent);
 
-    if(!rc)
-    	//ERROR
     free(pageData);
+
+    return rc;
 }
 
 void writeFrame(t_memory *mem, uint32_t frame, void *from){
@@ -194,6 +193,11 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
     // Si el frame no esta libre se envia a swap la pagina que lo ocupa.
     // Esto es para que replace() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
     if (! isFree(victim)){
+
+    	for (int i = 0; i < memoryConfig->swapDelay; i++) {
+    		usleep(1000);
+    	}
+
         // Enviar pagina reemplazada a swap.
         pthread_mutex_lock(&metadataMut);
             uint32_t victimPID  = (metadata->entries)[victim].PID;
@@ -251,7 +255,7 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
 uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t page){
 
     uint32_t start, end;
-    fijo(&start, &end, PID);
+    fija_memoria(&start, &end, PID);
 
     uint32_t victima = algoritmo(start, end);
 
@@ -278,38 +282,40 @@ t_swapFile *swapFile_create(char *path, int pageSize)
 	self->path = string_duplicate(path);
 	self->pageSize = pageSize;
 	self->maxPages = memoryConfig->memorySize / pageSize;
-	/*
-	 self->fd = open(self->path, O_RDWR|O_CREAT, S_IRWXU);
+
+	 self->fd = open(self->path, O_RDWR | O_CREAT, S_IRWXU);
 	 ftruncate(self->fd, self->size);
 	 void* mappedFile = mmap(NULL, self->size, PROT_READ|PROT_WRITE,MAP_SHARED, self->fd, 0);
 	 memset(mappedFile, 0, self->size);
 	 msync(mappedFile, self->size, MS_SYNC);
 	 munmap(mappedFile, self->size);
-	 */
 
-	/* TODO self->entries = calloc(1, sizeof(t_metadata) * self->maxPages);
+
+	 self->entries = calloc(1, sizeof(t_metadata) * self->maxPages);
 	 for(int i = 0; i < self->maxPages; i++)
 	 self->entries[i].used = false;
-	 */
+
 	return self;
 }
 
-uint32_t createPage(uint32_t PID)
+uint32_t createPage(uint32_t PID, uint32_t pt1_entry)
 {
 	pthread_mutex_lock(&pageTablesMut);
-		t_ptbr1 *table = getPageTable(PID, pageTables);
+		t_ptbr2 *table = getPageTable2(PID, pt1_entry, pageTables);
 	pthread_mutex_unlock(&pageTablesMut);
 
-	// TODO ? uint32_t pageNumber = pageTableAddEntry(table, 0);
+	uint32_t pageNumber = pageTableAddEntry(table, 0); //TODO no se xq 0
 
-	/*log_info(logger, "Creando pagina %i, para carpincho de PID %u.", pageNumber, PID);
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Page %i Created ; Process %u.", pageNumber, PID);
+	pthread_mutex_unlock(&mutex_log);
 
 	void *newPageContents = calloc(1, memoryConfig->pageSize);
-	if(swapInterface_savePage(swapInterface, PID, pageNumber, newPageContents)){
+	if(savePage(PID, pageNumber, newPageContents)){
 		free(newPageContents);
 		return pageNumber;
 	}
-	free(newPageContents);*/
+	free(newPageContents);
 
 	return -1;
 }
@@ -324,6 +330,14 @@ int swapFile_getIndex(t_swapFile* sf, uint32_t pid, int32_t pageNumber){
     }
 
     return found;
+}
+
+void* swapFile_readAtIndex(t_swapFile* sf, int index){
+    void* mappedFile = mmap(NULL, sf->size, PROT_READ|PROT_WRITE,MAP_SHARED, sf->fd, 0);
+    void* pagePtr = malloc(sf->pageSize);
+    memcpy(pagePtr, mappedFile + index * sf->pageSize, sf->pageSize);
+    munmap(mappedFile, sf->size);
+    return pagePtr;
 }
 
 bool swapFile_hasPid(t_swapFile* sf, uint32_t pid){
@@ -399,7 +413,7 @@ bool hasFreeChunk(t_swapFile* sf){
     return hasFreeChunk;
 }
 
-bool fijo(int32_t *start, int32_t *end, uint32_t PID){
+bool fija_memoria(int32_t *start, int32_t *end, uint32_t PID){
     *start = -1;
 
     pthread_mutex_lock(&metadataMut);
@@ -436,11 +450,12 @@ bool fijo(int32_t *start, int32_t *end, uint32_t PID){
 }
 
 // Algoritmo de asignacion fija.
-// Si el proceso existe en algun archivo, y hay lugar para una pagina mas en su chunk, se asigna.
-// Si el proceso existe en algun archivo, y no hay mas lugar, no se asigna.
-// Si el proceso NO existe en ningun archivo, pero hay un archivo con un chunk disponible, se asigna.
-// Si el proceso NO existe en ningun archivo, y no hay ningun archivo con un chunk disponible, no se asigna.
-bool fija(uint32_t pid, uint32_t page, void* pageContent){
+// Si proceso existe en algun archivo && hay lugar para una pagina mas en su chunk --> se asigna
+// Si proceso existe en algun archivo && no hay mas lugar --> no se asigna
+// Si proceso NO existe en ningun archivo && hay un archivo con un chunk disponible --> se asigna
+// Si proceso NO existe en ningun archivo && no hay ningun archivo con un chunk disponible --> no se asigna
+
+bool fija_swap(uint32_t pid, uint32_t page, void* pageContent){
 	t_swapFile* file = pidExists(pid);
 
 	bool _hasFreeChunk(void* elem){
@@ -465,7 +480,7 @@ bool fija(uint32_t pid, uint32_t page, void* pageContent){
 	swapFile_register(file, pid, page, assignedIndex);
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Archivo %s: se almaceno la pagina %u del proceso %u en el indice %u", file->path, page, pid, assignedIndex);
+		log_info(logger, "File %s: Page %u Saved ; Process %u ; Index %u", file->path, page, pid, assignedIndex);
 	pthread_mutex_lock(&mutex_log);
 
 	return true;
@@ -533,34 +548,35 @@ uint32_t clock_alg(uint32_t start, uint32_t end)
 		}
 }
 
-void destroyPage(uint32_t pid, uint32_t page){
+void destroy_swap_page(uint32_t pid, uint32_t page){
     t_swapFile* file = pidExists(pid);
 
     if(file == NULL){
-        t_packet* response = createPacket(SWAP_ERROR, 0);
-        socket_sendPacket(clientSocket, response);
-        destroyPacket(response);
+        t_packet* response = create_packet(SWAP_ERROR, 0);
+        socket_send_packet(server_socket, response);
+        packet_destroy(response);
 
         return;
     }
+
     int index = swapFile_getIndex(file, pid, page);
+
     if(index == -1){
-        t_packet* response = createPacket(SWAP_ERROR, 0);
-        socket_sendPacket(clientSocket, response);
-        destroyPacket(response);
+        t_packet* response = create_packet(SWAP_ERROR, 0);
+        socket_send_packet(server_socket, response);
+        packet_destroy(response);
 
         return;
     }
+
     swapFile_clearAtIndex(file, index);
     file->entries[index].used = false;
 
-    t_packet* response = createPacket(SWAP_OK, 0);
-    socket_sendPacket(clientSocket, response);
-    destroyPacket(response);
+    t_packet* response = create_packet(SWAP_OK, 0);
+    socket_send_packet(server_socket, response);
+    packet_destroy(response);
 
     pthread_mutex_lock(&mutex_log);
     	log_info(logger, "File %s: Page %i Erased ; Process %u", file->path, page, pid);
     pthread_mutex_unlock(&mutex_log);
-
-    return;
 }

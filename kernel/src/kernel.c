@@ -191,7 +191,8 @@ void *newToReady(void *args)
 }
 
 void *suspendedToReady(void *args)
-{ // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
+{
+	// Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb = NULL;
 	while (1)
 	{
@@ -244,10 +245,10 @@ void *io_t(void *args)
 				pcb = pQueue_take(blockedQ);
 				pcb->nextIO = pcb->nextIO - milisecs;
 				// Notifica a memoria de la suspension
-				// suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
-				// streamAdd_UINT32(suspendRequest->payload, process->pid);
-				// socket_sendPacket(memorySocket, suspendRequest);
-				// destroyPacket(suspendRequest);
+				/*t_packet* suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
+				stream_add_UINT32(suspendRequest->payload, pcb->pid);
+				socket_send_packet(memory_server_socket, suspendRequest);
+				packet_destroy(suspendRequest);*/
 				pQueue_put(suspended_blockQ, pcb);
 				sem_post(&sem_multiprogram);
 				// pthread_mutex_lock(&mutex_cupos);
@@ -402,6 +403,7 @@ void *header_handler(void *_client_socket)
 		serve = kernel_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
+	return 0;
 }
 
 int getIO(t_pcb *pcb)
