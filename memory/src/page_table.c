@@ -192,7 +192,7 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
 
     // Si el frame no esta libre se envia a swap la pagina que lo ocupa.
     // Esto es para que replace() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
-    if (! isFree(victim)){
+    if (!isFree(victim)){
 
     	for (int i = 0; i < memoryConfig->swapDelay; i++) {
     		usleep(1000);
@@ -257,9 +257,9 @@ uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t
     uint32_t start, end;
     fija_memoria(&start, &end, PID);
 
-    uint32_t victima = algoritmo(start, end);
+    uint32_t frameVictima = algoritmo(start, end);
 
-    return replace(victima, PID, pt1_entry, pt2_entry, page);
+    return replace(frameVictima, PID, pt1_entry, pt2_entry, page);
 }
 
 void swapFile_clearAtIndex(t_swapFile* sf, int index){
@@ -532,7 +532,7 @@ uint32_t clock_alg(uint32_t start, uint32_t end)
 		uint32_t total = end - start;
 
 		pthread_mutex_lock(&metadataMut);
-		uint32_t *counter = metadata->firstFrame ? &(metadata->clock_m_counter[start / memoryConfig->framesPerProcess]) : &clock_m_counter; // TODO cambiar
+		uint32_t *counter = metadata->firstFrame ? &(metadata->clock_counter[start / memoryConfig->framesPerProcess]) : &clock_counter; // TODO chequear
 
 		while(1){
 			for (uint32_t i = 0; i < total; i++){

@@ -7,7 +7,7 @@ int main()
 	// Initialize Config
 	memoryConfig = getMemoryConfig("./cfg/memory.config");
 	// Initialize Metadata
-	metadata = initializeMemoryMetadata(memoryConfig);
+	metadata = initializeMemoryMetadata();
 
 	// Creacion de server
 	server_socket = create_server(memoryConfig->listenPort);
@@ -55,9 +55,9 @@ bool process_suspension(t_packet *petition, int console_socket)
 				((t_page_entry*)list_get(pt2->entries, i))->present = false;
 			 }
 		}
+	pthread_mutex_unlock(&pageTablesMut);
 
 	//Cambiar metadata
-	pthread_mutex_unlock(&pageTablesMut);
 	if(metadata->firstFrame){
 		pthread_mutex_lock(&metadataMut);
 			for (uint32_t i = 0; i < memoryConfig->frameQty / memoryConfig->framesPerProcess; i++){
@@ -81,7 +81,7 @@ bool receive_pid(t_packet *petition, int kernel_socket)
 	if (!!pid)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory: PID #%d Received",pid);
+			log_info(logger, "Memory: PID #%d Received",pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *newPageTable = initializePageTable();
@@ -147,12 +147,14 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 			stream_add_UINT32(response->payload, frame);
 			socket_send_packet(cpu_socket, response);
 			packet_destroy(response);
-
 		}
 	}
 
 	return false;
 }
+
+//ver si se cumple lo del OK, chequear que se pueda crear pag
+//TODO lectura escritura en paralelo
 
 // READY?
 bool memory_write(t_packet *petition, int cpu_socket)
@@ -254,16 +256,16 @@ bool end_process(t_packet *petition, int cpu_socket)
     return true;
 }
 
-t_mem_metadata *initializeMemoryMetadata(t_memoryConfig *config)
+t_mem_metadata *initializeMemoryMetadata()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
 	metadata->entryQty = memoryConfig->frameQty;
-	metadata->counter = 0;
+	metadata->clock_counter = 0;
 	metadata->entries = calloc(metadata->entryQty, sizeof(t_frame_metadata));
 	metadata->clock_m_counter = NULL;
 	metadata->firstFrame = NULL;
 
-	uint32_t blockQuantity = memoryConfig->frameQty / config->framesPerProcess;
+	uint32_t blockQuantity = memoryConfig->frameQty / memoryConfig->framesPerProcess;
 
 	metadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
 	memset(metadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
@@ -272,7 +274,7 @@ t_mem_metadata *initializeMemoryMetadata(t_memoryConfig *config)
 
 	for (int i = 0; i < blockQuantity; i++)
 	{
-		metadata->clock_m_counter[i] = i * config->framesPerProcess;
+		metadata->clock_m_counter[i] = i * memoryConfig->framesPerProcess;
 	}
 
 	for (int i = 0; i < metadata->entryQty; i++)
