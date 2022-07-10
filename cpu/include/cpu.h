@@ -1,10 +1,3 @@
-/*
- * cpu.h
- *
- *  Created on: 15 jun. 2022
- *      Author: utnso
- */
-
 #ifndef INCLUDE_CPU_H_
 #define INCLUDE_CPU_H_
 

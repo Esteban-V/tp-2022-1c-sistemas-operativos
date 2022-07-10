@@ -1,11 +1,6 @@
 #ifndef SOCKET_HEADERS_H_
 #define SOCKET_HEADERS_H_
 
-typedef enum response_headers {
-	OK = 0,
-	ERROR = 1
-} messages;
-
 typedef enum console_headers
 {
 	PROCESS_OK = 0,

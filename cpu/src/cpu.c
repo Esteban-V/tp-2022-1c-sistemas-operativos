@@ -1,9 +1,3 @@
-/*
- * cpu.c
- *
- *  Created on: 15 jun. 2022
- *      Author: utnso
- */
 #include "cpu.h"
 
 int main()
@@ -15,7 +9,10 @@ int main()
 	// Creacion de server
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
 	kernel_interrupt_socket = create_server(config->interruptListenPort);
-	log_info(logger, "CPU ready for kernel");
+
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "CPU Ready for Kernel");
+	pthread_mutex_unlock(&mutex_log);
 
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_kernel_socket, NULL);
@@ -44,7 +41,7 @@ void *interruption()
 
 void pcb_to_kernel(kernel_headers header)
 {
-	t_packet *pcb_packet = create_packet(header, 64);
+	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
 	stream_add_pcb(pcb_packet, pcb);
 
 	pthread_mutex_lock(&mutex_kernel_socket);
@@ -53,7 +50,9 @@ void pcb_to_kernel(kernel_headers header)
 		socket_send_packet(kernel_client_socket, pcb_packet);
 		pthread_mutex_unlock(&mutex_kernel_socket);
 
-		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
 	}
 	packet_destroy(pcb_packet);
 }
@@ -94,8 +93,10 @@ bool receivedPcb(t_packet *petition, int kernel_socket)
 	stream_take_pcb(petition, pcb);
 	if (!!pcb)
 	{
-		log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
-				 list_size(pcb->instructions));
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Received PID: #%d ; %d Instructions", pcb->pid,
+					 list_size(pcb->instructions));
+		pthread_mutex_unlock(&mutex_log);
 		sem_post(&pcb_loaded);
 		return true;
 	}
@@ -143,8 +144,11 @@ enum operation fetch_and_decode(t_instruction **instruction)
 	char *op_code = (*instruction)->id;
 	enum operation op = get_op(op_code);
 
-	log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
-			 pcb->program_counter, op_code);
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
+				 pcb->program_counter, op_code);
+	pthread_mutex_unlock(&mutex_log);
+
 	return op;
 }
 

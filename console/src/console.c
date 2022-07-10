@@ -6,7 +6,7 @@
  I/O y READ: 1 parámetro
  COPY y WRITE: 2 parámetros
  EXIT: 0 parámetros
- */
+*/
 
 int main(int argc, char **argv)
 {
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
 	if (!config || !config_has_property(config, "IP_KERNEL") || !config_has_property(config, "PUERTO_KERNEL"))
 	{
-		log_error(logger, "Config failed to load");
+		log_error(logger, "Config Failed to Load");
 		return EXIT_FAILURE;
 	}
 
@@ -40,7 +40,9 @@ int main(int argc, char **argv)
 		terminate_console(true);
 	}
 
-	log_info(logger, "Console connected to kernel");
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Console Connected to Kernel");
+	pthread_mutex_unlock(&mutex_log);
 
 	char *code_path = argv[1];
 	uint32_t process_size = atoi(argv[2]);
@@ -53,7 +55,9 @@ int main(int argc, char **argv)
 
 	if (!list_size(instruction_list))
 	{
-		log_warning(logger, "Provided code has no instructions");
+		pthread_mutex_lock(&mutex_log);
+			log_warning(logger, "Provided Code has No Instructions");
+		pthread_mutex_unlock(&mutex_log);
 		terminate_console(true);
 	}
 
@@ -65,10 +69,13 @@ int main(int argc, char **argv)
 
 	memcpy(process->instructions, instruction_list, sizeof(t_list));
 	process->size = process_size;
-	log_info(logger, "Read process with %d instructions",
-			 list_size(process->instructions));
 
-	t_packet *process_packet = create_packet(NEW_PROCESS, 64);
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Process Read ; %d instructions",
+				 list_size(process->instructions));
+	pthread_mutex_unlock(&mutex_log);
+
+	t_packet *process_packet = create_packet(NEW_PROCESS, INITIAL_STREAM_SIZE);
 	stream_add_process(process_packet, process);
 
 	if (kernel_socket != -1)
@@ -81,11 +88,15 @@ int main(int argc, char **argv)
 
 	if (result)
 	{
-		log_error(logger, "Process exited with error code %d", result);
+		pthread_mutex_lock(&mutex_log);
+			log_error(logger, "Process exited with error code %d", result);
+		pthread_mutex_unlock(&mutex_log);
 	}
 	else
 	{
-		log_info(logger, "Process exited successfully");
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Process exited successfully");
+		pthread_mutex_unlock(&mutex_log);
 	}
 
 	terminate_console(result);

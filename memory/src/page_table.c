@@ -5,6 +5,9 @@ t_ptbr1 *initializePageTable()
 	t_ptbr1 *newTable = malloc(sizeof(t_ptbr1));
 	newTable->entryQuantity = 0;
 	newTable->entries = NULL;
+	newTable->tableNumber = pageTable_number;
+
+	pageTable_number++;
 
 	return newTable;
 }

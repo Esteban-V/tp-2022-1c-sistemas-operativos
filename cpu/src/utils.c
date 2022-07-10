@@ -1,16 +1,9 @@
-/*
- * utils.c
- *
- *  Created on: 15 jun. 2022
- *      Author: utnso
- */
 #include "utils.h"
 
 t_cpu_config *get_cpu_config(char *path)
 {
 	t_cpu_config *cpu_config = malloc(sizeof(t_cpu_config));
 	cpu_config->config = config_create(path);
-	cpu_config->ip = config_get_string_value(cpu_config->config, "IP_CPU");
 	cpu_config->tlbEntries = config_get_int_value(cpu_config->config,
 												  "ENTRADAS_TLB");
 	cpu_config->tlbReplace = config_get_string_value(cpu_config->config,
@@ -30,7 +23,6 @@ t_cpu_config *get_cpu_config(char *path)
 
 void destroy_cpu_config(t_cpu_config *cpu_config)
 {
-	free(cpu_config->ip);
 	free(cpu_config->tlbEntries);
 	free(cpu_config->tlbReplace);
 	free(cpu_config->delayNoOp);
