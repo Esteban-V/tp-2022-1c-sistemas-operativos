@@ -1,4 +1,4 @@
-#include"memmory.h"
+#include"memory.h"
 
 int main()
 {
