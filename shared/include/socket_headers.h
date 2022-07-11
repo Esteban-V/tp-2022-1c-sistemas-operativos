@@ -13,6 +13,7 @@ typedef enum kernel_headers
 	IO_CALL = 1,
 	EXIT_CALL = 2,
 	INTERRUPT_DISPATCH = 3,
+	SUSPEND = 4
 } kernel_headers;
 
 typedef enum cpu_headers
@@ -24,7 +25,9 @@ typedef enum cpu_headers
 typedef enum memory_headers
 {
 	MEMORY_PID = 0,
-
+	SWAP_OK = 1,
+	SWAP_ERROR = 2,
+	FRAME = 3
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

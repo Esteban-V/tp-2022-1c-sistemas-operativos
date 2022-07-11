@@ -3,7 +3,7 @@
 int main(void)
 {
 	logger = log_create("./cfg/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
-	config = getKernelConfig("./cfg/kernel.config");
+	kernelConfig = getKernelConfig("./cfg/kernel.config");
 
 	// Inicializar estructuras de estado
 	newQ = pQueue_create();
@@ -14,7 +14,7 @@ int main(void)
 	exitQ = pQueue_create();
 
 	// Inicializar semaforo de multiprocesamiento
-	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
+	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
 	// cupos_libres = config->multiprogrammingLevel;
 	// pthread_mutex_init(&mutex_cupos, NULL);
@@ -23,49 +23,59 @@ int main(void)
 	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 	sem_init(&longTermSemCall, 0, 0);
-
 	sem_init(&any_blocked, 0, 0);
-
 	sem_init(&bloquear, 0, 0);
 
-	if (config == NULL)
+	if (kernelConfig == NULL)
 	{
-		log_error(logger, "Config failed to load");
+		pthread_mutex_lock(&mutex_log);
+			log_error(logger, "Config Failed to Load");
+		pthread_mutex_unlock(&mutex_log);
+
 		terminate_kernel(true);
 	}
 
 	// Setteo de Algoritmo de Planificacion
-	if (!strcmp(config->schedulerAlgorithm, "SRT"))
+	if (!strcmp(kernelConfig->schedulerAlgorithm, "SRT"))
 	{
 		sortingAlgorithm = SRT;
 	}
-	else if (!strcmp(config->schedulerAlgorithm, "FIFO"))
+	else if (!strcmp(kernelConfig->schedulerAlgorithm, "FIFO"))
 	{
 		sortingAlgorithm = FIFO;
 	}
 	else
 	{
-		log_warning(logger,
-					"Wrong scheduler algorithm set in config --> Using FIFO");
+		pthread_mutex_lock(&mutex_log);
+			log_warning(logger,
+						"Wrong Scheduler Algorithm Set in Config --> Using FIFO");
+		pthread_mutex_unlock(&mutex_log);
 	}
 
-	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
-	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	cpu_dispatch_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortDispatch);
+	cpu_interrupt_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortInterrupt);
+	memory_server_socket = connect_to(kernelConfig->memoryIP, kernelConfig->memoryPort);
 
-	if (!cpu_dispatch_socket || !cpu_interrupt_socket)
+	if (!cpu_dispatch_socket || !cpu_interrupt_socket || !memory_server_socket)
 	{
 		terminate_kernel(true);
 	}
 
-	log_info(logger, "Kernel connected to CPU");
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Kernel connected to CPU and Memory");
+	pthread_mutex_unlock(&mutex_log);
 
 	// Creacion de server
-	int server_socket = create_server(config->kernelPort);
+	server_socket = create_server(kernelConfig->listenPort);
+
 	if (!server_socket)
 	{
 		terminate_kernel(true);
 	}
-	log_info(logger, "Kernel ready for console");
+
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Kernel Ready for Console");
+	pthread_mutex_unlock(&mutex_log);
 
 	// Inicializar hilos
 	// Inicializar Planificador de largo plazo
@@ -92,10 +102,6 @@ int main(void)
 	// Inicializo condition variable para despertar al planificador de mediano plazo
 	pthread_cond_init(&cond_mediumTerm, NULL);
 	pthread_mutex_init(&mutex_mediumTerm, NULL);
-
-	/*
-	 memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
-	 */
 
 	while (1)
 	{
@@ -134,7 +140,7 @@ void *readyToExec(void *args)
 		sem_wait(&freeCpu);
 		pcb = pQueue_take(readyQ);
 
-		t_packet *pcb_packet = create_packet(PCB_TO_CPU, 64);
+		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_pcb(pcb_packet, pcb);
 
 		if (cpu_dispatch_socket != -1)
@@ -143,8 +149,9 @@ void *readyToExec(void *args)
 		}
 
 		packet_destroy(pcb_packet);
+
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
+			log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 	}
 }
@@ -163,26 +170,38 @@ void *newToReady(void *args)
 		// pthread_mutex_lock(&mutex_mediumTerm);
 		// pcb = (t_pcb*) pQueue_take(newQ);
 
-		// manejar memoria, creacion de estructuras
+		// Manejar memoria, creacion de estructuras
+		// Recibir valor de Tabla
+		t_packet *memory_info = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(memory_info->payload, pcb->size);
 
-		/*
-		 t_packet *memory_info = create_packet(MEMORY_PID, 64);
-		 stream_add_UINT32(memory_info->payload, pcb->size);
+		if (memory_server_socket != -1) {
+			socket_send_packet(memory_server_socket, memory_info);
+		}
+		packet_destroy(memory_info);
 
-		 if (memory_server_socket != -1) {
-		 socket_send_packet(memory_server_socket, memory_info);
-		 }
+		// TODO Actualizar PCB
+		t_packet *packet = socket_receive_packet(memory_server_socket);
+		if (packet == NULL)
+		{
+			if (!socket_retry_packet(memory_server_socket, &packet))
+			{
+				close(memory_server_socket);
+				break;
+			}
+		}
 
-		 packet_destroy(memory_info);
+		pcb->page_table = stream_take_UINT32(packet->payload);
+		packet_destroy(packet);
 
-		 // Recibir valor de Tabla
-		 // Actualizar PCB
-		 */
+		/*pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Page Table Number Received #%d", pcb->page_table);
+		pthread_mutex_unlock(&mutex_log);*/
 
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
+		 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -191,7 +210,8 @@ void *newToReady(void *args)
 }
 
 void *suspendedToReady(void *args)
-{ // Hilo del largo plazo, toma un proceso de new y lo pasa a ready
+{
+	// Hilo del largo plazo, toma un proceso de new y lo pasa a ready
 	t_pcb *pcb = NULL;
 	while (1)
 	{
@@ -199,11 +219,14 @@ void *suspendedToReady(void *args)
 		sem_wait(&sem_multiprogram);
 
 		pcb = pQueue_take(suspended_readyQ);
-		// manejar memoria, sacar de suspendido y traer a "ram"
+
+		// Manejar memoria, sacar de suspendido y traer a "ram"
+
+
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
+			log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -217,8 +240,6 @@ void *io_t(void *args)
 	int milisecs;
 	int sobra;
 
-	// int memorySocket = connectToServer(config->memoryIP, config->memoryPort);
-
 	// t_packet* suspendRequest;
 
 	while (1)
@@ -229,7 +250,7 @@ void *io_t(void *args)
 			pcb = pQueue_peek(blockedQ);
 
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-			milisecs = (config->maxBlockedTime) - (time_to_ms(now) - (pcb->blocked_time));
+			milisecs = (kernelConfig->maxBlockedTime) - (time_to_ms(now) - (pcb->blocked_time));
 			sobra = milisecs - pcb->nextIO;
 
 			if (sobra >= 0)
@@ -243,11 +264,14 @@ void *io_t(void *args)
 				usleep(milisecs);
 				pcb = pQueue_take(blockedQ);
 				pcb->nextIO = pcb->nextIO - milisecs;
+
 				// Notifica a memoria de la suspension
-				// suspendRequest = createPacket(SUSPEND, INITIAL_STREAM_SIZE);
-				// streamAdd_UINT32(suspendRequest->payload, process->pid);
-				// socket_sendPacket(memorySocket, suspendRequest);
-				// destroyPacket(suspendRequest);
+
+				t_packet* suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
+				stream_add_UINT32(suspendRequest->payload, pcb->pid);
+				socket_send_packet(memory_server_socket, suspendRequest);
+				packet_destroy(suspendRequest);
+
 				pQueue_put(suspended_blockQ, pcb);
 				sem_post(&sem_multiprogram);
 				// pthread_mutex_lock(&mutex_cupos);
@@ -255,9 +279,9 @@ void *io_t(void *args)
 				// pthread_mutex_unlock(&mutex_cupos);
 				pthread_mutex_lock(&mutex_log);
 
-				log_info(logger,
-						 "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
-						 pcb->pid);
+					log_info(logger,
+							"Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
+							pcb->pid);
 				pthread_mutex_unlock(&mutex_log);
 			}
 		}
@@ -283,7 +307,7 @@ void putToReady(t_pcb *pcb)
 	if (sortingAlgorithm == FIFO)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: FIFO, skipping replan...");
+			log_info(logger, "Short Term Scheduler: FIFO ; Skipping Replan...");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
@@ -295,7 +319,7 @@ void putToReady(t_pcb *pcb)
 		}
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: SJF, replanning...");
+			log_info(logger, "Short Term Scheduler: SJF ; Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(readyQ, SJF_sort);
@@ -317,8 +341,10 @@ bool receive_process(t_packet *petition, int console_socket)
 		// NO DESTRUIR HASTA QUE ENCONTREMOS LA FORMA DE COPIAR CORRECTAMENTE
 		// process_destroy(received_process);
 
-		log_info(logger, "Received process sized %d with %d instructions",
-				 pcb->size, list_size(pcb->instructions));
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Received Process ; Size: %d ; %d Instructions",
+					 pcb->size, list_size(pcb->instructions));
+		pthread_mutex_unlock(&mutex_log);
 
 		// ESTO ROMPERIA SI DESTRUIMOS EL RECEIVED_PROCESS PORQUE LAS INSTRUCTIONS SE COPIAN MAL
 		// list_iterate(pcb->instructions, _log_instruction);
@@ -327,11 +353,12 @@ bool receive_process(t_packet *petition, int console_socket)
 		pcb->pid = pid;
 		pcb->client_socket = console_socket;
 		pcb->program_counter = 0;
-		pcb->burst_estimation = config->initialEstimate;
+		pcb->burst_estimation = kernelConfig->initialEstimate;
 
 		pQueue_put(newQ, (void *)pcb);
+
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d --> New queue", pcb->pid);
+			log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		sem_post(&new_for_ready);
@@ -363,7 +390,10 @@ bool exit_op(t_packet *petition, int cpu_socket)
 
 	if (!!received_pcb)
 	{
-		log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+
 		pQueue_put(exitQ, (void *)received_pcb);
 		sem_post(&freeCpu);
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
@@ -402,6 +432,7 @@ void *header_handler(void *_client_socket)
 		serve = kernel_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
+	return 0;
 }
 
 int getIO(t_pcb *pcb)
@@ -415,7 +446,7 @@ int getIO(t_pcb *pcb)
 void terminate_kernel(bool error)
 {
 	log_destroy(logger);
-	destroyKernelConfig(config);
+	destroyKernelConfig(kernelConfig);
 	if (cpu_interrupt_socket)
 		close(cpu_interrupt_socket);
 	if (cpu_dispatch_socket)

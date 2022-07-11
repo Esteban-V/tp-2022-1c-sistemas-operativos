@@ -26,7 +26,7 @@ void stream_destroy(t_stream_buffer *stream) {
 void stream_add(t_stream_buffer *stream, void *source, size_t size) {
 	// TODO: Que no agregue tamano de +
 	while (stream->malloc_size < stream->offset + size) {
-		stream->malloc_size += STREAM_SIZE_DEF;
+		stream->malloc_size += INITIAL_STREAM_SIZE;
 		stream->stream = realloc(stream->stream, stream->malloc_size);
 	}
 	memcpy(stream->stream + stream->offset, source, size);

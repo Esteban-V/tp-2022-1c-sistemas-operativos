@@ -25,10 +25,10 @@ void server_listen(int server_socket, void* (*client_handler)(void*));
 
 t_packet* create_packet(uint8_t header, size_t size);
 void packet_destroy(t_packet *packet);
-
+int create_server(char *server_port);
 // int receive_wrapper(int socket, void *dest, size_t size);
 // bool socket_receive(int socket, void *dest, size_t size);
-
+int connect_to(char *server_ip, char *server_port);
 uint8_t socket_receive_header(int socket);
 t_packet* socket_receive_packet(int socket);
 bool socket_retry_packet(int socket, t_packet **packet);

@@ -10,7 +10,7 @@
 #include <commons/collections/dictionary.h>
 
 
-#define STREAM_SIZE_DEF 64
+#define INITIAL_STREAM_SIZE 64
 
 typedef struct t_stream_buffer {
     uint32_t offset;

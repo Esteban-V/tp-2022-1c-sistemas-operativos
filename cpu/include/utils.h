@@ -26,7 +26,6 @@ typedef struct cpu_config{
     char* memoryPort;
     char* dispatchListenPort;
     char* interruptListenPort;
-    char* ip;
 } t_cpu_config;
 
 void destroy_cpu_config(t_cpu_config* cpu_config);

@@ -1,4 +1,4 @@
-#include "memmory.h"
+#include"memmory.h"
 
 int main()
 {
@@ -7,17 +7,24 @@ int main()
 	// Initialize Config
 	memoryConfig = getMemoryConfig("./cfg/memory.config");
 	// Initialize Metadata
-	metadata = create_memory_metadata(memoryConfig);
-
+	metadata = initializeMemoryMetadata();
+	pageTable_number = 0;
 	// Creacion de server
-	int server_socket = create_server(memoryConfig->listenPort);
-	log_info(logger, "Servidor de Memoria creado");
+	server_socket = create_server(memoryConfig->listenPort);
+	log_info(logger, "Memory Server Created");
+
+	t_list *swapFiles = list_create();
+	/* hay que ver como determinar swapfiles y filesize
+	agrear donde se swappean
+	list_add(swapFiles, swapFile_create(memoryConfig->swapFiles[i], memoryConfig->fileSize, memoryConfig->pageSize));
+	*/
 
 	// Initialize Variables
 	memory = initializeMemory(memoryConfig);
 	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
-	// algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+	algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+	clock_m_counter = 0;
 
 	while (1)
 	{
@@ -32,120 +39,285 @@ int main()
 	return EXIT_SUCCESS;
 }
 
-/*bool process_suspension(t_packet *petition, int console_socket) { // TODO ADAPTAR A LO NUESTRO, CON 2 TABLAS
- uint32_t PID = stream_take_UINT32(petition->payload);
-
- pthread_mutex_lock(&pageTablesMut); // TODO: Revisar posibilidad de deadlock, verificar logica.
- t_ptbr1 *pt = getPageTable(PID, pageTables);
- //TODO TABLE NUMBER?
- uint32_t pages = (pt->entries)->pageQuantity;
- for (uint32_t i = 0; i < pages; i++){
- if ((pt->entries)->entries[i].present){
- void *pageContent = (void*) memory_getFrame(memory, (pt->entries)->entries[i].frame);
- swapInterface_savePage(swapInterface, PID, i, pageContent);
- pthread_mutex_lock(&metadataMut);
- metadata->entries[(pt->entries)->entries[i].frame].isFree = true;
- pthread_mutex_unlock(&metadataMut);
- (pt->entries)->entries[i].present = false;
- }
- }
- pthread_mutex_unlock(&pageTablesMut);
-
- if(metadata->firstFrame){
- pthread_mutex_lock(&metadataMut);
- for (uint32_t i = 0; i < memoryConfig->entriesPerTable / memoryConfig->framesPerProcess; i++){
- if(metadata->firstFrame[i] == PID) metadata->firstFrame[i] = -1;
- }
- pthread_mutex_unlock(&metadataMut);
- }
-
- freeProcessEntries(PID);
-
- return false;
- }*/
-
-bool (*memory_handlers[7])(t_packet *petition, int socket) =
-	{
-		receive_pid};
-
-void *header_handler(void *_client_socket)
+//Ready
+bool process_suspension(t_packet *petition, int console_socket)
 {
-	int client_socket = (int)_client_socket;
-	bool serve = true;
-	while (serve)
-	{
-		t_packet *packet = socket_receive_packet(client_socket);
-		if (packet == NULL)
-		{
-			if (!socket_retry_packet(client_socket, &packet))
-			{
-				close(client_socket);
-				break;
-			}
-		}
-		serve = memory_handlers[packet->header](packet, client_socket);
-		packet_destroy(packet);
-	}
-	return 0;
-}
+	uint32_t PID = stream_take_UINT32(petition->payload);
+	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 
+
+	if(!!PID){
+
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Process Suspension Requested: PID #%d Received", PID);
+	pthread_mutex_unlock(&mutex_log);
+
+	pthread_mutex_lock(&pageTablesMut);
+		t_ptbr2 *pt2 = getPageTable2(PID, pt1_entry, pageTables);
+		uint32_t pages = pt2->pageQuantity;
+
+		//Swappear Pages
+		for (uint32_t i = 0; i < pages; i++){
+			if (((t_page_entry*)list_get(pt2->entries, i))->present){
+				void *pageContent = (void*) memory_getFrame(memory, ((t_page_entry*)list_get(pt2->entries, i))->frame);
+				savePage(PID, i, pageContent);
+				pthread_mutex_lock(&metadataMut);
+					metadata->entries[((t_page_entry*)list_get(pt2->entries, i))->frame].isFree = true;
+				pthread_mutex_unlock(&metadataMut);
+				((t_page_entry*)list_get(pt2->entries, i))->present = false;
+			 }
+		}
+	pthread_mutex_unlock(&pageTablesMut);
+
+	//Cambiar metadata
+	if(metadata->firstFrame){
+		pthread_mutex_lock(&metadataMut);
+			for (uint32_t i = 0; i < memoryConfig->frameQty / memoryConfig->framesPerProcess; i++){
+				 if(metadata->firstFrame[i] == PID) metadata->firstFrame[i] = -1;
+			}
+		pthread_mutex_unlock(&metadataMut);
+	}
+
+	//freeProcessTLBEntries(PID); TODO CPU
+
+	}
+
+	return false;
+ }
+
+
+//READY
 bool receive_pid(t_packet *petition, int kernel_socket)
 {
-	int pid = (int)stream_take_UINT32(petition->payload);
+
+	uint32_t pid = stream_take_UINT32(petition->payload);
 
 	if (!!pid)
 	{
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Initializing Memory Structures: PID #%d Received",pid);
+		pthread_mutex_unlock(&mutex_log);
+
 		t_ptbr1 *newPageTable = initializePageTable();
 
-		log_info(logger, "PID #%d", pid);
 		char *pid_key = string_itoa(pid);
 
 		pthread_mutex_lock(&pageTablesMut);
-		dictionary_put(pageTables, pid_key, (void *)newPageTable);
+			dictionary_put(pageTables, pid_key, (void *)newPageTable);
 		pthread_mutex_unlock(&pageTablesMut);
 
-		// free(pid_key);
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Page Table Obtained: #%d", newPageTable->tableNumber);
+		pthread_mutex_unlock(&mutex_log);
 
-		// TODO: Paginas
-		// TODO: Enviar confirmacion / informacion a kernel
+		t_packet* response;
+		response = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, newPageTable->tableNumber);
+		socket_send_packet(kernel_socket, response);
+		packet_destroy(response);
+
+		free(pid_key);
 	}
 
 	return false;
 }
 
+//READY
+bool access_lvl1_table(t_packet *petition, int cpu_socket)
+{
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+
+	if (!!pid)
+	{
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Level 1 Page Table Accessed: PID #%d Received", pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		t_ptbr2 *pt2 = getPageTable2(pid, pt1_entry, pageTables);
+		t_packet* response = create_packet(FRAME, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, pt2->tableNumber);
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);
+
+	}
+	return false;
+}
+
+//READY?
+bool access_lvl2_table(t_packet *petition, int cpu_socket)
+{
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
+	uint32_t page = stream_take_UINT32(petition->payload);
+
+	if (!!pid)
+	{
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Level 2 Page Table Accessed: PID #%d", pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		uint32_t frame = pageTable_getFrame(pid, pt1_entry, pt2_entry);
+
+		if(frame == -1){
+			uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
+			t_packet* response = create_packet(FRAME, INITIAL_STREAM_SIZE);
+			stream_add_UINT32(response->payload, frameVictima);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+		} else {
+			//esta presente y no esta libre
+			t_packet* response = create_packet(FRAME, INITIAL_STREAM_SIZE);
+			stream_add_UINT32(response->payload, frame);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+		}
+	}
+
+	return false;
+}
+
+//ver si se cumple lo del OK, chequear que se pueda crear pag
+//TODO lectura escritura en paralelo
+
+// READY?
 bool memory_write(t_packet *petition, int cpu_socket)
 {
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
+	uint32_t page = stream_take_UINT32(petition->payload);
+
+	if(!!pid){
+
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory Write Request: PID #%d Received", pid);
+	pthread_mutex_unlock(&mutex_log);
+
+	//cargar pagina
+	uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
+
+	t_packet* response;
+	if(frameVictima == -1) {
+		response = create_packet(SWAP_ERROR, 0);
+	} else {
+		response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
+	}
+
+	stream_add_UINT32(response->payload, frameVictima);
+	socket_send_packet(cpu_socket, response);
+	packet_destroy(response);
+	}
+
 	return false;
 }
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
+	uint32_t page = stream_take_UINT32(petition->payload);
+
+	if (!!pid)
+	{
+		pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Memory Read Request: PID #%d Received", pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		uint32_t frame = pageTable_getFrame(pid, pt1_entry, pt2_entry);
+		if(frame == -1 || isFree(frame)){
+			/*t_packet* response = create_packet(ERROR, 0);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+			return false;*/
+		}
+
+		for (int i = 0; i < memoryConfig->swapDelay; i++) {
+			usleep(1000);
+		}
+
+		readPage(pid, page);
+
+		/*t_packet* response = create_packet(ERROR, 0);
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);*/
+	}
 	return false;
 }
 
+//TODO no se si falta o no intervenir en el t_memory
 bool end_process(t_packet *petition, int cpu_socket)
 {
-	return false;
+    uint32_t PID = stream_take_UINT32(petition->payload);
+    uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+
+    if(!!PID){
+
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Ending Process: PID #%d Received", PID);
+	pthread_mutex_unlock(&mutex_log);
+
+    pthread_mutex_lock(&pageTablesMut);
+        t_ptbr2 *pt2 = getPageTable2(PID, pt1_entry, pageTables);
+        uint32_t pageQty = pt2->pageQuantity;
+    pthread_mutex_unlock(&pageTablesMut);
+
+    for (uint32_t i = pageQty - 1; i >= 0; i--){
+    	// Borrar File de Swap
+    	destroy_swap_page(PID, i);
+
+    	// Cambiar Valores en Metadata
+        pthread_mutex_lock(&pageTablesMut);
+        if (((t_page_entry*)list_get(pt2->entries, i))->present == true){
+            uint32_t frame = ((t_page_entry*)list_get(pt2->entries, i))->frame;
+            pthread_mutex_lock(&metadataMut);
+                (metadata->entries)[frame].isFree = true;
+            pthread_mutex_unlock(&metadataMut);
+        }
+        pthread_mutex_unlock(&pageTablesMut);
+    }
+
+    char *_PID = string_itoa(PID);
+    dictionary_remove_and_destroy(pageTables, _PID, _destroyPageTable);
+    free(_PID);
+
+    /*t_packet *response = create_packet(OK, 0);
+    socket_send_packet(cpu_socket, response);
+    packet_destroy(response);*/
+
+    pthread_mutex_lock(&mutex_log);
+        log_info(logger, "Process %u Ended", PID);
+    pthread_mutex_unlock(&mutex_log);
+
+    //sigUsr1HandlerTLB(0);
+
+    //freeProcessEntries(PID);
+	}
+
+    return true;
 }
 
-t_mem_metadata *create_memory_metadata(t_memoryConfig *config)
+t_mem_metadata *initializeMemoryMetadata()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
-	metadata->entryQty = config->entriesPerTable;
-	metadata->counter = 0;
-	metadata->entries = calloc(metadata->entryQty, sizeof(t_fr_metadata));
+	metadata->entryQty = memoryConfig->frameQty;
+	metadata->clock_counter = 0;
+	metadata->entries = calloc(metadata->entryQty, sizeof(t_frame_metadata));
 	metadata->clock_m_counter = NULL;
 	metadata->firstFrame = NULL;
 
-	uint32_t blockQuantity = config->entriesPerTable / config->framesPerProcess;
+	uint32_t blockQuantity = memoryConfig->frameQty / memoryConfig->framesPerProcess;
 
 	metadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
 	memset(metadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
 
 	metadata->clock_m_counter = calloc(blockQuantity, sizeof(uint32_t));
+
 	for (int i = 0; i < blockQuantity; i++)
 	{
-		metadata->clock_m_counter[i] = i * config->framesPerProcess;
+		metadata->clock_m_counter[i] = i * memoryConfig->framesPerProcess;
 	}
 
 	for (int i = 0; i < metadata->entryQty; i++)
@@ -175,4 +347,36 @@ t_memory *initializeMemory(t_memoryConfig *config)
 	newMemory->memory = calloc(1, config->memorySize);
 
 	return newMemory;
+}
+
+bool (*memory_handlers[7])(t_packet *petition, int socket) =
+{
+	receive_pid,
+	access_lvl1_table,
+	access_lvl2_table,
+	memory_read, //
+	process_suspension, //
+	memory_write,
+	end_process
+};
+
+void *header_handler(void *_client_socket)
+{
+	int client_socket = (int)_client_socket;
+	bool serve = true;
+	while (serve)
+	{
+		t_packet *packet = socket_receive_packet(client_socket);
+		if (packet == NULL)
+		{
+			if (!socket_retry_packet(client_socket, &packet))
+			{
+				close(client_socket);
+				break;
+			}
+		}
+		serve = memory_handlers[packet->header](packet, client_socket);
+		packet_destroy(packet);
+	}
+	return 0;
 }

@@ -1,5 +1,6 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<commons/log.h>
@@ -28,24 +29,19 @@ enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 
 struct timespec start_exec_time, last_burst_estimate, now_time;
 
-t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ,
-		*exitQ;
+t_pQueue *newQ, *readyQ, *blockedQ, *suspended_readyQ, *suspended_blockQ, *exitQ;
 pthread_t newToReadyThread, suspendedToReadyThread, readyToExecThread, thread_mediumTerm,
 	suspendProcessThread, cpuDispatchThread, io_thread, exitProcessThread;
-sem_t sem_multiprogram, new_for_ready, suspended_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready,
-	any_blocked, bloquear;
+sem_t sem_multiprogram, new_for_ready, suspended_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready, any_blocked, bloquear;
 pthread_mutex_t mutex_mediumTerm;
 // pthread_mutex_t mutex_cupos;
 pthread_cond_t cond_mediumTerm;
-
+int server_socket;
 struct timespec now;
 
 int cpu_interrupt_socket;
 int cpu_dispatch_socket;
 int memory_server_socket;
-
-char *ip;
-char *port;
 
 int pid = 0;
 t_log *logger;
@@ -56,6 +52,7 @@ bool receive_process(t_packet *petition, int console_socket);
 void putToReady(t_pcb *pcb);
 void* io_t(void *args);
 int getIO(t_pcb *pcb);
+void blocked_to_ready(t_pQueue *origin, t_pQueue *destination);
 
 bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);

@@ -3,7 +3,6 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-
 #include<string.h>
 #include<commons/log.h>
 #include<commons/config.h>
@@ -25,8 +24,6 @@
 
 typedef struct kernelConfig {
 	t_config *config;
-	char *kernelIP;
-	char *kernelPort;
 	char *memoryIP;
 	char *memoryPort;
 	char *cpuIP;
@@ -40,7 +37,7 @@ typedef struct kernelConfig {
 	int maxBlockedTime;
 } t_kernelConfig;
 
-t_kernelConfig *config;
+t_kernelConfig *kernelConfig;
 t_process *process;
 
 t_kernelConfig* getKernelConfig(char *path);
