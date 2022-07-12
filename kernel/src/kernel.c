@@ -29,7 +29,7 @@ int main(void)
 	if (kernelConfig == NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_error(logger, "Config Failed to Load");
+		log_error(logger, "Config failed to load");
 		pthread_mutex_unlock(&mutex_log);
 
 		terminate_kernel(true);
@@ -47,8 +47,8 @@ int main(void)
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_warning(logger,
-						"Wrong Scheduler Algorithm Set in Config --> Using FIFO");
+		log_warning(logger,
+					"Wrong scheduler algorithm set in config --> Using FIFO");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
@@ -62,7 +62,7 @@ int main(void)
 	}
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Kernel connected to CPU and Memory");
+	log_info(logger, "Kernel connected to CPU and memory");
 	pthread_mutex_unlock(&mutex_log);
 
 	// Creacion de server
@@ -74,7 +74,7 @@ int main(void)
 	}
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Kernel Ready for Console");
+	log_info(logger, "Kernel Ready for Console");
 	pthread_mutex_unlock(&mutex_log);
 
 	// Inicializar hilos
@@ -151,7 +151,7 @@ void *readyToExec(void *args)
 		packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
+		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 	}
 }
@@ -175,7 +175,8 @@ void *newToReady(void *args)
 		t_packet *memory_info = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(memory_info->payload, pcb->size);
 
-		if (memory_server_socket != -1) {
+		if (memory_server_socket != -1)
+		{
 			socket_send_packet(memory_server_socket, memory_info);
 		}
 		packet_destroy(memory_info);
@@ -201,7 +202,7 @@ void *newToReady(void *args)
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-		 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
+		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -222,11 +223,10 @@ void *suspendedToReady(void *args)
 
 		// Manejar memoria, sacar de suspendido y traer a "ram"
 
-
 		putToReady(pcb);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
+		log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pthread_cond_signal(&cond_mediumTerm);
@@ -267,7 +267,7 @@ void *io_t(void *args)
 
 				// Notifica a memoria de la suspension
 
-				t_packet* suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
+				t_packet *suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspendRequest->payload, pcb->pid);
 				socket_send_packet(memory_server_socket, suspendRequest);
 				packet_destroy(suspendRequest);
@@ -279,9 +279,9 @@ void *io_t(void *args)
 				// pthread_mutex_unlock(&mutex_cupos);
 				pthread_mutex_lock(&mutex_log);
 
-					log_info(logger,
-							"Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
-							pcb->pid);
+				log_info(logger,
+						 "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
+						 pcb->pid);
 				pthread_mutex_unlock(&mutex_log);
 			}
 		}
@@ -307,7 +307,7 @@ void putToReady(t_pcb *pcb)
 	if (sortingAlgorithm == FIFO)
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Short Term Scheduler: FIFO ; Skipping Replan...");
+		log_info(logger, "Short Term Scheduler: FIFO ; Skipping Replan...");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
@@ -319,7 +319,7 @@ void putToReady(t_pcb *pcb)
 		}
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Short Term Scheduler: SJF ; Replanning...");
+		log_info(logger, "Short Term Scheduler: SJF ; Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(readyQ, SJF_sort);
@@ -342,8 +342,8 @@ bool receive_process(t_packet *petition, int console_socket)
 		// process_destroy(received_process);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Received Process ; Size: %d ; %d Instructions",
-					 pcb->size, list_size(pcb->instructions));
+		log_info(logger, "Received %d sized process with %d instructions",
+				 pcb->size, list_size(pcb->instructions));
 		pthread_mutex_unlock(&mutex_log);
 
 		// ESTO ROMPERIA SI DESTRUIMOS EL RECEIVED_PROCESS PORQUE LAS INSTRUCTIONS SE COPIAN MAL
@@ -358,7 +358,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		pQueue_put(newQ, (void *)pcb);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d --> New queue", pcb->pid);
+		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		sem_post(&new_for_ready);
@@ -391,7 +391,7 @@ bool exit_op(t_packet *petition, int cpu_socket)
 	if (!!received_pcb)
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
+		log_info(logger, "PID #%d CPU --> Exit queue", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(exitQ, (void *)received_pcb);

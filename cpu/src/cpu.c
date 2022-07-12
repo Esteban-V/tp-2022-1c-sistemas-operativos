@@ -11,7 +11,7 @@ int main()
 	kernel_interrupt_socket = create_server(config->interruptListenPort);
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "CPU Ready for Kernel");
+	log_info(logger, "CPU Ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
 
 	sem_init(&pcb_loaded, 0, 0);
@@ -51,7 +51,7 @@ void pcb_to_kernel(kernel_headers header)
 		pthread_mutex_unlock(&mutex_kernel_socket);
 
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 	}
 	packet_destroy(pcb_packet);
@@ -94,8 +94,8 @@ bool receivedPcb(t_packet *petition, int kernel_socket)
 	if (!!pcb)
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Received PID: #%d ; %d Instructions", pcb->pid,
-					 list_size(pcb->instructions));
+		log_info(logger, "Received PID: #%d ; %d Instructions", pcb->pid,
+				 list_size(pcb->instructions));
 		pthread_mutex_unlock(&mutex_log);
 		sem_post(&pcb_loaded);
 		return true;
@@ -145,8 +145,8 @@ enum operation fetch_and_decode(t_instruction **instruction)
 	enum operation op = get_op(op_code);
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
-				 pcb->program_counter, op_code);
+	log_info(logger, "PID #%d / Instruction %d --> %s", pcb->pid,
+			 pcb->program_counter, op_code);
 	pthread_mutex_unlock(&mutex_log);
 
 	return op;

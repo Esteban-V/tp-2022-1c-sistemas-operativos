@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
 	if (!config || !config_has_property(config, "IP_KERNEL") || !config_has_property(config, "PUERTO_KERNEL"))
 	{
-		log_error(logger, "Config Failed to Load");
+		log_error(logger, "Config failed to load");
 		return EXIT_FAILURE;
 	}
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	}
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Console Connected to Kernel");
+	log_info(logger, "Console connected to kernel");
 	pthread_mutex_unlock(&mutex_log);
 
 	char *code_path = argv[1];
@@ -49,6 +49,7 @@ int main(int argc, char **argv)
 
 	instruction_list = list_create();
 
+	printf("%s \n", code_path);
 	FILE *instruction_file = open_file(code_path, error_opening_file);
 	get_code(instruction_file);
 	fclose(instruction_file);
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
 	if (!list_size(instruction_list))
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_warning(logger, "Provided Code has No Instructions");
+		log_warning(logger, "Provided code has no instructions");
 		pthread_mutex_unlock(&mutex_log);
 		terminate_console(true);
 	}
@@ -71,8 +72,8 @@ int main(int argc, char **argv)
 	process->size = process_size;
 
 	pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Process Read ; %d instructions",
-				 list_size(process->instructions));
+	log_info(logger, "Found process with %d instructions",
+			 list_size(process->instructions));
 	pthread_mutex_unlock(&mutex_log);
 
 	t_packet *process_packet = create_packet(NEW_PROCESS, INITIAL_STREAM_SIZE);
@@ -89,13 +90,13 @@ int main(int argc, char **argv)
 	if (result)
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_error(logger, "Process exited with error code %d", result);
+		log_error(logger, "Process exited with error code %d", result);
 		pthread_mutex_unlock(&mutex_log);
 	}
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Process exited successfully");
+		log_info(logger, "Process exited successfully");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
