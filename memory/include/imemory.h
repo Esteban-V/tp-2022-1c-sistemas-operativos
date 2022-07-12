@@ -17,5 +17,6 @@ void *header_handler(void *_client_socket);
 t_mem_metadata *initializeMemoryMetadata();
 void memory_metadata_destroy(t_mem_metadata *meta);
 t_memory *initializeMemory(t_memoryConfig *config);
+bool handshake(t_packet *petition, int cpu_socket);
 
 #endif /* MEMORY_H_ */

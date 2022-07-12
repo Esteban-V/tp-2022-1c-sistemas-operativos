@@ -197,9 +197,10 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
     // Esto es para que replace() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
     if (!isFree(victim)){
 
-    	for (int i = 0; i < memoryConfig->swapDelay; i++) {
-    		usleep(1000);
-    	}
+    	// TODO determinar file size
+    	// list_add(swapFiles, swapFile_create(strcat(memoryConfig->swapPath, itoa(PID)), memoryConfig->fileSize, memoryConfig->pageSize));
+
+    	usleep(memoryConfig->swapDelay);
 
         // Enviar pagina reemplazada a swap.
         pthread_mutex_lock(&metadataMut);
@@ -279,26 +280,24 @@ void swapFile_writeAtIndex(t_swapFile* sf, int index, void* pagePtr){
     munmap(mappedFile, sf->size);
 }
 
-t_swapFile *swapFile_create(char *path, int pageSize)
-{
-	t_swapFile *self = malloc(sizeof(t_swapFile));
-	self->path = string_duplicate(path);
-	self->pageSize = pageSize;
-	self->maxPages = memoryConfig->memorySize / pageSize;
+t_swapFile* swapFile_create(char* path, size_t size, size_t pageSize){
+    t_swapFile* self = malloc(sizeof(t_swapFile));
+    self->path = string_duplicate(path);
+    self->size = size;
+    self->pageSize = pageSize;
+    self->maxPages = size / pageSize;
+    self->fd = open(self->path, O_RDWR|O_CREAT, S_IRWXU);
+    ftruncate(self->fd, self->size);
+    void* mappedFile = mmap(NULL, self->size, PROT_READ|PROT_WRITE,MAP_SHARED, self->fd, 0);
+    memset(mappedFile, 0, self->size);
+    msync(mappedFile, self->size, MS_SYNC);
+    munmap(mappedFile, self->size);
 
-	 self->fd = open(self->path, O_RDWR | O_CREAT, S_IRWXU);
-	 ftruncate(self->fd, self->size);
-	 void* mappedFile = mmap(NULL, self->size, PROT_READ|PROT_WRITE,MAP_SHARED, self->fd, 0);
-	 memset(mappedFile, 0, self->size);
-	 msync(mappedFile, self->size, MS_SYNC);
-	 munmap(mappedFile, self->size);
+    self->entries = calloc(1, sizeof(t_pageMetadata) * self->maxPages);
+    for(int i = 0; i < self->maxPages; i++)
+        self->entries[i].used = false;
 
-
-	 self->entries = calloc(1, sizeof(t_metadata) * self->maxPages);
-	 for(int i = 0; i < self->maxPages; i++)
-	 self->entries[i].used = false;
-
-	return self;
+    return self;
 }
 
 uint32_t createPage(uint32_t PID, uint32_t pt1_entry)

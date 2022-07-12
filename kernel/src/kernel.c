@@ -208,6 +208,8 @@ void *newToReady(void *args)
 		pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
 	}
+
+	return 0;
 }
 
 void *suspendedToReady(void *args)

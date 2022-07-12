@@ -12,13 +12,9 @@ int main()
 	// Creacion de server
 	server_socket = create_server(memoryConfig->listenPort);
 
-	log_info(logger, "Memory ready for CPU");
+	log_info(logger, "Memory Ready for CPU");
 
 	t_list *swapFiles = list_create();
-	/* hay que ver como determinar swapfiles y filesize
-	agrear donde se swappean
-	list_add(swapFiles, swapFile_create(memoryConfig->swapFiles[i], memoryConfig->fileSize, memoryConfig->pageSize));
-	*/
 
 	// Initialize Variables
 	memory = initializeMemory(memoryConfig);
@@ -208,7 +204,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		log_info(logger, "Memory Write Request: PID #%d Received", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		// cargar pagina
+		// Cargar Pagina
 		uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
 
 		t_packet *response;
@@ -251,10 +247,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 			return false;*/
 		}
 
-		for (int i = 0; i < memoryConfig->swapDelay; i++)
-		{
-			usleep(1000);
-		}
+		usleep(memoryConfig->swapDelay);
 
 		readPage(pid, page);
 
@@ -319,6 +312,24 @@ bool end_process(t_packet *petition, int cpu_socket)
 	return true;
 }
 
+bool handshake(t_packet *petition, int cpu_socket) {
+
+	if(stream_take_UINT32(petition->payload) == 1)
+	{
+		t_packet *cpu_info = create_packet(MEMORY_INFO, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(cpu_info->payload, memoryConfig->pageSize);
+		stream_add_UINT32(cpu_info->payload, memoryConfig->entriesPerTable);
+		socket_send_packet(cpu_socket, cpu_info);
+		packet_destroy(cpu_info);
+	}
+	else
+	{
+		// ERROR
+	}
+
+	return false;
+}
+
 t_mem_metadata *initializeMemoryMetadata()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
@@ -369,15 +380,17 @@ t_memory *initializeMemory(t_memoryConfig *config)
 	return newMemory;
 }
 
-bool (*memory_handlers[7])(t_packet *petition, int socket) =
-	{
+bool (*memory_handlers[8])(t_packet *petition, int socket) =
+{
 		receive_pid,
 		access_lvl1_table,
 		access_lvl2_table,
 		memory_read,
 		process_suspension,
+		handshake,
 		memory_write,
-		end_process};
+		end_process
+};
 
 void *header_handler(void *_client_socket)
 {
@@ -394,6 +407,7 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
+		usleep(memoryConfig->memoryDelay);
 		serve = memory_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
