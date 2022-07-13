@@ -45,6 +45,7 @@ void pcb_to_kernel(kernel_headers header);
 pthread_mutex_t mutex_kernel_socket;
 int kernel_client_socket;
 
+int memory_server_socket;
 sem_t pcb_loaded;
 t_log *logger;
 
@@ -52,5 +53,6 @@ int kernel_dispatch_socket;
 int kernel_interrupt_socket;
 
 pthread_t interruptionThread, execThread;
+void handshake();
 
 #endif /* INCLUDE_CPU_H_ */

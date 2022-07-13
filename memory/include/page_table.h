@@ -62,9 +62,11 @@ typedef struct swapFile
     t_pageMetadata* entries;
 } t_swapFile;
 
+t_swapFile* swapFile_create(char* path, uint32_t PID, size_t size, size_t pageSize);
+
 t_list *swapFiles;
 uint32_t pageTable_number;
-t_swapFile *swapFile_create(char *path, int pageSize);
+
 void swapFile_clearAtIndex(t_swapFile* sf, int index);
 uint32_t clock_m_alg(uint32_t start, uint32_t end);
 int swapFile_getIndex(t_swapFile* sf, uint32_t pid, int32_t pageNumber);

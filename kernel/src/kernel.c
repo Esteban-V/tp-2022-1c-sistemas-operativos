@@ -28,7 +28,7 @@ int main(void)
 	if (kernelConfig == NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Config failed to load");
+		log_error(logger, "Config Failed to Load");
 		pthread_mutex_unlock(&mutex_log);
 
 		terminate_kernel(true);
@@ -114,7 +114,6 @@ void *cpu_dispatch_listener(void *args)
 	// sem_wait(&bloquear);
 	while (1)
 	{
-		// printf("a\n");
 		header_handler(cpu_dispatch_socket);
 	}
 }
@@ -127,6 +126,7 @@ void *exit_process(void *args)
 		pcb = pQueue_take(exitQ);
 		// avisar a consola que exit
 	}
+
 }
 
 void *readyToExec(void *args)
@@ -177,6 +177,7 @@ void *newToReady(void *args)
 		{
 			socket_send_packet(memory_socket, memory_info);
 		}
+
 		packet_destroy(memory_info);
 
 		// TODO Actualizar PCB
@@ -206,6 +207,8 @@ void *newToReady(void *args)
 		pthread_cond_signal(&cond_mediumTerm);
 		pthread_mutex_unlock(&mutex_mediumTerm);
 	}
+
+	return 0;
 }
 
 void *suspendedToReady(void *args)

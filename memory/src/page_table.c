@@ -197,9 +197,14 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
     // Esto es para que replace() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
     if (!isFree(victim)){
 
-    	for (int i = 0; i < memoryConfig->swapDelay; i++) {
-    		usleep(1000);
-    	}
+    	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "SWAP");
+		pthread_mutex_unlock(&mutex_log);
+
+    	// TODO determinar file size
+    	list_add(swapFiles, swapFile_create(memoryConfig->swapPath, PID, /*memoryConfig->fileSize*/ 4096, memoryConfig->pageSize));
+
+    	usleep(memoryConfig->swapDelay);
 
         // Enviar pagina reemplazada a swap.
         pthread_mutex_lock(&metadataMut);
@@ -279,26 +284,35 @@ void swapFile_writeAtIndex(t_swapFile* sf, int index, void* pagePtr){
     munmap(mappedFile, sf->size);
 }
 
-t_swapFile *swapFile_create(char *path, int pageSize)
-{
-	t_swapFile *self = malloc(sizeof(t_swapFile));
-	self->path = string_duplicate(path);
-	self->pageSize = pageSize;
-	self->maxPages = memoryConfig->memorySize / pageSize;
+t_swapFile* swapFile_create(char* path, uint32_t PID, size_t size, size_t pageSize){ // TODO Asignar PID
+    t_swapFile* self = malloc(sizeof(t_swapFile));
 
-	 self->fd = open(self->path, O_RDWR | O_CREAT, S_IRWXU);
-	 ftruncate(self->fd, self->size);
-	 void* mappedFile = mmap(NULL, self->size, PROT_READ|PROT_WRITE,MAP_SHARED, self->fd, 0);
-	 memset(mappedFile, 0, self->size);
-	 msync(mappedFile, self->size, MS_SYNC);
-	 munmap(mappedFile, self->size);
+    char* _PID = string_duplicate(string_itoa(PID));
+    string_append(&_PID, ".swap");
+    char* aux = "/";
+    string_append(&aux, _PID);
+    string_append(&path, aux);
 
+    pthread_mutex_lock(&mutex_log);
+	log_info(logger, "- - - - - - PATH %s - - - - - -", path);
+	pthread_mutex_unlock(&mutex_log);
 
-	 self->entries = calloc(1, sizeof(t_metadata) * self->maxPages);
-	 for(int i = 0; i < self->maxPages; i++)
-	 self->entries[i].used = false;
+    self->path = string_duplicate(path);
+    self->size = size;
+    self->pageSize = pageSize;
+    self->maxPages = size / pageSize;
+    self->fd = open(self->path, O_RDWR|O_CREAT, S_IRWXU);
+    ftruncate(self->fd, self->size);
+    void* mappedFile = mmap(NULL, self->size, PROT_READ|PROT_WRITE,MAP_SHARED, self->fd, 0);
+    memset(mappedFile, 0, self->size);
+    msync(mappedFile, self->size, MS_SYNC);
+    munmap(mappedFile, self->size);
 
-	return self;
+    self->entries = calloc(1, sizeof(t_pageMetadata) * self->maxPages);
+    for(int i = 0; i < self->maxPages; i++)
+        self->entries[i].used = false;
+
+    return self;
 }
 
 uint32_t createPage(uint32_t PID, uint32_t pt1_entry)
