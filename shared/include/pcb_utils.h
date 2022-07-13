@@ -37,7 +37,7 @@ typedef struct pcb
 	uint32_t page_table; // esta mal
 	uint32_t burst_estimation;
 	uint32_t blocked_time;
-	uint32_t nextIO;
+	uint32_t pending_io_time;
 } t_pcb;
 
 void stream_take_pcb(t_packet *, t_pcb *);

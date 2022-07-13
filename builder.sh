@@ -30,5 +30,5 @@ do
 
 	# Buildea el modulo
 	echo "Buildeando $MODULE con config $CONFIG_FILE en background y enviando log a $LOG_PATH..."
-	(cd ./$MODULE && make)  >$LOG_PATH &
+	(cd ./$MODULE && make) >$LOG_PATH &
 done

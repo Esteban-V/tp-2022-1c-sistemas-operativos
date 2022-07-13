@@ -238,8 +238,9 @@ void *suspendedToReady(void *args)
 void *io_t(void *args)
 {
 	t_pcb *pcb;
-	int milisecs;
-	int sobra;
+	int time_blocked;
+	int sleep_ms;
+	int remaining_io_time;
 
 	// t_packet* suspendRequest;
 
@@ -251,20 +252,28 @@ void *io_t(void *args)
 			pcb = pQueue_peek(blockedQ);
 
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-			milisecs = (kernelConfig->maxBlockedTime) - (time_to_ms(now) - (pcb->blocked_time));
-			sobra = milisecs - pcb->nextIO;
 
-			if (sobra >= 0)
+			//Tiempo desde su bloqueo
+			time_blocked = time_to_ms(now) - pcb->blocked_time;
+
+			//Tiempo a bloquear en caso de que 
+			sleep_ms = kernelConfig->maxBlockedTime - time_blocked;
+
+			//Tiempo que le faltaria de IO
+			remaining_io_time = sleep_ms - pcb->pending_io_time;
+
+			//Tiempo faltante supera tiempo maximo seteado en config
+			if (remaining_io_time >= 0)
 			{
-				usleep(pcb->nextIO);
+				usleep(pcb->pending_io_time);
 				pcb = pQueue_take(blockedQ);
 				putToReady(pcb);
 			}
 			else
 			{
-				usleep(milisecs);
+				usleep(sleep_ms);
 				pcb = pQueue_take(blockedQ);
-				pcb->nextIO = pcb->nextIO - milisecs;
+				pcb->pending_io_time = pcb->pending_io_time - sleep_ms;
 
 				// Notifica a memoria de la suspension
 
@@ -286,7 +295,7 @@ void *io_t(void *args)
 		else
 		{
 			pcb = pQueue_peek(suspended_blockQ);
-			usleep(pcb->nextIO);
+			usleep(pcb->pending_io_time);
 			blocked_to_ready(suspended_blockQ, suspended_readyQ);
 		}
 	}

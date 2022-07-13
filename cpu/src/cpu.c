@@ -165,6 +165,7 @@ void execute_no_op()
 void execute_io(t_instruction *instruction)
 {
 	uint32_t *time = list_get(instruction->params, 0);
+	pcb->pending_io_time = time;
 	pcb_to_kernel(IO_CALL);
 }
 
