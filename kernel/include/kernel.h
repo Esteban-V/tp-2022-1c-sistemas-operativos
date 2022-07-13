@@ -41,7 +41,7 @@ struct timespec now;
 
 int cpu_interrupt_socket;
 int cpu_dispatch_socket;
-int memory_server_socket;
+int memory_socket;
 
 int pid = 0;
 t_log *logger;

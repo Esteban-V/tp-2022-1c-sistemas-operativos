@@ -4,27 +4,45 @@ int main()
 {
 	// Initialize logger
 	logger = log_create("./cfg/memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
-	// Initialize Config
 	memoryConfig = getMemoryConfig("./cfg/memory.config");
-	// Initialize Metadata
-	metadata = initializeMemoryMetadata();
+
+	metadata = metadata_init();
 	pageTable_number = 0;
+
 	// Creacion de server
 	server_socket = create_server(memoryConfig->listenPort);
 
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Memory ready for CPU");
+	pthread_mutex_unlock(&mutex_log);
 
-	t_list *swapFiles = list_create();
+	swap_files = list_create();
 	/* hay que ver como determinar swapfiles y filesize
-	agrear donde se swappean
-	list_add(swapFiles, swapFile_create(memoryConfig->swapFiles[i], memoryConfig->fileSize, memoryConfig->pageSize));
+	agregar donde se swappean
+	list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
 	*/
+	sem_init(&writeRead, 0, 2); // TODO Ver si estan vien los semaforos, o si van en otras funciones tmb
 
-	// Initialize Variables
-	memory = initializeMemory(memoryConfig);
+	memory = memory_init(memoryConfig);
 	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
-	algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+
+	if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK"))
+	{
+		replace_algo = clock_alg;
+	}
+	else if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK-M"))
+	{
+		replace_algo = clock_m_alg;
+	}
+	else
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_warning(logger,
+					"Wrong replacing algorithm set in config --> Using CLOCK");
+		pthread_mutex_unlock(&mutex_log);
+	}
+
 	clock_m_counter = 0;
 
 	while (1)
@@ -32,12 +50,7 @@ int main()
 		server_listen(server_socket, header_handler);
 	}
 
-	// Destroy
-	destroyMemoryConfig(memoryConfig);
-	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
-	log_destroy(logger);
-
-	return EXIT_SUCCESS;
+	terminate_memory(false);
 }
 
 // Ready
@@ -109,7 +122,7 @@ bool receive_pid(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&pageTablesMut);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Reading page table #%d", newPageTable->tableNumber);
+		log_info(logger, "Reading Page Table #%d", newPageTable->tableNumber);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response;
@@ -191,11 +204,12 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 }
 
 // ver si se cumple lo del OK, chequear que se pueda crear pag
-// TODO lectura escritura en paralelo
 
 // READY?
 bool memory_write(t_packet *petition, int cpu_socket)
 {
+	sem_wait(&writeRead);
+
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
@@ -208,7 +222,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		log_info(logger, "Memory Write Request: PID #%d Received", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		// cargar pagina
+		// Cargar Pagina
 		uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
 
 		t_packet *response;
@@ -226,11 +240,15 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		packet_destroy(response);
 	}
 
+	sem_post(&writeRead);
+
 	return false;
 }
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
+	sem_wait(&writeRead);
+
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
@@ -251,10 +269,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 			return false;*/
 		}
 
-		for (int i = 0; i < memoryConfig->swapDelay; i++)
-		{
-			usleep(1000);
-		}
+		usleep(memoryConfig->swapDelay);
 
 		readPage(pid, page);
 
@@ -262,6 +277,9 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		socket_send_packet(cpu_socket, response);
 		packet_destroy(response);*/
 	}
+
+	sem_post(&writeRead);
+
 	return false;
 }
 
@@ -285,7 +303,7 @@ bool end_process(t_packet *petition, int cpu_socket)
 		for (uint32_t i = pageQty - 1; i >= 0; i--)
 		{
 			// Borrar File de Swap
-			destroy_swap_page(pid, i);
+			destroy_swap_page(pid, i, server_socket);
 
 			// Cambiar Valores en Metadata
 			pthread_mutex_lock(&pageTablesMut);
@@ -319,7 +337,29 @@ bool end_process(t_packet *petition, int cpu_socket)
 	return true;
 }
 
-t_mem_metadata *initializeMemoryMetadata()
+bool handshake(t_packet *petition, int cpu_socket) {
+
+	if(stream_take_UINT32(petition->payload) == 1)
+	{
+		t_packet *cpu_info = create_packet(MEMORY_INFO, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(cpu_info->payload, memoryConfig->pageSize);
+		stream_add_UINT32(cpu_info->payload, memoryConfig->entriesPerTable);
+		socket_send_packet(cpu_socket, cpu_info);
+		packet_destroy(cpu_info);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Connected to CPU");
+		pthread_mutex_unlock(&mutex_log);
+	}
+	else
+	{
+		// ERROR
+	}
+
+	return false;
+}
+
+t_mem_metadata *metadata_init()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
 	metadata->entryQty = memoryConfig->frameQty;
@@ -349,7 +389,7 @@ t_mem_metadata *initializeMemoryMetadata()
 	return metadata;
 }
 
-void memory_metadata_destroy(t_mem_metadata *meta)
+void metadata_destroy(t_mem_metadata *meta)
 {
 	if (meta->firstFrame)
 	{
@@ -361,23 +401,24 @@ void memory_metadata_destroy(t_mem_metadata *meta)
 	free(meta);
 }
 
-t_memory *initializeMemory(t_memoryConfig *config)
+t_memory *memory_init(t_memoryConfig *config)
 {
-	t_memory *newMemory = malloc(sizeof(t_memory));
-	newMemory->memory = calloc(1, config->memorySize);
-
-	return newMemory;
+	t_memory *mem = malloc(sizeof(t_memory));
+	mem->memory = calloc(1, config->memorySize);
+	return mem;
 }
 
-bool (*memory_handlers[7])(t_packet *petition, int socket) =
-	{
+bool (*memory_handlers[8])(t_packet *petition, int socket) =
+{
 		receive_pid,
 		access_lvl1_table,
 		access_lvl2_table,
 		memory_read,
 		process_suspension,
+		handshake,
 		memory_write,
-		end_process};
+		end_process
+};
 
 void *header_handler(void *_client_socket)
 {
@@ -394,8 +435,20 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
+		usleep(memoryConfig->memoryDelay);
 		serve = memory_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
 	return 0;
+}
+
+void terminate_memory(bool error)
+{
+	log_destroy(logger);
+	destroyMemoryConfig(memoryConfig);
+	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
+
+	if (server_socket)
+		close(server_socket);
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }

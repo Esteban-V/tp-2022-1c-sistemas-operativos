@@ -17,6 +17,7 @@
 #include<commons/config.h>
 #include<sys/stat.h>
 #include<fcntl.h>
+#include "semaphore.h"
 
 typedef struct memoryConfig{
     t_config* config;
@@ -65,7 +66,6 @@ typedef struct pageMetadata{
     bool used;
 } t_pageMetadata;
 
-int server_socket;
 t_memory* memory;
 t_memoryConfig *memoryConfig;
 t_log *logger;
@@ -76,10 +76,10 @@ uint32_t clock_counter;
 int32_t getFreeFrame(int32_t start, int32_t end);
 t_memoryConfig* getMemoryConfig(char *path);
 void destroyMemoryConfig(t_memoryConfig *memoryConfig);
-
+sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut, pageTablesMut;
 
 // Algoritmo de Reemplazo
-uint32_t (*algoritmo)(uint32_t start, uint32_t end);
+uint32_t (*replace_algo)(uint32_t start, uint32_t end);
 
 #endif /* UTILS_H_ */

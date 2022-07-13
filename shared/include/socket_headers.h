@@ -20,6 +20,7 @@ typedef enum cpu_headers
 {
 	PCB_TO_CPU = 0,
 	INTERRUPT = 1,
+	HANDSHAKE = 5
 } cpu_headers;
 
 typedef enum memory_headers
@@ -27,7 +28,8 @@ typedef enum memory_headers
 	MEMORY_PID = 0,
 	SWAP_OK = 1,
 	SWAP_ERROR = 2,
-	FRAME = 3
+	FRAME = 3,
+	MEMORY_INFO = 4
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

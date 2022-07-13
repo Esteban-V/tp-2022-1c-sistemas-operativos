@@ -14,8 +14,11 @@ bool process_suspension(t_packet *petition, int cpu_socket);
 
 void *header_handler(void *_client_socket);
 
-t_mem_metadata *initializeMemoryMetadata();
-void memory_metadata_destroy(t_mem_metadata *meta);
-t_memory *initializeMemory(t_memoryConfig *config);
+int server_socket;
+t_list *swap_files;
+
+t_mem_metadata *metadata_init();
+void metadata_destroy(t_mem_metadata *meta);
+t_memory *memory_init(t_memoryConfig *config);
 
 #endif /* MEMORY_H_ */

@@ -23,6 +23,11 @@ int main()
 	pthread_create(&execThread, 0, cpu_cycle, NULL);
 	pthread_detach(execThread);
 
+	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
+
+	// Handshake con Memoria
+	handshake();
+
 	while (1)
 	{
 		server_listen(kernel_dispatch_socket, header_handler);
@@ -58,7 +63,7 @@ void pcb_to_kernel(kernel_headers header)
 }
 
 bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
-	{
+{
 		receivedPcb,
 		receivedInterruption,
 };
@@ -185,3 +190,33 @@ void execute_exit()
 {
 	pcb_to_kernel(EXIT_CALL);
 }
+
+void handshake() {
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Handshake with Memory Requested");
+	pthread_mutex_unlock(&mutex_log);
+
+	t_packet *handshake = create_packet(HANDSHAKE, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(handshake->payload, 1);
+	socket_send_packet(memory_server_socket, handshake);
+	packet_destroy(handshake);
+
+	t_packet *packet = socket_receive_packet(memory_server_socket);
+
+	// TODO? Errores
+
+	// Recibir Datos
+	config->pageSize = stream_take_UINT32(packet->payload);
+	config->memoryEntriesPerTable = stream_take_UINT32(packet->payload);
+
+	log_info(logger, "Memory Info Received - Page Size: %d", config->pageSize);
+	log_info(logger, "Memory Info Received - Entries Per Table: %d", config->memoryEntriesPerTable);
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Handshake with Memory Successful");
+	pthread_mutex_unlock(&mutex_log);
+
+	packet_destroy(packet);
+}
+

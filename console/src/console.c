@@ -15,18 +15,18 @@ int main(int argc, char **argv)
 
 	if (argc < 3)
 	{
-		log_error(logger, "Missing params");
+		log_error(logger, "Missing Parameters");
 		return EXIT_FAILURE;
 	}
 
 	if (argc > 3)
 	{
-		log_warning(logger, "Unused params");
+		log_warning(logger, "Unused Parameters");
 	}
 
 	if (!config || !config_has_property(config, "IP_KERNEL") || !config_has_property(config, "PUERTO_KERNEL"))
 	{
-		log_error(logger, "Config failed to load");
+		log_error(logger, "Config Failed to Load");
 		return EXIT_FAILURE;
 	}
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	if (!list_size(instruction_list))
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_warning(logger, "Provided code has no instructions");
+		log_warning(logger, "Provided Code has No Instructions");
 		pthread_mutex_unlock(&mutex_log);
 		terminate_console(true);
 	}
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 	process->size = process_size;
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Found process with %d instructions",
+	log_info(logger, "Process Found ; %d Instructions",
 			 list_size(process->instructions));
 	pthread_mutex_unlock(&mutex_log);
 
@@ -90,15 +90,20 @@ int main(int argc, char **argv)
 	if (result)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Process exited with error code %d", result);
+		log_error(logger, "Process Exited ; Error Code: %d", result);
 		pthread_mutex_unlock(&mutex_log);
 	}
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Process exited successfully");
+		log_info(logger, "Process Exited successfully");
 		pthread_mutex_unlock(&mutex_log);
 	}
+
+
+	// TODO
+	//t_packet *packet = socket_receive_packet(kernel_socket);
+	//packet_destroy(packet);
 
 	terminate_console(result);
 }
@@ -149,6 +154,10 @@ void error_opening_file()
 
 void terminate_console(bool error)
 {
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Console Terminated");
+	pthread_mutex_unlock(&mutex_log);
+
 	log_destroy(logger);
 	config_destroy(config);
 	process_destroy(process);
