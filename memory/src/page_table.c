@@ -260,7 +260,7 @@ uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t
     uint32_t start, end;
     fija_memoria(&start, &end, PID);
 
-    uint32_t frameVictima = algoritmo(start, end);
+    uint32_t frameVictima = replace_algo(start, end);
 
     return replace(frameVictima, PID, pt1_entry, pt2_entry, page);
 }
@@ -551,12 +551,12 @@ uint32_t clock_alg(uint32_t start, uint32_t end)
 		}
 }
 
-void destroy_swap_page(uint32_t pid, uint32_t page){
+void destroy_swap_page(uint32_t pid, uint32_t page, int socket){
     t_swapFile* file = pidExists(pid);
 
     if(file == NULL){
         t_packet* response = create_packet(SWAP_ERROR, 0);
-        socket_send_packet(server_socket, response);
+        socket_send_packet(socket, response);
         packet_destroy(response);
 
         return;
@@ -566,7 +566,7 @@ void destroy_swap_page(uint32_t pid, uint32_t page){
 
     if(index == -1){
         t_packet* response = create_packet(SWAP_ERROR, 0);
-        socket_send_packet(server_socket, response);
+        socket_send_packet(socket, response);
         packet_destroy(response);
 
         return;
@@ -576,7 +576,7 @@ void destroy_swap_page(uint32_t pid, uint32_t page){
     file->entries[index].used = false;
 
     t_packet* response = create_packet(SWAP_OK, 0);
-    socket_send_packet(server_socket, response);
+    socket_send_packet(socket, response);
     packet_destroy(response);
 
     pthread_mutex_lock(&mutex_log);

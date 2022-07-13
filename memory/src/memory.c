@@ -4,27 +4,44 @@ int main()
 {
 	// Initialize logger
 	logger = log_create("./cfg/memory.log", "MEMORY", 1, LOG_LEVEL_TRACE);
-	// Initialize Config
 	memoryConfig = getMemoryConfig("./cfg/memory.config");
-	// Initialize Metadata
-	metadata = initializeMemoryMetadata();
+
+	metadata = metadata_init();
 	pageTable_number = 0;
+
 	// Creacion de server
 	server_socket = create_server(memoryConfig->listenPort);
 
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Memory ready for CPU");
+	pthread_mutex_unlock(&mutex_log);
 
-	t_list *swapFiles = list_create();
+	swap_files = list_create();
 	/* hay que ver como determinar swapfiles y filesize
-	agrear donde se swappean
-	list_add(swapFiles, swapFile_create(memoryConfig->swapFiles[i], memoryConfig->fileSize, memoryConfig->pageSize));
+	agregar donde se swappean
+	list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
 	*/
 
-	// Initialize Variables
-	memory = initializeMemory(memoryConfig);
+	memory = memory_init(memoryConfig);
 	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
-	algoritmo = strcmp(memoryConfig->replaceAlgorithm, "CLOCK") ? clock_alg : clock_m_alg;
+
+	if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK"))
+	{
+		replace_algo = clock_alg;
+	}
+	else if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK-M"))
+	{
+		replace_algo = clock_m_alg;
+	}
+	else
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_warning(logger,
+					"Wrong replacing algorithm set in config --> Using CLOCK");
+		pthread_mutex_unlock(&mutex_log);
+	}
+
 	clock_m_counter = 0;
 
 	while (1)
@@ -32,12 +49,7 @@ int main()
 		server_listen(server_socket, header_handler);
 	}
 
-	// Destroy
-	destroyMemoryConfig(memoryConfig);
-	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
-	log_destroy(logger);
-
-	return EXIT_SUCCESS;
+	terminate_memory(false);
 }
 
 // Ready
@@ -285,7 +297,7 @@ bool end_process(t_packet *petition, int cpu_socket)
 		for (uint32_t i = pageQty - 1; i >= 0; i--)
 		{
 			// Borrar File de Swap
-			destroy_swap_page(pid, i);
+			destroy_swap_page(pid, i, server_socket);
 
 			// Cambiar Valores en Metadata
 			pthread_mutex_lock(&pageTablesMut);
@@ -319,7 +331,7 @@ bool end_process(t_packet *petition, int cpu_socket)
 	return true;
 }
 
-t_mem_metadata *initializeMemoryMetadata()
+t_mem_metadata *metadata_init()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
 	metadata->entryQty = memoryConfig->frameQty;
@@ -349,7 +361,7 @@ t_mem_metadata *initializeMemoryMetadata()
 	return metadata;
 }
 
-void memory_metadata_destroy(t_mem_metadata *meta)
+void metadata_destroy(t_mem_metadata *meta)
 {
 	if (meta->firstFrame)
 	{
@@ -361,12 +373,11 @@ void memory_metadata_destroy(t_mem_metadata *meta)
 	free(meta);
 }
 
-t_memory *initializeMemory(t_memoryConfig *config)
+t_memory *memory_init(t_memoryConfig *config)
 {
-	t_memory *newMemory = malloc(sizeof(t_memory));
-	newMemory->memory = calloc(1, config->memorySize);
-
-	return newMemory;
+	t_memory *mem = malloc(sizeof(t_memory));
+	mem->memory = calloc(1, config->memorySize);
+	return mem;
 }
 
 bool (*memory_handlers[7])(t_packet *petition, int socket) =
@@ -398,4 +409,15 @@ void *header_handler(void *_client_socket)
 		packet_destroy(packet);
 	}
 	return 0;
+}
+
+void terminate_memory(bool error)
+{
+	log_destroy(logger);
+	destroyMemoryConfig(memoryConfig);
+	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
+
+	if (server_socket)
+		close(server_socket);
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }

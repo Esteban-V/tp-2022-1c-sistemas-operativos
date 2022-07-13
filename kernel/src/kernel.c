@@ -16,12 +16,11 @@ int main(void)
 	// Inicializar semaforo de multiprocesamiento
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
-	// cupos_libres = config->multiprogrammingLevel;
-	// pthread_mutex_init(&mutex_cupos, NULL);
 
 	sem_init(&new_for_ready, 0, 0);
 	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
+
 	sem_init(&longTermSemCall, 0, 0);
 	sem_init(&any_blocked, 0, 0);
 	sem_init(&bloquear, 0, 0);
@@ -35,7 +34,6 @@ int main(void)
 		terminate_kernel(true);
 	}
 
-	// Setteo de Algoritmo de Planificacion
 	if (!strcmp(kernelConfig->schedulerAlgorithm, "SRT"))
 	{
 		sortingAlgorithm = SRT;
@@ -54,9 +52,9 @@ int main(void)
 
 	cpu_dispatch_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortDispatch);
 	cpu_interrupt_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortInterrupt);
-	memory_server_socket = connect_to(kernelConfig->memoryIP, kernelConfig->memoryPort);
+	memory_socket = connect_to(kernelConfig->memoryIP, kernelConfig->memoryPort);
 
-	if (!cpu_dispatch_socket || !cpu_interrupt_socket || !memory_server_socket)
+	if (!cpu_dispatch_socket || !cpu_interrupt_socket || !memory_socket)
 	{
 		terminate_kernel(true);
 	}
@@ -74,7 +72,7 @@ int main(void)
 	}
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Kernel Ready for Console");
+	log_info(logger, "Kernel ready for console");
 	pthread_mutex_unlock(&mutex_log);
 
 	// Inicializar hilos
@@ -171,23 +169,23 @@ void *newToReady(void *args)
 		// pcb = (t_pcb*) pQueue_take(newQ);
 
 		// Manejar memoria, creacion de estructuras
-		// Recibir valor de Tabla
+		// Recibir valor de tabla
 		t_packet *memory_info = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(memory_info->payload, pcb->size);
 
-		if (memory_server_socket != -1)
+		if (memory_socket != -1)
 		{
-			socket_send_packet(memory_server_socket, memory_info);
+			socket_send_packet(memory_socket, memory_info);
 		}
 		packet_destroy(memory_info);
 
 		// TODO Actualizar PCB
-		t_packet *packet = socket_receive_packet(memory_server_socket);
+		t_packet *packet = socket_receive_packet(memory_socket);
 		if (packet == NULL)
 		{
-			if (!socket_retry_packet(memory_server_socket, &packet))
+			if (!socket_retry_packet(memory_socket, &packet))
 			{
-				close(memory_server_socket);
+				close(memory_socket);
 				break;
 			}
 		}
@@ -269,14 +267,11 @@ void *io_t(void *args)
 
 				t_packet *suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspendRequest->payload, pcb->pid);
-				socket_send_packet(memory_server_socket, suspendRequest);
+				socket_send_packet(memory_socket, suspendRequest);
 				packet_destroy(suspendRequest);
 
 				pQueue_put(suspended_blockQ, pcb);
 				sem_post(&sem_multiprogram);
-				// pthread_mutex_lock(&mutex_cupos);
-				// cupos_libres++;
-				// pthread_mutex_unlock(&mutex_cupos);
 				pthread_mutex_lock(&mutex_log);
 
 				log_info(logger,
@@ -451,7 +446,7 @@ void terminate_kernel(bool error)
 		close(cpu_interrupt_socket);
 	if (cpu_dispatch_socket)
 		close(cpu_dispatch_socket);
-	if (memory_server_socket)
-		close(memory_server_socket);
+	if (memory_socket)
+		close(memory_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }

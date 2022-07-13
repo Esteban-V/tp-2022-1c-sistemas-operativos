@@ -65,7 +65,6 @@ typedef struct pageMetadata{
     bool used;
 } t_pageMetadata;
 
-int server_socket;
 t_memory* memory;
 t_memoryConfig *memoryConfig;
 t_log *logger;
@@ -80,6 +79,6 @@ void destroyMemoryConfig(t_memoryConfig *memoryConfig);
 pthread_mutex_t memoryMut, metadataMut, pageTablesMut;
 
 // Algoritmo de Reemplazo
-uint32_t (*algoritmo)(uint32_t start, uint32_t end);
+uint32_t (*replace_algo)(uint32_t start, uint32_t end);
 
 #endif /* UTILS_H_ */
