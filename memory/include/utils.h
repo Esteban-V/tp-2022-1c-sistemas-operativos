@@ -62,7 +62,7 @@ typedef struct mem {
 
 typedef struct pageMetadata{
     uint32_t pid;
-    int32_t pageNumber;
+    uint32_t pageNumber;
     bool used;
 } t_pageMetadata;
 
@@ -73,7 +73,7 @@ t_mem_metadata* metadata;
 uint32_t clock_m_counter;
 uint32_t clock_counter;
 
-int32_t getFreeFrame(int32_t start, int32_t end);
+uint32_t getFreeFrame(uint32_t start, uint32_t end);
 t_memoryConfig* getMemoryConfig(char *path);
 void destroyMemoryConfig(t_memoryConfig *memoryConfig);
 sem_t writeRead;

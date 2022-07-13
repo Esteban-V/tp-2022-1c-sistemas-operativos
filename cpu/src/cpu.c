@@ -26,7 +26,7 @@ int main()
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 
 	// Handshake con Memoria
-	handshake();
+	memory_handshake();
 
 	while (1)
 	{
@@ -190,7 +190,7 @@ void execute_exit()
 	pcb_to_kernel(EXIT_CALL);
 }
 
-void handshake() {
+void memory_handshake() {
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Handshake with Memory Requested");

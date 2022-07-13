@@ -53,6 +53,7 @@ int kernel_dispatch_socket;
 int kernel_interrupt_socket;
 
 pthread_t interruptionThread, execThread;
-void handshake();
+
+void memory_handshake();
 
 #endif /* INCLUDE_CPU_H_ */

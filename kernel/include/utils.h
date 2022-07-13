@@ -49,8 +49,7 @@ typedef struct pageTableEntry {
 } t_page_entry;
 
 typedef struct t_ptbr {
-	uint32_t pageQuantity;
-	t_page_entry *entries;
+	t_list *entries; // t_page_entry
 } t_ptbr;
 
 void* readyToExec(void *args);

@@ -67,10 +67,10 @@ bool process_suspension(t_packet *petition, int console_socket)
 
 		pthread_mutex_lock(&pageTablesMut);
 		t_ptbr2 *pt2 = getPageTable2(pid, pt1_entry, pageTables);
-		uint32_t pages = pt2->pageQuantity;
+		uint32_t page_cant = list_size(pt2->entries);
 
 		// Swappear Pages
-		for (uint32_t i = 0; i < pages; i++)
+		for (uint32_t i = 0; i < page_cant; i++)
 		{
 			if (((t_page_entry *)list_get(pt2->entries, i))->present)
 			{
@@ -113,7 +113,7 @@ bool receive_pid(t_packet *petition, int kernel_socket)
 		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		t_ptbr1 *newPageTable = initializePageTable();
+		t_ptbr1 *newPageTable = page_table_init();
 
 		char *pid_key = string_itoa(pid);
 
@@ -297,15 +297,19 @@ bool end_process(t_packet *petition, int cpu_socket)
 
 		pthread_mutex_lock(&pageTablesMut);
 		t_ptbr2 *pt2 = getPageTable2(pid, pt1_entry, pageTables);
-		uint32_t pageQty = pt2->pageQuantity;
+		uint32_t pages_cant = list_size(pt2->entries);
 		pthread_mutex_unlock(&pageTablesMut);
 
-		for (uint32_t i = pageQty - 1; i >= 0; i--)
+		for (uint32_t i = pages_cant - 1; i >= 0; i--)
 		{
-			// Borrar File de Swap
-			destroy_swap_page(pid, i, server_socket);
+			// Borrar swap
+			bool error = destroy_swap_page(pid, i);
 
-			// Cambiar Valores en Metadata
+			t_packet *response_packet = create_packet(error ? SWAP_ERROR : SWAP_OK, 0);
+			socket_send_packet(cpu_socket, response_packet);
+			packet_destroy(response_packet);
+
+			// Cambiar valores en metadata
 			pthread_mutex_lock(&pageTablesMut);
 			if (((t_page_entry *)list_get(pt2->entries, i))->present == true)
 			{
@@ -318,7 +322,7 @@ bool end_process(t_packet *petition, int cpu_socket)
 		}
 
 		char *_PID = string_itoa(pid);
-		dictionary_remove_and_destroy(pageTables, _PID, _destroyPageTable);
+		dictionary_remove_and_destroy(pageTables, _PID, page_table_destroy);
 		free(_PID);
 
 		/*t_packet *response = create_packet(OK, 0);
@@ -337,9 +341,10 @@ bool end_process(t_packet *petition, int cpu_socket)
 	return true;
 }
 
-bool handshake(t_packet *petition, int cpu_socket) {
+bool handshake(t_packet *petition, int cpu_socket)
+{
 
-	if(stream_take_UINT32(petition->payload) == 1)
+	if (stream_take_UINT32(petition->payload) == 1)
 	{
 		t_packet *cpu_info = create_packet(MEMORY_INFO, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(cpu_info->payload, memoryConfig->pageSize);
@@ -408,16 +413,16 @@ t_memory *memory_init(t_memoryConfig *config)
 	return mem;
 }
 
-bool (*memory_handlers[8])(t_packet *petition, int socket) =
-{
+bool (*memory_handlers[6])(t_packet *petition, int socket) =
+	{
 		receive_pid,
 		access_lvl1_table,
 		access_lvl2_table,
 		memory_read,
 		process_suspension,
 		handshake,
-		memory_write,
-		end_process
+		// memory_write,
+		// end_process
 };
 
 void *header_handler(void *_client_socket)
