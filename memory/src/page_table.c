@@ -197,8 +197,12 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,uint32_t pt2_
     // Esto es para que replace() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
     if (!isFree(victim)){
 
+    	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "SWAP");
+		pthread_mutex_unlock(&mutex_log);
+
     	// TODO determinar file size
-    	// list_add(swapFiles, swapFile_create(strcat(memoryConfig->swapPath, itoa(PID)), memoryConfig->fileSize, memoryConfig->pageSize));
+    	list_add(swapFiles, swapFile_create(memoryConfig->swapPath, PID, /*memoryConfig->fileSize*/ 4096, memoryConfig->pageSize));
 
     	usleep(memoryConfig->swapDelay);
 
@@ -280,8 +284,19 @@ void swapFile_writeAtIndex(t_swapFile* sf, int index, void* pagePtr){
     munmap(mappedFile, sf->size);
 }
 
-t_swapFile* swapFile_create(char* path, size_t size, size_t pageSize){
+t_swapFile* swapFile_create(char* path, uint32_t PID, size_t size, size_t pageSize){ // TODO Asignar PID
     t_swapFile* self = malloc(sizeof(t_swapFile));
+
+    char* _PID = string_duplicate(string_itoa(PID));
+    string_append(&_PID, ".swap");
+    char* aux = "/";
+    string_append(&aux, _PID);
+    string_append(&path, aux);
+
+    pthread_mutex_lock(&mutex_log);
+	log_info(logger, "- - - - - - PATH %s - - - - - -", path);
+	pthread_mutex_unlock(&mutex_log);
+
     self->path = string_duplicate(path);
     self->size = size;
     self->pageSize = pageSize;

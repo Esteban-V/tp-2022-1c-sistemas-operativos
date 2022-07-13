@@ -16,6 +16,8 @@ int main()
 
 	t_list *swapFiles = list_create();
 
+	sem_init(&writeRead, 0, 2); // TODO Ver si estan vien los semaforos, o si van en otras funciones tmb
+
 	// Initialize Variables
 	memory = initializeMemory(memoryConfig);
 	metadata->clock_m_counter = 0;
@@ -29,9 +31,7 @@ int main()
 	}
 
 	// Destroy
-	destroyMemoryConfig(memoryConfig);
-	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
-	log_destroy(logger);
+	memory_destroy();
 
 	return EXIT_SUCCESS;
 }
@@ -105,7 +105,7 @@ bool receive_pid(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&pageTablesMut);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Reading page table #%d", newPageTable->tableNumber);
+		log_info(logger, "Reading Page Table #%d", newPageTable->tableNumber);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response;
@@ -187,11 +187,12 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 }
 
 // ver si se cumple lo del OK, chequear que se pueda crear pag
-// TODO lectura escritura en paralelo
 
 // READY?
 bool memory_write(t_packet *petition, int cpu_socket)
 {
+	sem_wait(&writeRead);
+
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
@@ -222,11 +223,15 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		packet_destroy(response);
 	}
 
+	sem_post(&writeRead);
+
 	return false;
 }
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
+	sem_wait(&writeRead);
+
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 	uint32_t pt2_entry = stream_take_UINT32(petition->payload);
@@ -255,6 +260,9 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		socket_send_packet(cpu_socket, response);
 		packet_destroy(response);*/
 	}
+
+	sem_post(&writeRead);
+
 	return false;
 }
 
@@ -321,6 +329,10 @@ bool handshake(t_packet *petition, int cpu_socket) {
 		stream_add_UINT32(cpu_info->payload, memoryConfig->entriesPerTable);
 		socket_send_packet(cpu_socket, cpu_info);
 		packet_destroy(cpu_info);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Connected to CPU");
+		pthread_mutex_unlock(&mutex_log);
 	}
 	else
 	{
@@ -412,4 +424,10 @@ void *header_handler(void *_client_socket)
 		packet_destroy(packet);
 	}
 	return 0;
+}
+
+void memory_destroy() {
+	destroyMemoryConfig(memoryConfig);
+	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
+	log_destroy(logger);
 }

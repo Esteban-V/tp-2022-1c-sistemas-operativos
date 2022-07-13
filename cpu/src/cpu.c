@@ -1,7 +1,5 @@
 #include "cpu.h"
 
-//TODO RETARDO MEMORIA
-
 int main()
 {
 	// Initialize logger
@@ -65,7 +63,7 @@ void pcb_to_kernel(kernel_headers header)
 }
 
 bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
-	{
+{
 		receivedPcb,
 		receivedInterruption,
 };
@@ -207,7 +205,7 @@ void handshake() {
 
 	// TODO? Errores
 
-	// TODO Hacer Stream Take para recibir datos
+	// Recibir Datos
 	config->pageSize = stream_take_UINT32(packet->payload);
 	config->memoryEntriesPerTable = stream_take_UINT32(packet->payload);
 

@@ -17,6 +17,7 @@
 #include<commons/config.h>
 #include<sys/stat.h>
 #include<fcntl.h>
+#include "semaphore.h"
 
 typedef struct memoryConfig{
     t_config* config;
@@ -76,7 +77,7 @@ uint32_t clock_counter;
 int32_t getFreeFrame(int32_t start, int32_t end);
 t_memoryConfig* getMemoryConfig(char *path);
 void destroyMemoryConfig(t_memoryConfig *memoryConfig);
-
+sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut, pageTablesMut;
 
 // Algoritmo de Reemplazo

@@ -29,7 +29,7 @@ int main(void)
 	if (kernelConfig == NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Config failed to load");
+		log_error(logger, "Config Failed to Load");
 		pthread_mutex_unlock(&mutex_log);
 
 		terminate_kernel(true);
@@ -116,7 +116,6 @@ void *cpu_dispatch_listener(void *args)
 	// sem_wait(&bloquear);
 	while (1)
 	{
-		// printf("a\n");
 		header_handler(cpu_dispatch_socket);
 	}
 }
@@ -129,6 +128,7 @@ void *exit_process(void *args)
 		pcb = pQueue_take(exitQ);
 		// avisar a consola que exit
 	}
+
 }
 
 void *readyToExec(void *args)
@@ -179,18 +179,11 @@ void *newToReady(void *args)
 		{
 			socket_send_packet(memory_server_socket, memory_info);
 		}
+
 		packet_destroy(memory_info);
 
 		// TODO Actualizar PCB
 		t_packet *packet = socket_receive_packet(memory_server_socket);
-		if (packet == NULL)
-		{
-			if (!socket_retry_packet(memory_server_socket, &packet))
-			{
-				close(memory_server_socket);
-				break;
-			}
-		}
 
 		pcb->page_table = stream_take_UINT32(packet->payload);
 		packet_destroy(packet);

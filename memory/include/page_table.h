@@ -62,7 +62,7 @@ typedef struct swapFile
     t_pageMetadata* entries;
 } t_swapFile;
 
-t_swapFile* swapFile_create(char* path, size_t size, size_t pageSize);
+t_swapFile* swapFile_create(char* path, uint32_t PID, size_t size, size_t pageSize);
 
 t_list *swapFiles;
 uint32_t pageTable_number;
