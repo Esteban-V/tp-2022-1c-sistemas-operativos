@@ -90,8 +90,8 @@ t_pcb *create_pcb()
 		return NULL;
 	}
 
-	pcb->nextIO = malloc(sizeof(uint32_t));
-	if (pcb->nextIO == NULL)
+	pcb->pending_io_time = malloc(sizeof(uint32_t));
+	if (pcb->pending_io_time == NULL)
 	{
 		free(pcb->pid);
 		free(pcb->size);
