@@ -18,10 +18,7 @@ bool process_suspend(t_packet *petition, int cpu_socket);
 bool cpu_handshake(t_packet *petition, int cpu_socket);
 void *header_handler(void *_client_socket);
 
-<<<<<<< HEAD
-=======
 sem_t cpu_connected;
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 
 int server_socket;
 t_list *swap_files;

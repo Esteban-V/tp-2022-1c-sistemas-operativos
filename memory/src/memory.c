@@ -19,18 +19,11 @@ int main() {
 
 	swap_files = list_create();
 	/* hay que ver como determinar swapfiles y filesize
-<<<<<<< HEAD
-	 agregar donde se swappean
-	 list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
-	 */
-	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
-=======
 	agregar donde se swappean
 	list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
 	*/
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan vien los semaforos, o si van en otras funciones tmb
 	sem_init(&cpu_connected, 0, 0);
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 
 	memory = memory_init();
 	metadata->clock_m_counter = 0;
@@ -56,10 +49,6 @@ int main() {
 	terminate_memory(false);
 }
 
-<<<<<<< HEAD
-// Ready
-bool process_suspension(t_packet *petition, int console_socket) {
-=======
 // READY
 bool process_new(t_packet *petition, int kernel_socket)
 {
@@ -98,7 +87,6 @@ bool process_new(t_packet *petition, int kernel_socket)
 // READY
 bool process_suspend(t_packet *petition, int kernel_socket)
 {
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 
@@ -144,14 +132,9 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-<<<<<<< HEAD
-// READY
-bool receive_pid(t_packet *petition, int kernel_socket) {
-=======
 // TODO no se si falta o no intervenir en el t_memory
 bool process_exit(t_packet *petition, int cpu_socket)
 {
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
 
@@ -160,25 +143,6 @@ bool process_exit(t_packet *petition, int cpu_socket)
 		log_info(logger, "Destroying PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-<<<<<<< HEAD
-		int index = page_table_init();
-
-		char *pid_key = string_itoa(pid);
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Reading Page Table #%d", index);
-		pthread_mutex_unlock(&mutex_log);
-
-		pthread_mutex_lock(&pageTablesMut);
-		dictionary_put(pageTables, pid_key, index);
-		pthread_mutex_unlock(&pageTablesMut);
-
-		t_packet *response;
-		response = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, index);
-		socket_send_packet(kernel_socket, response);
-		packet_destroy(response);
-=======
 		pthread_mutex_lock(&pageTablesMut);
 		t_ptbr2 *pt2 = getPageTable2(pid, pt1_entry, pageTables);
 		uint32_t pages_cant = list_size(pt2->entries);
@@ -218,7 +182,6 @@ bool process_exit(t_packet *petition, int cpu_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		// sigUsr1HandlerTLB(0);
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 
 		// freeProcessEntries(pid);
 	}
@@ -335,79 +298,6 @@ bool memory_read(t_packet *petition, int cpu_socket) {
 	return false;
 }
 
-<<<<<<< HEAD
-// TODO no se si falta o no intervenir en el t_memory
-bool end_process(t_packet *petition, int cpu_socket) {
-	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
-
-	if (!!pid) {
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroying PID #%d", pid);
-		pthread_mutex_unlock(&mutex_log);
-
-		pthread_mutex_lock(&pageTablesMut);
-		t_ptbr2 *pt2 = getPageTable2(pid, pt1_entry, pageTables);
-		uint32_t pages_cant = list_size(pt2->entries);
-		pthread_mutex_unlock(&pageTablesMut);
-
-		for (uint32_t i = pages_cant - 1; i >= 0; i--) {
-			// Borrar swap
-			bool error = destroy_swap_page(pid, i);
-
-			t_packet *response_packet = create_packet(
-					error ? SWAP_ERROR : SWAP_OK, 0);
-			socket_send_packet(cpu_socket, response_packet);
-			packet_destroy(response_packet);
-
-			// Cambiar valores en metadata
-			pthread_mutex_lock(&pageTablesMut);
-			if (((t_page_entry*) list_get(pt2->entries, i))->present == true) {
-				uint32_t frame =
-						((t_page_entry*) list_get(pt2->entries, i))->frame;
-				pthread_mutex_lock(&metadataMut);
-				(metadata->entries)[frame].isFree = true;
-				pthread_mutex_unlock(&metadataMut);
-			}
-			pthread_mutex_unlock(&pageTablesMut);
-		}
-
-		char *_PID = string_itoa(pid);
-		dictionary_remove_and_destroy(pageTables, _PID, page_table_destroy);
-		free(_PID);
-
-		/*t_packet *response = create_packet(OK, 0);
-		 socket_send_packet(cpu_socket, response);
-		 packet_destroy(response);*/
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroyed PID #%d successfully", pid);
-		pthread_mutex_unlock(&mutex_log);
-
-		// sigUsr1HandlerTLB(0);
-
-		// freeProcessEntries(pid);
-	}
-
-	return true;
-}
-
-bool handshake(t_packet *petition, int cpu_socket) {
-
-	if (stream_take_UINT32(petition->payload) == 1) {
-		t_packet *cpu_info = create_packet(MEMORY_INFO, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(cpu_info->payload, memoryConfig->pageSize);
-		stream_add_UINT32(cpu_info->payload, memoryConfig->entriesPerTable);
-		socket_send_packet(cpu_socket, cpu_info);
-		packet_destroy(cpu_info);
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Connected to CPU");
-		pthread_mutex_unlock(&mutex_log);
-	} else {
-		// ERROR
-	}
-=======
 bool cpu_handshake(t_packet *petition, int cpu_socket)
 {
 
@@ -426,7 +316,6 @@ bool cpu_handshake(t_packet *petition, int cpu_socket)
 	pthread_mutex_unlock(&mutex_log);
 
 	sem_post(&cpu_connected);
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 
 	return 0;
 }
@@ -475,19 +364,6 @@ t_memory* memory_init() {
 	return mem;
 }
 
-<<<<<<< HEAD
-bool (*memory_handlers[6])(t_packet *petition, int socket) =
-{
-	receive_pid,
-	access_lvl1_table,
-	access_lvl2_table,
-	memory_read,
-	process_suspension,
-	handshake,
-	// memory_write,
-	// end_process
-};
-=======
 bool (*memory_handlers[8])(t_packet *petition, int socket) =
 	{
 		process_new,
@@ -498,7 +374,6 @@ bool (*memory_handlers[8])(t_packet *petition, int socket) =
 		memory_write,
 		process_suspend,
 		process_exit};
->>>>>>> 5b366ebd16260eb2767ccb189d6ed5cdb80c8d50
 
 void* header_handler(void *_client_socket) {
 	int client_socket = (int) _client_socket;
