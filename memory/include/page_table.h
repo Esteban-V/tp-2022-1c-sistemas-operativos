@@ -7,6 +7,31 @@
 #include <pthread.h>
 #include "utils.h"
 
+/*
+typedef struct t_page_entry
+{
+
+    uint32_t frame;
+    bool present;
+    bool used;
+    bool modified;
+
+} t_page_entry;
+
+typedef struct t_ptbr2
+{
+    t_list *entries; // t_page_entry
+
+} t_ptbr2;
+
+typedef struct processStruct
+{
+	t_list *firstLevel; //lista de enteros
+	t_list *secondLevel; // t_ptbr2
+
+}t_processStruct;
+*/
+
 pthread_mutex_t pageTablesMut;
 t_dictionary *pageTables;
 
@@ -20,14 +45,12 @@ typedef struct t_page_entry
 
 typedef struct t_ptbr2
 {
-    uint32_t tableNumber;
     t_list *entries; // t_page_entry
 } t_ptbr2;
 
 typedef struct t_ptbr1
 {
-	uint32_t tableNumber;
-    t_list *entries; // t_ptbr2
+    t_list *entries; // int
 } t_ptbr1;
 
 uint32_t swap_files_counter;
@@ -67,7 +90,6 @@ void* swapFile_readAtIndex(t_swapFile* sf, int index);
 uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t page);
 
 t_list *swapFiles;
-uint32_t pageTable_number;
 
 void swapFile_clearAtIndex(t_swapFile* sf, int index);
 uint32_t clock_m_alg(uint32_t start, uint32_t end);

@@ -11,6 +11,7 @@ bool catch_syscall_err(int code) {
 		free(buf);
 		return true;
 	}
+
 	return false;
 }
 
