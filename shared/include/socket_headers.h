@@ -1,8 +1,10 @@
 #ifndef SOCKET_HEADERS_H_
 #define SOCKET_HEADERS_H_
 
+#define CPU_MEM_SECRET 37562
 typedef enum console_headers
 {
+	// Kernel response headers
 	PROCESS_OK = 0,
 	PROCESS_FAILURE = 1,
 } console_headers;
@@ -20,16 +22,24 @@ typedef enum cpu_headers
 {
 	PCB_TO_CPU = 0,
 	INTERRUPT = 1,
+	FRAME_TO_CPU = 2,
+	TABLE_INFO_TO_CPU = 3,
+	// Memory response headers
+	SWAP_OK = 4,
+	SWAP_ERROR = 5,
 } cpu_headers;
 
 typedef enum memory_headers
 {
-	MEMORY_PID = 0,
-	SWAP_OK = 1,
-	SWAP_ERROR = 2,
-	FRAME = 3,
-	MEMORY_INFO = 4,
-	HANDSHAKE = 5
+	PROCESS_NEW = 0,
+	MEM_HANDSHAKE = 1,
+	LVL1_TABLE = 2,
+	LVL2_TABLE = 3,
+	READ_CALL = 4,
+	WRITE_CALL = 5,
+	PROCESS_SUSPEND = 6,
+	PROCESS_EXIT = 7
+
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

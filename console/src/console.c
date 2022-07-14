@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
 	kernel_socket = connect_to(kernel_ip, kernel_port);
 
-	if (!kernel_socket)
+	if (kernel_socket == -1)
 	{
 		terminate_console(true);
 	}
@@ -100,10 +100,9 @@ int main(int argc, char **argv)
 		pthread_mutex_unlock(&mutex_log);
 	}
 
-
 	// TODO
-	//t_packet *packet = socket_receive_packet(kernel_socket);
-	//packet_destroy(packet);
+	// t_packet *packet = socket_receive_packet(kernel_socket);
+	// packet_destroy(packet);
 
 	terminate_console(result);
 }

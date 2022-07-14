@@ -3,7 +3,7 @@
 int main()
 {
 	// Initialize logger
-	logger = log_create("./cfg/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+	logger = log_create("./cfg/cpu-final.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("./cfg/cpu.config");
 
 	// Creacion de server
@@ -17,7 +17,7 @@ int main()
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_kernel_socket, NULL);
 
-	pthread_create(&interruptionThread, 0, interruption, NULL);
+	pthread_create(&interruptionThread, 0, listen_interruption, NULL);
 	pthread_detach(interruptionThread);
 
 	pthread_create(&execThread, 0, cpu_cycle, NULL);
@@ -36,7 +36,7 @@ int main()
 	log_destroy(logger);
 }
 
-void *interruption()
+void *listen_interruption()
 {
 	while (1)
 	{
@@ -62,16 +62,16 @@ void pcb_to_kernel(kernel_headers header)
 	packet_destroy(pcb_packet);
 }
 
-bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
-{
-		receivedPcb,
-		receivedInterruption,
+bool (*cpu_handlers[3])(t_packet *petition, int console_socket) =
+	{
+		receive_pcb,
+		receive_interruption,
 };
 
-void *header_handler(void *_kernel_client_socket)
+void *header_handler(void *_client_socket)
 {
 	pthread_mutex_lock(&mutex_kernel_socket);
-	kernel_client_socket = (int)_kernel_client_socket;
+	kernel_client_socket = (int)_client_socket;
 	pthread_mutex_unlock(&mutex_kernel_socket);
 
 	bool serve = true;
@@ -92,7 +92,7 @@ void *header_handler(void *_kernel_client_socket)
 	return 0;
 }
 
-bool receivedPcb(t_packet *petition, int kernel_socket)
+bool receive_pcb(t_packet *petition, int kernel_socket)
 {
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
@@ -108,7 +108,7 @@ bool receivedPcb(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-bool receivedInterruption(t_packet *petition, int kernel_socket)
+bool receive_interruption(t_packet *petition, int kernel_socket)
 {
 	// recibir header interrupcion
 	// meter interrupcion en queue o variable ya q se puede 1 a la vez
@@ -116,7 +116,7 @@ bool receivedInterruption(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-void (*execute[6])(t_instruction *instruction) =
+void (*execute[6])(t_list *params) =
 	{
 		execute_no_op,
 		execute_io,
@@ -135,7 +135,7 @@ void *cpu_cycle()
 		{
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
-			execute[op](instruction);
+			execute[op](instruction->params);
 		}
 	}
 }
@@ -162,28 +162,28 @@ void execute_no_op()
 	usleep((time_t)config->delayNoOp);
 }
 
-void execute_io(t_instruction *instruction)
+void execute_io(t_list *params)
 {
-	uint32_t *time = list_get(instruction->params, 0);
+	uint32_t *time = list_get(params, 0);
 	pcb->pending_io_time = time;
 	pcb_to_kernel(IO_CALL);
 }
 
-void execute_read(t_instruction *instruction)
+void execute_read(t_list *params)
 {
-	uint32_t *fst_param = list_get(instruction->params, 0);
+	uint32_t *fst_param = list_get(params, 0);
 }
 
-void execute_copy(t_instruction *instruction)
+void execute_copy(t_list *params)
 {
-	uint32_t *fst_param = list_get(instruction->params, 0);
-	uint32_t *snd_param = list_get(instruction->params, 1);
+	uint32_t *fst_param = list_get(params, 0);
+	uint32_t *snd_param = list_get(params, 1);
 }
 
-void execute_write(t_instruction *instruction)
+void execute_write(t_list *params)
 {
-	uint32_t *fst_param = list_get(instruction->params, 0);
-	uint32_t *snd_param = list_get(instruction->params, 1);
+	uint32_t *fst_param = list_get(params, 0);
+	uint32_t *snd_param = list_get(params, 1);
 }
 
 void execute_exit()
@@ -191,32 +191,29 @@ void execute_exit()
 	pcb_to_kernel(EXIT_CALL);
 }
 
-void memory_handshake() {
+void memory_handshake()
+{
+	if (memory_server_socket != -1)
+	{
+		socket_send_header(memory_server_socket, MEM_HANDSHAKE);
+	}
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Handshake with Memory Requested");
+	log_info(logger, "Handshake with memory requested");
 	pthread_mutex_unlock(&mutex_log);
 
-	t_packet *handshake = create_packet(HANDSHAKE, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(handshake->payload, 1);
-	socket_send_packet(memory_server_socket, handshake);
-	packet_destroy(handshake);
-
-	t_packet *packet = socket_receive_packet(memory_server_socket);
+	t_packet *mem_data = socket_receive_packet(memory_server_socket);
 
 	// TODO? Errores
 
-	// Recibir Datos
-	config->pageSize = stream_take_UINT32(packet->payload);
-	config->memoryEntriesPerTable = stream_take_UINT32(packet->payload);
-
-	log_info(logger, "Memory Info Received - Page Size: %d", config->pageSize);
-	log_info(logger, "Memory Info Received - Entries Per Table: %d", config->memoryEntriesPerTable);
+	// Recibir datos
+	config->pageSize = stream_take_UINT32(mem_data->payload);
+	config->memoryEntriesPerTable = stream_take_UINT32(mem_data->payload);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Handshake with Memory Successful");
+	log_info(logger, "Handshake with memory successful");
+	log_info(logger, "Page size: %d | Entries per table: %d", config->pageSize, config->memoryEntriesPerTable);
 	pthread_mutex_unlock(&mutex_log);
 
-	packet_destroy(packet);
+	packet_destroy(mem_data);
 }
-

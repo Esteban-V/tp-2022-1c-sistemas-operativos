@@ -2,7 +2,7 @@
 
 int main(void)
 {
-	logger = log_create("./cfg/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+	logger = log_create("./cfg/kernel-final.log", "KERNEL", 1, LOG_LEVEL_INFO);
 	kernelConfig = getKernelConfig("./cfg/kernel.config");
 
 	// Inicializar estructuras de estado
@@ -170,7 +170,7 @@ void *newToReady(void *args)
 
 		// Manejar memoria, creacion de estructuras
 		// Recibir valor de tabla
-		t_packet *memory_info = create_packet(MEMORY_PID, INITIAL_STREAM_SIZE);
+		t_packet *memory_info = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(memory_info->payload, pcb->size);
 
 		if (memory_socket != -1)

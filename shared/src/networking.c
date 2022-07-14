@@ -1,7 +1,9 @@
-#include"networking.h"
+#include "networking.h"
 
-bool catch_syscall_err(int code) {
-	if (code == -1) {
+bool catch_syscall_err(int code)
+{
+	if (code == -1)
+	{
 		int error = errno;
 		char *buf = malloc(100);
 		strerror_r(error, buf, 100);
@@ -14,7 +16,8 @@ bool catch_syscall_err(int code) {
 	return false;
 }
 
-int connect_to(char *server_ip, char *server_port) {
+int connect_to(char *server_ip, char *server_port)
+{
 	int client_socket = 0;
 
 	struct addrinfo hints;
@@ -26,13 +29,14 @@ int connect_to(char *server_ip, char *server_port) {
 	hints.ai_flags = AI_PASSIVE;
 
 	catch_syscall_err(
-			getaddrinfo(server_ip, server_port, &hints, &server_info));
+		getaddrinfo(server_ip, server_port, &hints, &server_info));
 	catch_syscall_err(
-			client_socket = socket(server_info->ai_family,
-					server_info->ai_socktype, server_info->ai_protocol));
+		client_socket = socket(server_info->ai_family,
+							   server_info->ai_socktype, server_info->ai_protocol));
 	if (catch_syscall_err(
 			connect(client_socket, server_info->ai_addr,
-					server_info->ai_addrlen))) {
+					server_info->ai_addrlen)))
+	{
 		freeaddrinfo(server_info);
 		return 0;
 	}
@@ -41,7 +45,8 @@ int connect_to(char *server_ip, char *server_port) {
 	return client_socket;
 }
 
-int create_server(char *server_port) {
+int create_server(char *server_port)
+{
 	int server_socket = 0;
 
 	struct sockaddr_in server_address;
@@ -51,40 +56,41 @@ int create_server(char *server_port) {
 	server_address.sin_port = htons(atoi(server_port));
 
 	catch_syscall_err(server_socket = socket(AF_INET, SOCK_STREAM, 0));
-	//Sirve para que se puedan reutilizar los puertos mal cerrados
+	// Sirve para que se puedan reutilizar los puertos mal cerrados
 	int on = 1;
 	catch_syscall_err(
-			setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on,
-					sizeof(on)));
+		setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on,
+				   sizeof(on)));
 	catch_syscall_err(
-			bind(server_socket, (void*) &server_address, sizeof(server_address))
-					!= 0);
+		bind(server_socket, (void *)&server_address, sizeof(server_address)) != 0);
 	catch_syscall_err(listen(server_socket, SOMAXCONN));
 	return server_socket;
 }
 
-int accept_client(int server_socket) {
+int accept_client(int server_socket)
+{
 	int client_socket = 0; // = malloc(sizeof(int));
 
 	struct sockaddr_in client_address;
 	socklen_t address_size = sizeof(struct sockaddr_in);
 	catch_syscall_err(
-			client_socket = accept(server_socket,
-					(struct sockaddr*) &client_address, &address_size));
+		client_socket = accept(server_socket,
+							   (struct sockaddr *)&client_address, &address_size));
 
 	return client_socket;
 }
 
-void server_listen(int server_socket, void* (*client_handler)(void*)) {
+void server_listen(int server_socket, void *(*client_handler)(void *))
+{
 	int client_socket = accept_client(server_socket);
 	pthread_t client_handler_thread = 0;
 	catch_syscall_err(
-			pthread_create(&client_handler_thread, NULL, client_handler,
-					(void*) client_socket));
+		pthread_create(&client_handler_thread, NULL, client_handler,
+					   (void *)client_socket));
 	pthread_detach(client_handler_thread);
 }
 
-//uso
+// uso
 /*
  while(1) {
  server_listen(server_socket, handler);
@@ -109,15 +115,18 @@ void server_listen(int server_socket, void* (*client_handler)(void*)) {
  }
  */
 
-t_packet* create_packet(uint8_t header, size_t size) {
+t_packet *create_packet(uint8_t header, size_t size)
+{
 	t_packet *packet = malloc(sizeof(t_packet));
-	if (packet == NULL) {
+	if (packet == NULL)
+	{
 		return NULL;
 	}
 
 	packet->header = header;
 	packet->payload = create_stream(size);
-	if (packet->payload == NULL) {
+	if (packet->payload == NULL)
+	{
 		free(packet);
 		return NULL;
 	}
@@ -125,13 +134,16 @@ t_packet* create_packet(uint8_t header, size_t size) {
 	return packet;
 }
 
-void packet_destroy(t_packet *packet) {
+void packet_destroy(t_packet *packet)
+{
 	stream_destroy(packet->payload);
 	free(packet);
 }
 
-int receive_wrapper(int socket, void *dest, size_t size) {
-	while (size > 0) {
+int receive_wrapper(int socket, void *dest, size_t size)
+{
+	while (size > 0)
+	{
 		int i = recv(socket, dest, size, 0);
 		if (i == 0)
 			return 0;
@@ -143,8 +155,10 @@ int receive_wrapper(int socket, void *dest, size_t size) {
 	return 1;
 }
 
-bool socket_receive(int socket, void *dest, size_t size) {
-	if (size != 0) {
+bool socket_receive(int socket, void *dest, size_t size)
+{
+	if (size != 0)
+	{
 		int rcv;
 		catch_syscall_err(rcv = receive_wrapper(socket, dest, size));
 		if (rcv < 1)
@@ -153,22 +167,26 @@ bool socket_receive(int socket, void *dest, size_t size) {
 	return true;
 }
 
-uint8_t socket_receive_header(int socket) {
+uint8_t socket_receive_header(int socket)
+{
 	uint8_t header;
 	socket_receive(socket, &header, sizeof(uint8_t));
 	return header;
 }
 
-t_packet* socket_receive_packet(int socket) {
+t_packet *socket_receive_packet(int socket)
+{
 	uint8_t header = socket_receive_header(socket);
 	uint32_t size;
 
-	if (!socket_receive(socket, &size, sizeof(uint32_t))) {
+	if (!socket_receive(socket, &size, sizeof(uint32_t)))
+	{
 		return NULL;
 	}
 
 	t_packet *packet = create_packet(header, size);
-	if (!socket_receive(socket, packet->payload->stream, size)) {
+	if (!socket_receive(socket, packet->payload->stream, size))
+	{
 		packet_destroy(packet);
 		return NULL;
 	}
@@ -176,10 +194,12 @@ t_packet* socket_receive_packet(int socket) {
 	return packet;
 }
 
-bool socket_retry_packet(int socket, t_packet **packet) {
+bool socket_retry_packet(int socket, t_packet **packet)
+{
 	int tries = 0;
 
-	while (*packet == NULL && tries <= 5) {
+	while (*packet == NULL && tries <= 5)
+	{
 		sleep(1);
 		*packet = socket_receive_packet(socket);
 		if (*packet != NULL)
@@ -190,8 +210,10 @@ bool socket_retry_packet(int socket, t_packet **packet) {
 	return false;
 }
 
-int send_wrapper(int socket, void *buffer, size_t size) {
-	while (size > 0) {
+int send_wrapper(int socket, void *buffer, size_t size)
+{
+	while (size > 0)
+	{
 		int i = send(socket, buffer, size, 0);
 		if (i == 0)
 			return 0;
@@ -203,24 +225,27 @@ int send_wrapper(int socket, void *buffer, size_t size) {
 	return 1;
 }
 
-void socket_send(int socket, void *source, size_t size) {
+void socket_send(int socket, void *source, size_t size)
+{
 	catch_syscall_err(send_wrapper(socket, source, size));
 }
 
-void socket_send_header(int socket, uint8_t header) {
+void socket_send_header(int socket, uint8_t header)
+{
 	uint8_t tmpHeader = header;
-	socket_send(socket, (void*) &tmpHeader, sizeof(uint8_t));
+	socket_send(socket, (void *)&tmpHeader, sizeof(uint8_t));
 }
 
-void socket_send_packet(int socket, t_packet *packet) {
+void socket_send_packet(int socket, t_packet *packet)
+{
 	socket_send_header(socket, packet->header);
-	socket_send(socket, (void*) &packet->payload->offset, sizeof(uint32_t));
-	socket_send(socket, (void*) packet->payload->stream,
-			packet->payload->offset);
+	socket_send(socket, (void *)&packet->payload->offset, sizeof(uint32_t));
+	socket_send(socket, (void *)packet->payload->stream,
+				packet->payload->offset);
 }
 
-void socket_relay(int socket, t_packet *packet) {
-	packet->payload->offset = (uint32_t) packet->payload->malloc_size;
+void socket_relay(int socket, t_packet *packet)
+{
+	packet->payload->offset = (uint32_t)packet->payload->malloc_size;
 	socket_send_packet(socket, packet);
 }
-

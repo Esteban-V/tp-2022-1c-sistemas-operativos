@@ -21,23 +21,25 @@
 #include "process_utils.h"
 #include "semaphore.h"
 
+#define CPU_MEMORY_SECRET = "CMSMC"
+
 t_pcb *pcb;
 t_cpu_config *config;
 
-bool receivedPcb(t_packet *petition, int console_socket);
-bool receivedInterruption(t_packet *petition, int console_socket);
+bool receive_pcb(t_packet *petition, int console_socket);
+bool receive_interruption(t_packet *petition, int console_socket);
 
 void *header_handler(void *_kernel_client_socket);
 void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
 
-void *interruption();
+void *listen_interruption();
 
 void execute_no_op();
-void execute_io(t_instruction *instruction);
-void execute_read(t_instruction *instruction);
-void execute_copy(t_instruction *instruction);
-void execute_write(t_instruction *instruction);
+void execute_io(t_list *params);
+void execute_read(t_list *params);
+void execute_copy(t_list *params);
+void execute_write(t_list *params);
 void execute_exit();
 
 void pcb_to_kernel(kernel_headers header);
