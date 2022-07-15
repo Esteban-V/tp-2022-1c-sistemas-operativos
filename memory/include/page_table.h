@@ -32,6 +32,9 @@ typedef struct processStruct
 }t_processStruct;
 */
 
+t_list *fsLevelTables;
+t_list *sdLevelTables;
+
 pthread_mutex_t pageTablesMut;
 t_dictionary *pageTables;
 
@@ -50,12 +53,12 @@ typedef struct t_ptbr2
 
 typedef struct t_ptbr1
 {
-    t_list *entries; // int
+    t_list *entries; // int a t_ptbr2
 } t_ptbr1;
 
 uint32_t swap_files_counter;
 
-t_ptbr1 *page_table_init();
+int page_table_init(uint32_t process_size);
 void page_table_destroy(t_ptbr1 *table);
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame);
 void pageTable_destroyLastEntry(t_ptbr1 *pt);
@@ -98,7 +101,7 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID);
 bool destroy_swap_page(uint32_t pid, uint32_t page);
 bool read_swap_page(uint32_t pid, uint32_t page);
 bool fija_swap(uint32_t pid, uint32_t page, void* pageContent);
-void* readPage(uint32_t pid, uint32_t pageNumber);
+void* readPage(uint32_t dir);
 void destroyPage(uint32_t pid, uint32_t page);
 bool savePage(uint32_t pid, uint32_t pageNumber, void* pageContent);
 t_swapFile *pidExists(uint32_t pid);

@@ -1,48 +1,40 @@
-#include "page_table.h"0;
+#include "page_table.h";
 
-/*
- t_processStruct *page_table_init()
- {
- t_processStruct *newStruct = malloc(sizeof(t_processStruct));
- newStruct->firstLevel = list_create();
- newStruct->secondLevel = list_create();
+int page_table_init(uint32_t process_size) {
+	// Creacion tabla nivel 1
+	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
+	level1_table->entries = list_create();
 
- for(int i=0;i<memoryConfig->entriesPerTable;i++){
+	// Se agrega a lista global
+	list_add(fsLevelTables, level1_table);
+	int level1_index = list_size(fsLevelTables);
 
- t_ptbr2 *table = malloc(sizeof(t_ptbr2));
- table->entrie s= list_create();
- list_add(newStruct->secondLevel,table);
- }
+	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
+	int pagesRequired = process_size / (memoryConfig->pageSize);
+	// ceil = (a / b) + ((a % b) != 0)
+	int secondLevelPages = (pagesRequired / memoryConfig->entriesPerTable)
+			+ ((pagesRequired % memoryConfig->entriesPerTable) != 0);
 
- pageTable_number++;
+	// Creacion tablas nivel 2
+	for (int i = 0; i < secondLevelPages; i++) {
+		t_ptbr2 *level2_table = malloc(sizeof(t_ptbr2));
+		level2_table->entries = list_create();
 
- return newStruct;
- }
- */
-
-int* page_table_init() {
-	t_ptbr1 *newTable = malloc(sizeof(t_ptbr1));
-	newTable->entries = list_create();
-	list_add(fsLevelTables, newTable);
-	int index = list_size(fsLevelTables);
-
-	for (int i = 0; i < memoryConfig->entriesPerTable; i++) {
-		t_ptbr2 *newTable2 = malloc(sizeof(t_ptbr2));
-		newTable2->entries = list_create();
-
-		for (int i = 0; i < memoryConfig->entriesPerTable; i++) {
+		// Creacion paginas por tabla de nivel 2
+		for (int j = 0; j < memoryConfig->entriesPerTable; j++) {
 			t_page_entry *page = malloc(sizeof(t_page_entry));
-			page->frame = NULL;
+			page->frame = -1;
 			page->present = 0;
 			page->modified = 0;
 			page->used = 0;
-			list_add(newTable2->entries, page);
+			list_add(level2_table->entries, page);
 		}
 
-		list_add(sdLevelTables, newTable2);
-		list_add(newTable->entries, list_size(sdLevelTables));
+		// Se agrega a lista global
+		list_add(sdLevelTables, level2_table);
 	}
-	return index;
+
+	return level1_index;
 }
 
 void page_table_destroy(t_ptbr1 *table) {
@@ -82,7 +74,7 @@ t_ptbr2* getPageTable2(uint32_t PID, uint32_t pt1_entry,
 uint32_t pageTable_getFrame(uint32_t PID, uint32_t pt1_entry,
 		uint32_t pt2_entry) {
 	uint32_t frame;
-
+	// Añadir si el frame no es -1 y si esta presente
 	pthread_mutex_lock(&pageTablesMut);
 	t_ptbr2 *pt2 = getPageTable2(PID, pt1_entry, pageTables);
 	frame = pt2_entry < list_size(pt2->entries) ?
@@ -113,9 +105,7 @@ void* readPage(uint32_t dir) {
 }
 
 bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent) {
-
 	void *pageData = NULL;
-
 	bool rc = fija_swap(pid, pageNumber, pageContent);
 
 	free(pageData);
@@ -144,7 +134,7 @@ void* memory_getFrame(t_memory *mem, uint32_t frame) {
 uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
 		uint32_t pt2_entry, uint32_t page) {
 	// Traer pagina pedida de swap.
-	void *pageFromSwap = readPage(PID, page); // creo q read page
+	void *pageFromSwap = readPage(page); // creo q read page
 
 	// Chequear que se haya podido traer
 	if (pageFromSwap == NULL) {

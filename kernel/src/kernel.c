@@ -21,6 +21,8 @@ int main(void)
 	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 
+	sem_init(&pcb_table_ready, 0, 0);
+
 	sem_init(&longTermSemCall, 0, 0);
 	sem_init(&any_blocked, 0, 0);
 	sem_init(&bloquear, 0, 0);
@@ -94,6 +96,10 @@ int main(void)
 	pthread_create(&cpuDispatchThread, 0, cpu_dispatch_listener, NULL);
 	pthread_detach(cpuDispatchThread);
 
+	// Inicializar memory listener
+	pthread_create(&memoryThread, 0, memory_listener, NULL);
+	pthread_detach(memoryThread);
+
 	pthread_create(&io_thread, NULL, io_t, NULL);
 	pthread_detach(io_thread);
 
@@ -115,6 +121,15 @@ void *cpu_dispatch_listener(void *args)
 	while (1)
 	{
 		header_handler(cpu_dispatch_socket);
+	}
+}
+
+void *memory_listener(void *args)
+{
+	// sem_wait(&bloquear);
+	while (1)
+	{
+		header_handler(memory_socket);
 	}
 }
 
@@ -170,29 +185,18 @@ void *newToReady(void *args)
 
 		// Manejar memoria, creacion de estructuras
 		// Recibir valor de tabla
-		t_packet *memory_info = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(memory_info->payload, pcb->size);
+		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(pid_packet->payload, pcb->pid);
+		stream_add_UINT32(pid_packet->payload, pcb->size);
 
 		if (memory_socket != -1)
 		{
-			socket_send_packet(memory_socket, memory_info);
+			socket_send_packet(memory_socket, pid_packet);
 		}
 
-		packet_destroy(memory_info);
+		packet_destroy(pid_packet);
 
-		// TODO Actualizar PCB
-		t_packet *packet = socket_receive_packet(memory_socket);
-		if (packet == NULL)
-		{
-			if (!socket_retry_packet(memory_socket, &packet))
-			{
-				close(memory_socket);
-				break;
-			}
-		}
-
-		pcb->page_table = stream_take_UINT32(packet->payload);
-		packet_destroy(packet);
+		sem_wait(&pcb_table_ready);
 
 		/*pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Page Table Number Received #%d", pcb->page_table);
@@ -334,6 +338,13 @@ void putToReady(t_pcb *pcb)
 	sem_post(&ready_for_exec);
 }
 
+bool receive_table_index(t_packet *petition, int mem_socket) {
+	uint32_t *size = &(process->size);
+	pcb->page_table = stream_take_UINT32(petition->payload);
+	sem_post(&pcb_table_ready);
+	return false;
+}
+
 bool receive_process(t_packet *petition, int console_socket)
 {
 	t_process *received_process = create_process();
@@ -418,6 +429,9 @@ bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
 		receive_process,
 		io_op,
 		exit_op,
+		NULL,
+		NULL,
+		receive_table_index,
 };
 
 void *header_handler(void *_client_socket)

@@ -4,9 +4,6 @@
 #include "utils.h"
 #include "page_table.h"
 
-t_list *fsLevelTables;
-t_list *sdLevelTables;
-
 bool access_lvl1_table(t_packet *petition, int cpu_socket);
 bool access_lvl2_table(t_packet *petition, int cpu_socket);
 bool process_new(t_packet *petition, int kernel_socket);
@@ -17,8 +14,6 @@ bool process_suspend(t_packet *petition, int cpu_socket);
 
 bool cpu_handshake(t_packet *petition, int cpu_socket);
 void *header_handler(void *_client_socket);
-
-sem_t cpu_connected;
 
 int server_socket;
 t_list *swap_files;

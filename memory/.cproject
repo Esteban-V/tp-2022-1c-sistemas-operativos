@@ -1,138 +1,329 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?>
+<cproject
+	storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
-		<cconfiguration id="cdt.managedbuild.config.gnu.exe.debug.531019101">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.debug.531019101" moduleId="org.eclipse.cdt.core.settings" name="Debug">
-				<externalSettings/>
+		<cconfiguration
+			id="cdt.managedbuild.config.gnu.exe.debug.531019101">
+			<storageModule
+				buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider"
+				id="cdt.managedbuild.config.gnu.exe.debug.531019101"
+				moduleId="org.eclipse.cdt.core.settings" name="Debug">
+				<externalSettings />
 				<extensions>
-					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GNU_ELF"
+						point="org.eclipse.cdt.core.BinaryParser" />
+					<extension id="org.eclipse.cdt.core.GASErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GLDErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.CWDLocator"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GCCErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
 				</extensions>
 			</storageModule>
-			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.exe.debug.531019101" name="Debug" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=" parent="cdt.managedbuild.config.gnu.exe.debug">
-					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.531019101." name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.831256746" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
-							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug.2057649078" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/memory}/Debug" id="cdt.managedbuild.target.gnu.builder.exe.debug.1684065560" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
-							<tool id="cdt.managedbuild.tool.gnu.archiver.base.2077316234" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.2077566855" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
-								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.2078813394" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
-								<option defaultValue="gnu.cpp.compiler.debugging.level.max" id="gnu.cpp.compiler.exe.debug.option.debugging.level.1045172855" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" valueType="enumerated"/>
+			<storageModule moduleId="cdtBuildSystem"
+				version="4.0.0">
+				<configuration artifactName="${ProjName}"
+					buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe"
+					buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug"
+					cleanCommand="rm -rf" description=""
+					id="cdt.managedbuild.config.gnu.exe.debug.531019101" name="Debug"
+					optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes="
+					parent="cdt.managedbuild.config.gnu.exe.debug">
+					<folderInfo
+						id="cdt.managedbuild.config.gnu.exe.debug.531019101." name="/"
+						resourcePath="">
+						<toolChain
+							id="cdt.managedbuild.toolchain.gnu.exe.debug.831256746"
+							name="Linux GCC"
+							superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
+							<targetPlatform
+								id="cdt.managedbuild.target.gnu.platform.exe.debug.2057649078"
+								name="Debug Platform"
+								superClass="cdt.managedbuild.target.gnu.platform.exe.debug" />
+							<builder buildPath="${workspace_loc:/memory}/Debug"
+								id="cdt.managedbuild.target.gnu.builder.exe.debug.1684065560"
+								keepEnvironmentInBuildfile="false" managedBuildOn="true"
+								name="Gnu Make Builder"
+								superClass="cdt.managedbuild.target.gnu.builder.exe.debug" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.archiver.base.2077316234"
+								name="GCC Archiver"
+								superClass="cdt.managedbuild.tool.gnu.archiver.base" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.2077566855"
+								name="GCC C++ Compiler"
+								superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
+								<option
+									id="gnu.cpp.compiler.exe.debug.option.optimization.level.2078813394"
+									name="Optimization Level"
+									superClass="gnu.cpp.compiler.exe.debug.option.optimization.level"
+									useByScannerDiscovery="false"
+									value="gnu.cpp.compiler.optimization.level.none"
+									valueType="enumerated" />
+								<option
+									defaultValue="gnu.cpp.compiler.debugging.level.max"
+									id="gnu.cpp.compiler.exe.debug.option.debugging.level.1045172855"
+									name="Debug Level"
+									superClass="gnu.cpp.compiler.exe.debug.option.debugging.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1597463972" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
-								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1322776479" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
-								<option defaultValue="gnu.c.debugging.level.max" id="gnu.c.compiler.exe.debug.option.debugging.level.2121688102" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.include.paths.610055818" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/memory/include}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/shared/include}&quot;"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1597463972"
+								name="GCC C Compiler"
+								superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
+								<option defaultValue="gnu.c.optimization.level.none"
+									id="gnu.c.compiler.exe.debug.option.optimization.level.1322776479"
+									name="Optimization Level"
+									superClass="gnu.c.compiler.exe.debug.option.optimization.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
+								<option defaultValue="gnu.c.debugging.level.max"
+									id="gnu.c.compiler.exe.debug.option.debugging.level.2121688102"
+									name="Debug Level"
+									superClass="gnu.c.compiler.exe.debug.option.debugging.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
+								<option
+									id="gnu.c.compiler.option.include.paths.610055818"
+									name="Include paths (-I)"
+									superClass="gnu.c.compiler.option.include.paths"
+									useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/memory/include}&quot;" />
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/shared/include}&quot;" />
 								</option>
-								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1102205365" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+								<inputType
+									id="cdt.managedbuild.tool.gnu.c.compiler.input.1102205365"
+									superClass="cdt.managedbuild.tool.gnu.c.compiler.input" />
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.890501390" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
-								<option id="gnu.c.link.option.libs.1757252190" name="Libraries (-l)" superClass="gnu.c.link.option.libs" useByScannerDiscovery="false" valueType="libs">
-									<listOptionValue builtIn="false" value="shared"/>
-									<listOptionValue builtIn="false" value="commons"/>
-									<listOptionValue builtIn="false" value="pthread"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.890501390"
+								name="GCC C Linker"
+								superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
+								<option id="gnu.c.link.option.libs.1757252190"
+									name="Libraries (-l)" superClass="gnu.c.link.option.libs"
+									useByScannerDiscovery="false" valueType="libs">
+									<listOptionValue builtIn="false" value="shared" />
+									<listOptionValue builtIn="false"
+										value="commons" />
+									<listOptionValue builtIn="false"
+										value="pthread" />
 								</option>
-								<option id="gnu.c.link.option.paths.568927514" name="Library search path (-L)" superClass="gnu.c.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/shared/Debug}&quot;"/>
+								<option id="gnu.c.link.option.paths.568927514"
+									name="Library search path (-L)"
+									superClass="gnu.c.link.option.paths"
+									useByScannerDiscovery="false" valueType="libPaths">
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/shared/Debug}&quot;" />
 								</option>
-								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.714619310" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
-									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
-									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								<inputType
+									id="cdt.managedbuild.tool.gnu.c.linker.input.714619310"
+									superClass="cdt.managedbuild.tool.gnu.c.linker.input">
+									<additionalInput
+										kind="additionalinputdependency" paths="$(USER_OBJS)" />
+									<additionalInput kind="additionalinput"
+										paths="$(LIBS)" />
 								</inputType>
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.573277680" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug"/>
-							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.debug.371355445" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1005593580" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.573277680"
+								name="GCC C++ Linker"
+								superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.assembler.exe.debug.371355445"
+								name="GCC Assembler"
+								superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
+								<inputType
+									id="cdt.managedbuild.tool.gnu.assembler.input.1005593580"
+									superClass="cdt.managedbuild.tool.gnu.assembler.input" />
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED"
+							kind="sourcePath" name="src" />
 					</sourceEntries>
 				</configuration>
 			</storageModule>
-			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+			<storageModule
+				moduleId="org.eclipse.cdt.core.externalSettings" />
 		</cconfiguration>
-		<cconfiguration id="cdt.managedbuild.config.gnu.exe.release.1620128292">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.release.1620128292" moduleId="org.eclipse.cdt.core.settings" name="Release">
-				<externalSettings/>
+		<cconfiguration
+			id="cdt.managedbuild.config.gnu.exe.release.1620128292">
+			<storageModule
+				buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider"
+				id="cdt.managedbuild.config.gnu.exe.release.1620128292"
+				moduleId="org.eclipse.cdt.core.settings" name="Release">
+				<externalSettings />
 				<extensions>
-					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GNU_ELF"
+						point="org.eclipse.cdt.core.BinaryParser" />
+					<extension id="org.eclipse.cdt.core.GASErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GLDErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.CWDLocator"
+						point="org.eclipse.cdt.core.ErrorParser" />
+					<extension id="org.eclipse.cdt.core.GCCErrorParser"
+						point="org.eclipse.cdt.core.ErrorParser" />
 				</extensions>
 			</storageModule>
-			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.exe.release.1620128292" name="Release" optionalBuildProperties="" parent="cdt.managedbuild.config.gnu.exe.release">
-					<folderInfo id="cdt.managedbuild.config.gnu.exe.release.1620128292." name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.release.1631445405" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.release">
-							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.release.16890804" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.release"/>
-							<builder buildPath="${workspace_loc:/memory}/Release" id="cdt.managedbuild.target.gnu.builder.exe.release.1490765557" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.release"/>
-							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1301775399" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.274609923" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
-								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.1385871683" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
-								<option defaultValue="gnu.cpp.compiler.debugging.level.none" id="gnu.cpp.compiler.exe.release.option.debugging.level.1984031129" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" useByScannerDiscovery="false" valueType="enumerated"/>
+			<storageModule moduleId="cdtBuildSystem"
+				version="4.0.0">
+				<configuration artifactName="${ProjName}"
+					buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe"
+					buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release"
+					cleanCommand="rm -rf" description=""
+					id="cdt.managedbuild.config.gnu.exe.release.1620128292"
+					name="Release" optionalBuildProperties=""
+					parent="cdt.managedbuild.config.gnu.exe.release">
+					<folderInfo
+						id="cdt.managedbuild.config.gnu.exe.release.1620128292." name="/"
+						resourcePath="">
+						<toolChain
+							id="cdt.managedbuild.toolchain.gnu.exe.release.1631445405"
+							name="Linux GCC"
+							superClass="cdt.managedbuild.toolchain.gnu.exe.release">
+							<targetPlatform
+								id="cdt.managedbuild.target.gnu.platform.exe.release.16890804"
+								name="Debug Platform"
+								superClass="cdt.managedbuild.target.gnu.platform.exe.release" />
+							<builder buildPath="${workspace_loc:/memory}/Release"
+								id="cdt.managedbuild.target.gnu.builder.exe.release.1490765557"
+								keepEnvironmentInBuildfile="false" managedBuildOn="true"
+								name="Gnu Make Builder"
+								superClass="cdt.managedbuild.target.gnu.builder.exe.release" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.archiver.base.1301775399"
+								name="GCC Archiver"
+								superClass="cdt.managedbuild.tool.gnu.archiver.base" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.274609923"
+								name="GCC C++ Compiler"
+								superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
+								<option
+									id="gnu.cpp.compiler.exe.release.option.optimization.level.1385871683"
+									name="Optimization Level"
+									superClass="gnu.cpp.compiler.exe.release.option.optimization.level"
+									useByScannerDiscovery="false"
+									value="gnu.cpp.compiler.optimization.level.most"
+									valueType="enumerated" />
+								<option
+									defaultValue="gnu.cpp.compiler.debugging.level.none"
+									id="gnu.cpp.compiler.exe.release.option.debugging.level.1984031129"
+									name="Debug Level"
+									superClass="gnu.cpp.compiler.exe.release.option.debugging.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.898205728" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release">
-								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.exe.release.option.optimization.level.5860946" name="Optimization Level" superClass="gnu.c.compiler.exe.release.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
-								<option defaultValue="gnu.c.debugging.level.none" id="gnu.c.compiler.exe.release.option.debugging.level.115265252" name="Debug Level" superClass="gnu.c.compiler.exe.release.option.debugging.level" useByScannerDiscovery="false" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.include.paths.1709143245" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/memory/include}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/shared/include}&quot;"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.898205728"
+								name="GCC C Compiler"
+								superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release">
+								<option defaultValue="gnu.c.optimization.level.most"
+									id="gnu.c.compiler.exe.release.option.optimization.level.5860946"
+									name="Optimization Level"
+									superClass="gnu.c.compiler.exe.release.option.optimization.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
+								<option defaultValue="gnu.c.debugging.level.none"
+									id="gnu.c.compiler.exe.release.option.debugging.level.115265252"
+									name="Debug Level"
+									superClass="gnu.c.compiler.exe.release.option.debugging.level"
+									useByScannerDiscovery="false" valueType="enumerated" />
+								<option
+									id="gnu.c.compiler.option.include.paths.1709143245"
+									name="Include paths (-I)"
+									superClass="gnu.c.compiler.option.include.paths"
+									useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/memory/include}&quot;" />
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/shared/include}&quot;" />
 								</option>
-								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1895147118" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+								<inputType
+									id="cdt.managedbuild.tool.gnu.c.compiler.input.1895147118"
+									superClass="cdt.managedbuild.tool.gnu.c.compiler.input" />
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.release.589989786" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release">
-								<option id="gnu.c.link.option.libs.1616492046" name="Libraries (-l)" superClass="gnu.c.link.option.libs" useByScannerDiscovery="false" valueType="libs">
-									<listOptionValue builtIn="false" value="commons"/>
-									<listOptionValue builtIn="false" value="pthread"/>
-									<listOptionValue builtIn="false" value="shared"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.c.linker.exe.release.589989786"
+								name="GCC C Linker"
+								superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release">
+								<option id="gnu.c.link.option.libs.1616492046"
+									name="Libraries (-l)" superClass="gnu.c.link.option.libs"
+									useByScannerDiscovery="false" valueType="libs">
+									<listOptionValue builtIn="false"
+										value="commons" />
+									<listOptionValue builtIn="false"
+										value="pthread" />
+									<listOptionValue builtIn="false" value="shared" />
 								</option>
-								<option id="gnu.c.link.option.paths.1651281410" name="Library search path (-L)" superClass="gnu.c.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/shared/Release}&quot;"/>
+								<option id="gnu.c.link.option.paths.1651281410"
+									name="Library search path (-L)"
+									superClass="gnu.c.link.option.paths"
+									useByScannerDiscovery="false" valueType="libPaths">
+									<listOptionValue builtIn="false"
+										value="&quot;${workspace_loc:/shared/Release}&quot;" />
 								</option>
-								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1308921272" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
-									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
-									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								<inputType
+									id="cdt.managedbuild.tool.gnu.c.linker.input.1308921272"
+									superClass="cdt.managedbuild.tool.gnu.c.linker.input">
+									<additionalInput
+										kind="additionalinputdependency" paths="$(USER_OBJS)" />
+									<additionalInput kind="additionalinput"
+										paths="$(LIBS)" />
 								</inputType>
 							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.1269083081" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release"/>
-							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.release.1628595528" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.release">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1263099408" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							<tool
+								id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.1269083081"
+								name="GCC C++ Linker"
+								superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release" />
+							<tool
+								id="cdt.managedbuild.tool.gnu.assembler.exe.release.1628595528"
+								name="GCC Assembler"
+								superClass="cdt.managedbuild.tool.gnu.assembler.exe.release">
+								<inputType
+									id="cdt.managedbuild.tool.gnu.assembler.input.1263099408"
+									superClass="cdt.managedbuild.tool.gnu.assembler.input" />
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED"
+							kind="sourcePath" name="src" />
 					</sourceEntries>
 				</configuration>
 			</storageModule>
-			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+			<storageModule
+				moduleId="org.eclipse.cdt.core.externalSettings" />
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="memory.cdt.managedbuild.target.gnu.exe.1028170329" name="Executable" projectType="cdt.managedbuild.target.gnu.exe"/>
+		<project
+			id="memory.cdt.managedbuild.target.gnu.exe.1028170329"
+			name="Executable" projectType="cdt.managedbuild.target.gnu.exe" />
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.531019101;cdt.managedbuild.config.gnu.exe.debug.531019101.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1597463972;cdt.managedbuild.tool.gnu.c.compiler.input.1102205365">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<autodiscovery enabled="true"
+			problemReportingEnabled="true" selectedProfileId="" />
+		<scannerConfigBuildInfo
+			instanceId="cdt.managedbuild.config.gnu.exe.debug.531019101;cdt.managedbuild.config.gnu.exe.debug.531019101.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1597463972;cdt.managedbuild.tool.gnu.c.compiler.input.1102205365">
+			<autodiscovery enabled="true"
+				problemReportingEnabled="true" selectedProfileId="" />
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1620128292;cdt.managedbuild.config.gnu.exe.release.1620128292.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.898205728;cdt.managedbuild.tool.gnu.c.compiler.input.1895147118">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo
+			instanceId="cdt.managedbuild.config.gnu.exe.release.1620128292;cdt.managedbuild.config.gnu.exe.release.1620128292.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.898205728;cdt.managedbuild.tool.gnu.c.compiler.input.1895147118">
+			<autodiscovery enabled="true"
+				problemReportingEnabled="true" selectedProfileId="" />
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule
+		moduleId="org.eclipse.cdt.core.LanguageSettingsProviders" />
+	<storageModule moduleId="refreshScope" />
+	<storageModule
+		moduleId="org.eclipse.cdt.make.core.buildtargets" />
 </cproject>

@@ -15,7 +15,8 @@ typedef enum kernel_headers
 	IO_CALL = 1,
 	EXIT_CALL = 2,
 	INTERRUPT_DISPATCH = 3,
-	SUSPEND = 4
+	SUSPEND = 4,
+	PROCESS_MEMORY_READY = 5
 } kernel_headers;
 
 typedef enum cpu_headers
@@ -23,10 +24,11 @@ typedef enum cpu_headers
 	PCB_TO_CPU = 0,
 	INTERRUPT = 1,
 	FRAME_TO_CPU = 2,
-	TABLE_INFO_TO_CPU = 3,
+	TABLE2_TO_CPU = 3,
+	TABLE_INFO_TO_CPU = 4,
 	// Memory response headers
-	SWAP_OK = 4,
-	SWAP_ERROR = 5,
+	SWAP_OK = 5,
+	SWAP_ERROR = 6,
 } cpu_headers;
 
 typedef enum memory_headers
@@ -39,7 +41,6 @@ typedef enum memory_headers
 	WRITE_CALL = 5,
 	PROCESS_SUSPEND = 6,
 	PROCESS_EXIT = 7
-
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */
