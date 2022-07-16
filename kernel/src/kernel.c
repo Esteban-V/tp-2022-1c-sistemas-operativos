@@ -14,13 +14,11 @@ int main(void)
 	suspended_readyQ = pQueue_create();
 	exitQ = pQueue_create();
 
-
-	//multiproc
+	// multiproc
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
 
 	sem_init(&somethingToReadyInitialCondition, 0, 0);
-
 
 	sem_init(&new_for_ready, 0, 0);
 
@@ -134,12 +132,6 @@ void *memory_listener(void *args)
 	}
 }
 
-
-
-
-
-
-
 void *exit_process(void *args)
 {
 	t_pcb *pcb = NULL;
@@ -149,9 +141,6 @@ void *exit_process(void *args)
 		// avisar a consola que exit
 	}
 }
-
-
-
 
 void *readyToExec(void *args)
 {
@@ -178,102 +167,88 @@ void *readyToExec(void *args)
 	}
 }
 
-
-
-
-
-
-
-void *newToReady(void *args)
+void *newToReady()
 {
-		t_pcb *pcb = NULL;
-		sem_wait(&sem_multiprogram);
+	t_pcb *pcb = NULL;
+	sem_wait(&sem_multiprogram);
 
-		pcb = (t_pcb *)pQueue_take(newQ);
+	pcb = (t_pcb *)pQueue_take(newQ);
 
-		// Pide a memoria creacion de estructuras segun pid y size
-		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(pid_packet->payload, pcb->pid);
-		stream_add_UINT32(pid_packet->payload, pcb->size);
+	// Pide a memoria creacion de estructuras segun pid y size
+	t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(pid_packet->payload, pcb->pid);
+	stream_add_UINT32(pid_packet->payload, pcb->size);
 
-		pQueue_put(memoryWaitQ, (void *)pcb);
+	pQueue_put(memoryWaitQ, (void *)pcb);
 
-		if (memory_socket != -1)
-		{
-			socket_send_packet(memory_socket, pid_packet);
-		}
+	if (memory_socket != -1)
+	{
+		socket_send_packet(memory_socket, pid_packet);
+	}
 
-		packet_destroy(pid_packet);
+	packet_destroy(pid_packet);
 
-		sem_wait(&pcb_table_ready);
+	sem_wait(&pcb_table_ready);
 
-		put_to_ready(pcb);
+	put_to_ready(pcb);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
+	pthread_mutex_unlock(&mutex_log);
 
+	pthread_mutex_unlock(&mutexToReady);
 
-		pthread_mutex_unlock(&mutexToReady);
-
-		return 0;
+	return 0;
 }
 
-void *suspendedToReady(void *args)
+void *suspendedToReady()
 {
-		t_pcb *pcb = NULL;
-		sem_wait(&sem_multiprogram);
-		pcb = pQueue_take(suspended_readyQ);
+	t_pcb *pcb = NULL;
+	sem_wait(&sem_multiprogram);
+	pcb = pQueue_take(suspended_readyQ);
 
-		// Manejar memoria, sacar de suspendido y traer a "ram"
+	// Manejar memoria, sacar de suspendido y traer a "ram"
 
-		put_to_ready(pcb);
+	put_to_ready(pcb);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
+	pthread_mutex_unlock(&mutex_log);
 
-		pthread_mutex_unlock(&mutexToReady);
-		return 0;
+	pthread_mutex_unlock(&mutexToReady);
+	return 0;
 }
 
-
-
-void *toReady(void *args){
-	while(1){
+void *toReady(void *args)
+{
+	while (1)
+	{
 		pthread_mutex_lock(&mutexToReady);
 
-		sem_wait(&somethingToReadyInitialCondition);//falta agregarlo a cuando algo esta listo en bloqueado o suspendido listo
+		sem_wait(&somethingToReadyInitialCondition); // falta agregarlo a cuando algo esta listo en bloqueado o suspendido listo
 		int freeSpots;
-		sem_getValue(&sem_multiprogram,&freeSpots);
-		if(freeSpots!=0){
+		sem_getValue(&sem_multiprogram, &freeSpots);
+		if (freeSpots != 0)
+		{
 			pthread_mutex_unlock(&mutexToReady);
 			continue;
 		}
 
-		if(!pQueue_isEmpty(suspended_readyQ)){
+		if (!pQueue_isEmpty(suspended_readyQ))
+		{
 			suspendedToReady();
-		}else if(!pQueue_isEmpty(newQ)){
+		}
+		else if (!pQueue_isEmpty(newQ))
+		{
 			newToReady();
-		}else {
+		}
+		else
+		{
 			pthread_mutex_unlock(&mutexToReady);
 			continue;
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void *io_t(void *args)
 {
@@ -434,7 +409,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		sem_post(&somethingToReadyInitialCondition);
-		sem_post(&new_for_ready);//se saca
+		sem_post(&new_for_ready); // se saca
 	}
 
 	return true;
