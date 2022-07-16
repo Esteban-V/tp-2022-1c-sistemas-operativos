@@ -27,7 +27,7 @@ typedef struct cpu_config{
     char* dispatchListenPort;
     char* interruptListenPort;
     int pageSize;
-    int memoryEntriesPerTable;
+    int entriesPerTable;
 } t_cpu_config;
 
 void destroy_cpu_config(t_cpu_config* cpu_config);

@@ -6,6 +6,7 @@
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
 #include "utils.h"
+#include "swap.h"
 
 t_list *level1_tables;
 t_list *level2_tables;
@@ -49,6 +50,8 @@ t_ptbr2 *get_page_table2(uint32_t pt2_index);
 int get_frame_number(uint32_t pt2_index, uint32_t entry_index);
 void *get_frame(uint32_t frame_number);
 uint32_t get_frame_value(void *frame_ptr, uint32_t offset);
+
+bool can_assign_frame(t_list *entries);
 
 bool isFree(int frame_number);
 

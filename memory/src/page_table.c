@@ -7,10 +7,8 @@ int page_table_init(uint32_t process_size)
 	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
 	level1_table->entries = list_create();
 
-	// Se agrega a lista global 1...
-	list_add(level1_tables, level1_table);
-	// y se obtiene su posicion en la misma para retornar
-	int level1_index = list_size(level1_tables) - 1;
+	// Se agrega a lista global 1 y se obtiene su posicion en la misma para retornar
+	int level1_index = list_add(level1_tables, level1_table);
 
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
 	int pages_required = process_size / (memoryConfig->pageSize);
@@ -38,10 +36,8 @@ int page_table_init(uint32_t process_size)
 			list_add(level2_table->entries, page);
 		}
 
-		// Se agrega a lista global 2...
-		list_add(level2_tables, level2_table);
-		// y se obtiene su posicion en la misma...
-		int level2_index = list_size(level2_tables) - 1;
+		// Se agrega a lista global 2 y se obtiene su posicion en la misma...
+		int level2_index = list_add(level2_tables, level2_table);
 		// para agregar a la lista de entradas de su tabla nivel 1
 		list_add(level1_table->entries, level2_index);
 	}
@@ -156,7 +152,6 @@ void page_table_destroy(t_ptbr1 *table)
 	free(table);
 }
 
-
 // De aca en adelante estas funciones no se revisaron
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
 {
@@ -205,7 +200,7 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	return rc;
 }
 
-void writeFrame(t_memory *mem, uint32_t frame, void *from)
+/* void writeFrame(t_memory *mem, uint32_t frame, void *from)
 {
 	void *frameAddress = memory_getFrame(mem, frame);
 
@@ -217,9 +212,9 @@ void writeFrame(t_memory *mem, uint32_t frame, void *from)
 	pthread_mutex_lock(&memoryMut);
 	memcpy(frameAddress, from, memoryConfig->pageSize);
 	pthread_mutex_unlock(&memoryMut);
-}
+} */
 
-uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
+/* uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
 				 uint32_t pt2_entry, uint32_t page)
 {
 	// Traer pagina pedida de swap.
@@ -244,7 +239,7 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
 		pthread_mutex_unlock(&mutex_log);
 
 		// TODO determinar file size
-		list_add(swapFiles, swapFile_create(memoryConfig->swapPath, PID, /*memoryConfig->fileSize*/
+		list_add(swapFiles, swapFile_create(memoryConfig->swapPath, PID,
 											4096, memoryConfig->pageSize));
 
 		usleep(memoryConfig->swapDelay);
@@ -369,7 +364,7 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 
 	return true;
 }
-
+ */
 uint32_t clock_m_alg(uint32_t start, uint32_t end)
 {
 	uint32_t frame = getFreeFrame(start, end);

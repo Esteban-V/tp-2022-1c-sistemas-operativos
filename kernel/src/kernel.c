@@ -8,6 +8,7 @@ int main(void)
 	// Inicializar estructuras de estado
 	newQ = pQueue_create();
 	readyQ = pQueue_create();
+	memoryWaitQ = pQueue_create();
 	blockedQ = pQueue_create();
 	suspended_blockQ = pQueue_create();
 	suspended_readyQ = pQueue_create();
@@ -141,7 +142,6 @@ void *exit_process(void *args)
 		pcb = pQueue_take(exitQ);
 		// avisar a consola que exit
 	}
-
 }
 
 void *readyToExec(void *args)
@@ -179,15 +179,12 @@ void *newToReady(void *args)
 
 		pcb = (t_pcb *)pQueue_take(newQ);
 
-		// sem_wait(&longTermSemCall);
-		// pthread_mutex_lock(&mutex_mediumTerm);
-		// pcb = (t_pcb*) pQueue_take(newQ);
-
-		// Manejar memoria, creacion de estructuras
-		// Recibir valor de tabla
+		// Pide a memoria creacion de estructuras segun pid y size
 		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(pid_packet->payload, pcb->pid);
 		stream_add_UINT32(pid_packet->payload, pcb->size);
+
+		pQueue_put(memoryWaitQ, (void *)pcb);
 
 		if (memory_socket != -1)
 		{
@@ -253,16 +250,16 @@ void *io_t(void *args)
 
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 
-			//Tiempo desde su bloqueo
+			// Tiempo desde su bloqueo
 			time_blocked = time_to_ms(now) - pcb->blocked_time;
 
-			//Tiempo a bloquear en caso de que 
+			// Tiempo a bloquear en caso de que
 			sleep_ms = kernelConfig->maxBlockedTime - time_blocked;
 
-			//Tiempo que le faltaria de IO
+			// Tiempo que le faltaria de IO
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
 
-			//Tiempo faltante supera tiempo maximo seteado en config
+			// Tiempo faltante supera tiempo maximo seteado en config
 			if (remaining_io_time >= 0)
 			{
 				usleep(pcb->pending_io_time);
@@ -326,7 +323,7 @@ void put_to_ready(t_pcb *pcb)
 		}
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: SJF ; Replanning...");
+		log_info(logger, "Short Term Scheduler: SJF -> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(readyQ, SJF_sort);
@@ -335,9 +332,25 @@ void put_to_ready(t_pcb *pcb)
 	sem_post(&ready_for_exec);
 }
 
-bool receive_table_index(t_packet *petition, int mem_socket) {
-	uint32_t *size = &(process->size);
-	pcb->page_table = stream_take_UINT32(petition->payload);
+bool receive_table_index(t_packet *petition, int mem_socket)
+{
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t level1_table_index = stream_take_UINT32(petition->payload);
+
+	void _page_table_to_pid(void *elem)
+	{
+		t_pcb *pcb = (t_pcb *)elem;
+		// Encontrar el pcb correspondiente al pid
+		if (pcb->pid == pid)
+		{
+			// Almacenar puntero a tabla de paginas nivel 1 dado por memoria
+			pcb->page_table = level1_table_index;
+		}
+	};
+
+	pQueue_iterate(memoryWaitQ, _page_table_to_pid);
+
+	// Avisar de pcb listo para memoria
 	sem_post(&pcb_table_ready);
 	return false;
 }
@@ -429,28 +442,29 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 	if (!!received_pcb)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> Desalojado", received_pcb->pid);
+		log_info(logger, "PID #%d --> Desalojado de CPU", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		pQueue_put(readyQ, (void *)received_pcb);
-		//TODO: Reordenar queue segun alg?
-
+		put_to_ready(received_pcb);
 		sem_post(&freeCpu);
-		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
-		// y recien ahi se libere el multiprogram
-		sem_post(&sem_multiprogram);
 	}
 
 	return true;
 }
 
-bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
+bool (*kernel_handlers[6])(t_packet *petition, int console_socket) =
 	{
+		// NEW_PROCESS
 		receive_process,
+		// IO_CALL
 		io_op,
+		// EXIT_CALL
 		exit_op,
+		// INTERRUPT_DISPATCH
 		handle_interruption,
+		// SUSPEND
 		NULL,
+		// PROCESS_MEMORY_READY
 		receive_table_index,
 };
 

@@ -48,7 +48,8 @@ void execute_exit();
 
 void pcb_to_kernel(kernel_headers header);
 
-pthread_mutex_t mutex_kernel_socket;
+pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;
+bool new_interruption;
 int kernel_client_socket;
 
 int memory_server_socket;

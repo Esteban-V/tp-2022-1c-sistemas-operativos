@@ -8,6 +8,7 @@ void pcb_destroy(t_pcb *pcb)
 		free(pcb->instructions);
 		free(pcb);
 	}
+	pcb = NULL;
 }
 
 t_pcb *create_pcb()

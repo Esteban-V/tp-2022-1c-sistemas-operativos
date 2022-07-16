@@ -34,7 +34,7 @@ typedef struct pcb
 	uint32_t client_socket;
 	t_list *instructions;
 	uint32_t program_counter;
-	uint32_t page_table; // esta mal
+	uint32_t page_table;
 	uint32_t burst_estimation;
 	uint32_t blocked_time;
 	uint32_t pending_io_time;
@@ -44,6 +44,6 @@ void stream_take_pcb(t_packet *, t_pcb *);
 void stream_add_pcb(t_packet *packet, t_pcb *pcb);
 
 t_pcb *create_pcb();
-void pcb_destroy(t_pcb *);
+void pcb_destroy(t_pcb *pcb);
 
 #endif /* INCLUDE_PCB_UTILS_H_ */

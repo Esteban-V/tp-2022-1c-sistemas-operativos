@@ -57,13 +57,21 @@ int main()
 
 bool (*memory_handlers[8])(t_packet *petition, int socket) =
 	{
+		// PROCESS_NEW
 		process_new,
+		// MEM_HANDSHAKE
 		cpu_handshake,
+		// LVL1_TABLE
 		access_lvl1_table,
+		// LVL2_TABLE
 		access_lvl2_table,
+		// READ_CALL
 		memory_read,
+		// WRITE_CALL
 		memory_write,
+		// PROCESS_SUSPEND
 		process_suspend,
+		// PROCESS_EXIT
 		process_exit};
 
 void *header_handler(void *_client_socket)
@@ -137,7 +145,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
 
-	if (!!pid)
+	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Process suspension requested for PID #%d", pid);
@@ -151,6 +159,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		t_ptbr2 *pt2 = get_page_table2(pt2_index);
 		int page_cant = list_size(pt2->entries);
 		// Swappear Pages
+		// No page_cant, usar list_iterate
 		for (int i = 0; i < page_cant; i++)
 		{
 			t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, i);
@@ -191,21 +200,23 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 bool process_exit(t_packet *petition, int cpu_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t pt1_entry = stream_take_UINT32(petition->payload);
+	uint32_t pt1_index = stream_take_UINT32(petition->payload);
 
-	if (!!pid)
+	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Destroying PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		pthread_mutex_lock(&pageTablesMut);
-		t_ptbr2 *pt2 = get_page_table2(pid, pt1_entry, pageTables);
-		pthread_mutex_unlock(&pageTablesMut);
+		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
+		t_ptbr1 *pt1 = get_page_table1(pt1_index);
 
-		uint32_t pages_cant = list_size(pt2->entries);
-
-		for (uint32_t i = pages_cant - 1; i >= 0; i--)
+		// Se iteran las entries (indices a tablas nivel 2) de pt1 y se ejecuta por cada una:
+		/*
+		t_ptbr2 *pt2 = get_page_table2(pt2_index);
+		int page_cant = list_size(pt2->entries);
+		// No page_cant, usar list_iterate
+		for (int i = 0; i < page_cant; i++)
 		{
 			// Borrar swap
 			bool error = destroy_swap_page(pid, i);
@@ -224,14 +235,7 @@ bool process_exit(t_packet *petition, int cpu_socket)
 				(metadata->entries)[frame].isFree = true;
 				pthread_mutex_unlock(&metadataMut);
 			}
-		}
-
-		char *pid_key = string_itoa(pid);
-		pthread_mutex_lock(&pageTablesMut);
-		dictionary_remove_and_destroy(pageTables, pid_key, page_table_destroy);
-		pthread_mutex_unlock(&pageTablesMut);
-
-		free(pid_key);
+		}*/
 
 		/*t_packet *response = create_packet(OK, 0);
 		 socket_send_packet(cpu_socket, response);
@@ -240,10 +244,6 @@ bool process_exit(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Destroyed PID #%d successfully", pid);
 		pthread_mutex_unlock(&mutex_log);
-
-		// sigUsr1HandlerTLB(0);
-
-		// freeProcessEntries(pid);
 	}
 
 	return true;
@@ -310,32 +310,32 @@ bool memory_write(t_packet *petition, int cpu_socket)
 
 	uint32_t dir = stream_take_UINT32(petition->payload);
 	uint32_t toWrite = stream_take_UINT32(petition->payload);
-
-	if (!!toWrite)
-	{
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Write Request");
-		pthread_mutex_unlock(&mutex_log);
-
-		// Cargar página
-		uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
-
-		t_packet *response;
-		if (frameVictima == -1)
+	/*
+		if (!!toWrite)
 		{
-			response = create_packet(SWAP_ERROR, 0);
-		}
-		else
-		{
-			response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
-		}
 
-		stream_add_UINT32(response->payload, frameVictima);
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);
-	}
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Memory Write Request");
+			pthread_mutex_unlock(&mutex_log);
 
+			// Cargar página
+			uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
+
+			t_packet *response;
+			if (frameVictima == -1)
+			{
+				response = create_packet(SWAP_ERROR, 0);
+			}
+			else
+			{
+				response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
+			}
+
+			stream_add_UINT32(response->payload, frameVictima);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+		}
+	 */
 	sem_post(&writeRead);
 
 	return false;

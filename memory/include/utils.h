@@ -12,6 +12,7 @@
 #include <commons/collections/list.h>
 #include "serialization.h"
 #include "networking.h"
+#include "pcb_utils.h"
 #include "socket_headers.h"
 #include <sys/mman.h>
 #include <commons/config.h>
