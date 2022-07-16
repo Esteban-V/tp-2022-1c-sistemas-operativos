@@ -63,6 +63,7 @@ bool io_op(t_packet *petition, int console_socket);
 void *newToReady(void *args);
 void *suspendedToReady(void *args);
 void *cpu_dispatch_listener(void *args);
+void *memory_listener(void *args);
 void *suspend_process(void *args);
 void *exit_process(void *args);
 

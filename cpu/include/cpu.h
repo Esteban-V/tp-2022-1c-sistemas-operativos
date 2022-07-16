@@ -10,6 +10,7 @@
 #include <commons/collections/dictionary.h>
 #include <commons/config.h>
 #include <readline/readline.h>
+#include <commons/collections/queue.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -23,6 +24,8 @@
 
 #define CPU_MEMORY_SECRET = "CMSMC"
 
+sem_t interruption_counter;
+
 t_pcb *pcb;
 t_cpu_config *config;
 
@@ -34,6 +37,7 @@ void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
 
 void *listen_interruption();
+void *memory_listener();
 
 void execute_no_op();
 void execute_io(t_list *params);

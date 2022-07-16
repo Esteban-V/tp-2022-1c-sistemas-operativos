@@ -198,11 +198,7 @@ void *newToReady(void *args)
 
 		sem_wait(&pcb_table_ready);
 
-		/*pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Page Table Number Received #%d", pcb->page_table);
-		pthread_mutex_unlock(&mutex_log);*/
-
-		putToReady(pcb);
+		put_to_ready(pcb);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
@@ -228,7 +224,7 @@ void *suspendedToReady(void *args)
 
 		// Manejar memoria, sacar de suspendido y traer a "ram"
 
-		putToReady(pcb);
+		put_to_ready(pcb);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
@@ -271,7 +267,7 @@ void *io_t(void *args)
 			{
 				usleep(pcb->pending_io_time);
 				pcb = pQueue_take(blockedQ);
-				putToReady(pcb);
+				put_to_ready(pcb);
 			}
 			else
 			{
@@ -312,7 +308,7 @@ void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 	sem_post(&suspended_for_ready);
 }
 
-void putToReady(t_pcb *pcb)
+void put_to_ready(t_pcb *pcb)
 {
 	pQueue_put(readyQ, (void *)pcb);
 	if (sortingAlgorithm == FIFO)
@@ -335,6 +331,7 @@ void putToReady(t_pcb *pcb)
 
 		pQueue_sort(readyQ, SJF_sort);
 	}
+
 	sem_post(&ready_for_exec);
 }
 
@@ -387,7 +384,6 @@ bool receive_process(t_packet *petition, int console_socket)
 
 bool io_op(t_packet *petition, int cpu_socket)
 {
-	sem_post(&freeCpu);
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
 
@@ -396,6 +392,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
 		received_pcb->blocked_time = time_to_ms(now);
 		pQueue_put(blockedQ, (void *)received_pcb);
+		sem_post(&freeCpu);
 		sem_post(&any_blocked);
 	}
 	return true;
@@ -424,12 +421,35 @@ bool exit_op(t_packet *petition, int cpu_socket)
 	return false;
 }
 
+bool handle_interruption(t_packet *petition, int cpu_socket)
+{
+	t_pcb *received_pcb = create_pcb();
+	stream_take_pcb(petition, received_pcb);
+
+	if (!!received_pcb)
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d CPU --> Desalojado", received_pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		pQueue_put(readyQ, (void *)received_pcb);
+		//TODO: Reordenar queue segun alg?
+
+		sem_post(&freeCpu);
+		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
+		// y recien ahi se libere el multiprogram
+		sem_post(&sem_multiprogram);
+	}
+
+	return true;
+}
+
 bool (*kernel_handlers[3])(t_packet *petition, int console_socket) =
 	{
 		receive_process,
 		io_op,
 		exit_op,
-		NULL,
+		handle_interruption,
 		NULL,
 		receive_table_index,
 };

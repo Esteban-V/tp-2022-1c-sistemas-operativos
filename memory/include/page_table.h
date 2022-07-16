@@ -6,7 +6,6 @@
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
 #include "utils.h"
-#include "swap.h"
 
 t_list *level1_tables;
 t_list *level2_tables;

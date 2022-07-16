@@ -26,7 +26,9 @@ int main() {
 	pthread_create(&execThread, 0, cpu_cycle, NULL);
 	pthread_detach(execThread);
 
-	memory_socket = connect_to(config->memoryIP, config->memoryPort);
+	sem_init(&interruption_counter, 0, 0);
+
+	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 
 	// Handshake con Memoria
 	memory_handshake();
@@ -48,7 +50,7 @@ void *memory_listener()
 {
 	while (1)
 	{
-		header_handler(memory_socket);
+		header_handler(memory_server_socket);
 	}
 }
 
@@ -64,6 +66,8 @@ void pcb_to_kernel(kernel_headers header) {
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
+
+		sem_wait(&pcb_loaded);
 	}
 	packet_destroy(pcb_packet);
 }
@@ -109,9 +113,7 @@ bool receive_pcb(t_packet *petition, int kernel_socket) {
 }
 
 bool receive_interruption(t_packet *petition, int kernel_socket) {
-	// recibir header interrupcion
-	// meter interrupcion en queue o variable ya q se puede 1 a la vez
-	// activar sem de interrupcion
+	sem_post(&interruption_counter);
 	return false;
 }
 
@@ -132,7 +134,18 @@ void* cpu_cycle() {
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
 			execute[op](instruction->params);
+
+			// Check interrupt
+			while(!!sem_getvalue(&interruption_counter)) {
+				sem_wait(&interruption_counter);
+				// Handle interruption, desalojar proceso actual
+				pcb_to_kernel(INTERRUPT_DISPATCH);
+			}
+
 		}
+
+		// Mandar el proceso al kernel en caso de que no haya un EXIT?
+		pcb_to_kernel(INTERRUPT_DISPATCH);
 	}
 }
 
@@ -181,15 +194,15 @@ void execute_exit() {
 }
 
 void memory_handshake() {
-	if (memory_socket != -1) {
-		socket_send_header(memory_socket, MEM_HANDSHAKE);
+	if (memory_server_socket != -1) {
+		socket_send_header(memory_server_socket, MEM_HANDSHAKE);
 	}
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Handshake with memory requested");
 	pthread_mutex_unlock(&mutex_log);
 
-	t_packet *mem_data = socket_receive_packet(memory_socket);
+	t_packet *mem_data = socket_receive_packet(memory_server_socket);
 
 	// TODO? Errores
 
