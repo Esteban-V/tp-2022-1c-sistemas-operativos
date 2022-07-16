@@ -191,13 +191,7 @@ void *newToReady(void *args)
 
 		pcb = (t_pcb *)pQueue_take(newQ);
 
-<<<<<<< Updated upstream
 		// Pide a memoria creacion de estructuras segun pid y size
-=======
-		// Manejar memoria, creacion de estructuras
-		// Recibir valor de tabla
-
->>>>>>> Stashed changes
 		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(pid_packet->payload, pcb->pid);
 		stream_add_UINT32(pid_packet->payload, pcb->size);
@@ -499,13 +493,10 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 
 		put_to_ready(received_pcb);
 		sem_post(&freeCpu);
-<<<<<<< Updated upstream
-=======
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
 		// y recien ahi se libere el multiprogram
 		sem_post(&sem_multiprogram);
 		sem_wait(&somethingToReadyInitialCondition);
->>>>>>> Stashed changes
 	}
 
 	return true;
