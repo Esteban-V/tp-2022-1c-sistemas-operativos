@@ -6,105 +6,65 @@
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
 #include "utils.h"
+#include "swap.h"
 
-/*
-typedef struct t_page_entry
-{
-
-    uint32_t frame;
-    bool present;
-    bool used;
-    bool modified;
-
-} t_page_entry;
-
-typedef struct t_ptbr2
-{
-    t_list *entries; // t_page_entry
-
-} t_ptbr2;
-
-typedef struct processStruct
-{
-	t_list *firstLevel; //lista de enteros
-	t_list *secondLevel; // t_ptbr2
-
-}t_processStruct;
-*/
-
-t_list *fsLevelTables;
-t_list *sdLevelTables;
+t_list *level1_tables;
+t_list *level2_tables;
 
 pthread_mutex_t pageTablesMut;
 t_dictionary *pageTables;
 
 typedef struct t_page_entry
 {
-    uint32_t frame;
+    // A que frame (index) de la memoria (de void*) corresponde
+    int frame;
+    // Bit de presencia
     bool present;
+    // Bit de uso
     bool used;
+    // Bit de modificado
     bool modified;
 } t_page_entry;
 
 typedef struct t_ptbr2
 {
-    t_list *entries; // t_page_entry
+    // t_page_entry
+    t_list *entries;
 } t_ptbr2;
 
 typedef struct t_ptbr1
 {
-    t_list *entries; // int a t_ptbr2
+    // int a t_ptbr2
+    t_list *entries;
 } t_ptbr1;
 
-uint32_t swap_files_counter;
-
-int page_table_init(uint32_t process_size);
-void page_table_destroy(t_ptbr1 *table);
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame);
 void pageTable_destroyLastEntry(t_ptbr1 *pt);
 
-t_ptbr2 *getPageTable2(uint32_t _PID, uint32_t pt1_entry, t_dictionary *pageTables);
-t_ptbr1 *getPageTable(uint32_t _PID, t_dictionary *pageTables);
+int page_table_init(uint32_t process_size);
+t_ptbr1 *get_page_table1(uint32_t pt1_index);
 
-uint32_t pageTable_getFrame(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry);
-void *memory_getFrame(t_memory *mem, uint32_t frame);
+int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
+t_ptbr2 *get_page_table2(uint32_t pt2_index);
 
-typedef struct t_metadata
-{
-    uint32_t pid;
-    uint32_t pageNumber;
-    bool used;
-} t_metadata;
+int get_frame_number(uint32_t pt2_index, uint32_t entry_index);
+void *get_frame(uint32_t frame_number);
+uint32_t get_frame_value(void *frame_ptr, uint32_t offset);
 
-typedef struct swapFile
-{
-    char* path;
-    int fd;
-    size_t size;
-    size_t pageSize;
-    int maxPages;
-    t_pageMetadata* entries;
-} t_swapFile;
+bool isFree(int frame_number);
 
-t_swapFile* swapFile_create(char* path, uint32_t PID, size_t size, size_t pageSize);
-int swapFile_getIndex(t_swapFile* sf, uint32_t pid, uint32_t pageNumber);
-void* swapFile_readAtIndex(t_swapFile* sf, int index);
+uint32_t createPage(uint32_t pid, uint32_t pt1_entry);
 
-uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t page);
+void *readPage(uint32_t dir);
+bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent);
+uint32_t swapPage(uint32_t pid, uint32_t pt1_entry, uint32_t pt2_entry, uint32_t page);
 
-t_list *swapFiles;
+void destroyPage(uint32_t pid, uint32_t page);
 
-void swapFile_clearAtIndex(t_swapFile* sf, int index);
+void page_table_destroy(t_ptbr1 *table);
+
 uint32_t clock_m_alg(uint32_t start, uint32_t end);
 uint32_t clock_alg(uint32_t start, uint32_t end);
-bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID);
-bool destroy_swap_page(uint32_t pid, uint32_t page);
-bool read_swap_page(uint32_t pid, uint32_t page);
-bool fija_swap(uint32_t pid, uint32_t page, void* pageContent);
-void* readPage(uint32_t dir);
-void destroyPage(uint32_t pid, uint32_t page);
-bool savePage(uint32_t pid, uint32_t pageNumber, void* pageContent);
-t_swapFile *pidExists(uint32_t pid);
-bool isFree(uint32_t frame);
+bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t pid);
 
 #endif /* PAGETABLE_H_ */

@@ -12,7 +12,7 @@ t_memoryConfig* getMemoryConfig(char* path){
     memoryConfig->framesPerProcess = config_get_int_value(memoryConfig->config, "MARCOS_POR_PROCESO");
     memoryConfig->swapDelay = config_get_int_value(memoryConfig->config, "RETARDO_SWAP");
     memoryConfig->swapPath = config_get_string_value(memoryConfig->config, "PATH_SWAP");
-    memoryConfig->frameQty = memoryConfig->memorySize / memoryConfig->pageSize;
+    memoryConfig->framesInMemory = memoryConfig->memorySize / memoryConfig->pageSize;
     return memoryConfig;
 }
 
