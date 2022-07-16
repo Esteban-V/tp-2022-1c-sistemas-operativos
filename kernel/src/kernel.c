@@ -227,7 +227,7 @@ void *toReady(void *args)
 
 		sem_wait(&somethingToReadyInitialCondition); // falta agregarlo a cuando algo esta listo en bloqueado o suspendido listo
 		int freeSpots;
-		sem_getValue(&sem_multiprogram, &freeSpots);
+		sem_getvalue(&sem_multiprogram, &freeSpots);
 		if (freeSpots != 0)
 		{
 			pthread_mutex_unlock(&mutexToReady);
