@@ -17,9 +17,13 @@ void *header_handler(void *_client_socket);
 
 int server_socket;
 t_list *swap_files;
+int memory_access_counter = 0;
+int memory_read_counter = 0;
+int memory_write_counter = 0;
 
 t_mem_metadata *metadata_init();
 void metadata_destroy(t_mem_metadata *meta);
 t_memory *memory_init();
+void terminate_memory(bool error);
 
 #endif /* MEMORY_H_ */

@@ -58,7 +58,7 @@ t_log *logger;
 
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
-
+void stats();
 pthread_t interruptionThread, memoryThread, execThread;
 
 void memory_handshake();

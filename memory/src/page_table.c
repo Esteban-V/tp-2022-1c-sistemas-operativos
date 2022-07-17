@@ -1,4 +1,4 @@
-#include "page_table.h";
+#include "page_table.h"
 
 // Crea tabla de nivel 1 y tablas de nivel 2 correspondientes, y retorna el indice de la 1era
 int page_table_init(uint32_t process_size)

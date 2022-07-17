@@ -42,6 +42,7 @@ int main()
 		server_listen(kernel_dispatch_socket, header_handler);
 	}
 
+	stats();
 	log_destroy(logger);
 }
 
@@ -259,10 +260,17 @@ void memory_handshake()
 	config->entriesPerTable = stream_take_UINT32(mem_data->payload);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Handshake with memory successful");
+	log_info(logger, "Handshake with Memory successful");
 	log_info(logger, "Page size: %d | Entries per table: %d", config->pageSize,
 			 config->entriesPerTable);
 	pthread_mutex_unlock(&mutex_log);
 
 	packet_destroy(mem_data);
+}
+
+void stats() {
+	pthread_mutex_lock(&mutex_log);
+	/*log_info(logger, "TLB Hits: %d", tlb_hit_counter);
+	log_info(logger, "TLB Misses: %d", tlb_miss_counter);*/
+	pthread_mutex_unlock(&mutex_log);
 }

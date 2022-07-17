@@ -23,7 +23,7 @@ int main()
 	 agregar donde se swappean
 	 list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
 	 */
-	sem_init(&writeRead, 0, 2); // TODO Ver si estan vien los semaforos, o si van en otras funciones tmb
+	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
 	memory = memory_init();
 	metadata->clock_m_counter = 0;
@@ -90,6 +90,13 @@ void *header_handler(void *_client_socket)
 			}
 		}
 		usleep(memoryConfig->memoryDelay);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory Accessed");
+		pthread_mutex_unlock(&mutex_log);
+
+		memory_access_counter++;
+
 		serve = memory_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
@@ -306,6 +313,8 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 
 bool memory_write(t_packet *petition, int cpu_socket)
 {
+	memory_write_counter++;
+
 	sem_wait(&writeRead);
 
 	uint32_t dir = stream_take_UINT32(petition->payload);
@@ -343,12 +352,15 @@ bool memory_write(t_packet *petition, int cpu_socket)
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
+	memory_read_counter++;
+
+
 	sem_wait(&writeRead);
 
 	uint32_t dir = stream_take_UINT32(petition->payload);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Reading memory");
+	log_info(logger, "Reading Memory");
 	pthread_mutex_unlock(&mutex_log);
 
 	sem_post(&writeRead);
@@ -409,6 +421,15 @@ void metadata_destroy(t_mem_metadata *meta)
 
 void terminate_memory(bool error)
 {
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Memory Accesses: %d", memory_access_counter);
+	log_info(logger, "Memory Reads: %d", memory_read_counter);
+	log_info(logger, "Memory Writes: %d", memory_write_counter);
+	/*log_info(logger, "Page Assignments: %d", page_assignment_counter);
+	log_info(logger, "Page Replacements: %d", page_replacement_counter);
+	log_info(logger, "Page Faults: %d", page_faults_counter);*/
+	pthread_mutex_unlock(&mutex_log);
+
 	log_destroy(logger);
 	destroyMemoryConfig(memoryConfig);
 	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
@@ -416,4 +437,5 @@ void terminate_memory(bool error)
 	if (server_socket)
 		close(server_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+
 }
