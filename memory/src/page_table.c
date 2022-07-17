@@ -99,9 +99,11 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index)
 			/// Mirar implementacion de fija_memoria (es medio bardo, nos la complica)
 
 			// Opcion 2
-			// Tener un bitmap de frames libres que se actualiza todo el tiempo
+			// Tener un bitmap de frames libres que se actualiza ttodo el tiempo
 			// Se elije de aquellos frames libres "globales", es diferente cada vez
 			// y en diferentes momentos ese frame esta reservado por diferentes procesos sin casarse a ninguno
+
+			// RTA: no deberia ser la primera ya que tenemos asig fija y reemp local?
 		}
 		else
 		{
