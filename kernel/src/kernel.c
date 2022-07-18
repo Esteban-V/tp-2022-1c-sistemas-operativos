@@ -14,7 +14,6 @@ int main(void)
 	suspended_readyQ = pQueue_create();
 	exitQ = pQueue_create();
 
-	// multiproc
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
 
@@ -29,12 +28,11 @@ int main(void)
 	sem_init(&any_blocked, 0, 0);
 	sem_init(&bloquear, 0, 0);
 
+	pthread_mutex_init(&mutexToReady, NULL);
+
 	if (kernelConfig == NULL)
 	{
-		pthread_mutex_lock(&mutex_log);
 		log_error(logger, "Config failed to load");
-		pthread_mutex_unlock(&mutex_log);
-
 		terminate_kernel(true);
 	}
 
@@ -48,10 +46,8 @@ int main(void)
 	}
 	else
 	{
-		pthread_mutex_lock(&mutex_log);
 		log_warning(logger,
 					"Wrong scheduler algorithm set in config --> Using FIFO");
-		pthread_mutex_unlock(&mutex_log);
 	}
 
 	cpu_dispatch_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortDispatch);
@@ -63,9 +59,7 @@ int main(void)
 		terminate_kernel(true);
 	}
 
-	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Kernel connected to CPU and memory");
-	pthread_mutex_unlock(&mutex_log);
 
 	// Creacion de server
 	server_socket = create_server(kernelConfig->listenPort);
@@ -75,9 +69,7 @@ int main(void)
 		terminate_kernel(true);
 	}
 
-	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Kernel server ready for console");
-	pthread_mutex_unlock(&mutex_log);
 
 	// Inicializar hilos
 	// Inicializar Planificador de largo plazo
@@ -98,11 +90,8 @@ int main(void)
 	pthread_create(&memoryThread, 0, memory_listener, NULL);
 	pthread_detach(memoryThread);
 
-	pthread_create(&io_thread, NULL, io_t, NULL);
+	pthread_create(&io_thread, NULL, io_listener, NULL);
 	pthread_detach(io_thread);
-
-	// Inicializo condition variable para despertar al planificador de mediano plazo
-	pthread_mutex_init(&mutexToReady, NULL);
 
 	while (1)
 	{
@@ -178,7 +167,7 @@ void *readyToExec(void *args)
 	}
 }
 
-void *newToReady()
+void *new_to_ready()
 {
 	t_pcb *pcb = NULL;
 	sem_wait(&sem_multiprogram);
@@ -212,7 +201,7 @@ void *newToReady()
 	return 0;
 }
 
-void *suspendedToReady()
+void *suspended_to_ready()
 {
 	t_pcb *pcb = NULL;
 	sem_wait(&sem_multiprogram);
@@ -230,7 +219,7 @@ void *suspendedToReady()
 	return 0;
 }
 
-void *toReady(void *args)
+void *toReady()
 {
 	while (1)
 	{
@@ -247,11 +236,11 @@ void *toReady(void *args)
 
 		if (!pQueue_isEmpty(suspended_readyQ))
 		{
-			suspendedToReady();
+			suspended_to_ready();
 		}
 		else if (!pQueue_isEmpty(newQ))
 		{
-			newToReady();
+			new_to_ready();
 		}
 		else
 		{
@@ -261,7 +250,7 @@ void *toReady(void *args)
 	}
 }
 
-void *io_t(void *args)
+void *io_listener()
 {
 	t_pcb *pcb;
 	int time_blocked;
@@ -522,14 +511,6 @@ void *header_handler(void *_client_socket)
 		packet_destroy(packet);
 	}
 	return 0;
-}
-
-int getIO(t_pcb *pcb)
-{
-	t_instruction *instruccion;
-	instruccion = list_get(pcb->instructions, pcb->program_counter);
-	uint32_t n = *((uint32_t *)list_get(instruccion->params, 0));
-	return n;
 }
 
 void terminate_kernel(bool error)
