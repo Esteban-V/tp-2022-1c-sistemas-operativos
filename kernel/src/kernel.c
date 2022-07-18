@@ -18,9 +18,8 @@ int main(void)
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
 
+
 	sem_init(&somethingToReadyInitialCondition, 0, 0);
-
-
 
 	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
@@ -138,6 +137,25 @@ void *exit_process(void *args)
 	while (1)
 	{
 		pcb = pQueue_take(exitQ);
+
+		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
+				stream_add_UINT32(exit_request->payload, pcb->pid);
+				stream_add_UINT32(exit_request->payload, pcb->page_table);
+
+			pQueue_put(memoryWaitQ, (void *)pcb);
+
+			if (memory_socket != -1)
+			{
+				socket_send_packet(memory_socket, exit_request);
+			}
+
+			sem_post(&sem_multiprogram);
+			sem_post(&somethingToReadyInitialCondition);
+
+			packet_destroy(exit_request);
+
+
+
 		// avisar a consola que exit
 	}
 }
@@ -225,7 +243,7 @@ void *toReady(void *args)
 	{
 		pthread_mutex_lock(&mutexToReady);
 
-		sem_wait(&somethingToReadyInitialCondition); // falta agregarlo a cuando algo esta listo en bloqueado o suspendido listo
+		sem_wait(&somethingToReadyInitialCondition);
 		int freeSpots;
 		sem_getvalue(&sem_multiprogram, &freeSpots);
 		if (freeSpots != 0)
@@ -293,17 +311,23 @@ void *io_t(void *args)
 
 				// Notifica a memoria de la suspension
 
-				t_packet *suspendRequest = create_packet(SUSPEND, INITIAL_STREAM_SIZE);
-				stream_add_UINT32(suspendRequest->payload, pcb->pid);
-				socket_send_packet(memory_socket, suspendRequest);
-				packet_destroy(suspendRequest);
 
+				t_packet *suspendRequest = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
+				stream_add_UINT32(suspendRequest->payload, pcb->pid);
+				stream_add_UINT32(suspendRequest->payload, pcb->page_table);
+
+
+				if (memory_socket != -1)
+				{
+					socket_send_packet(memory_socket, suspendRequest);
+				}
+				packet_destroy(suspendRequest);
 				pQueue_put(suspended_blockQ, pcb);
-				sem_post(&any_blocked);
 				sem_post(&sem_multiprogram);
 				sem_post(&somethingToReadyInitialCondition);
-				pthread_mutex_lock(&mutex_log);
+				sem_post(&any_blocked);
 
+				pthread_mutex_lock(&mutex_log);
 				log_info(logger,
 						 "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
 						 pcb->pid);
@@ -450,10 +474,6 @@ bool exit_op(t_packet *petition, int cpu_socket)
 		sem_post(&freeCpu);
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
 		// y recien ahi se libere el multiprogram
-		sem_post(&sem_multiprogram);
-		sem_post(&somethingToReadyInitialCondition);
-
-		socket_send_header(received_pcb->client_socket, PROCESS_OK);
 		return true;
 	}
 	return false;
