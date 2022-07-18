@@ -17,14 +17,11 @@ int main(void)
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&cpu_free, 0, 1);
 
-	sem_init(&any_ready, 0, 0);
-
-	sem_init(&suspended_for_ready, 0, 0);
+	sem_init(&any_for_blocked, 0, 0);
+	sem_init(&any_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 
 	sem_init(&pcb_table_ready, 0, 0);
-
-	sem_init(&any_blocked, 0, 0);
 
 	pthread_mutex_init(&mutexToReady, NULL);
 
@@ -126,7 +123,7 @@ void *io_listener()
 
 	while (1)
 	{
-		sem_wait(&any_blocked);
+		sem_wait(&any_for_blocked);
 		if (!pQueue_isEmpty(blocked_q))
 		{
 			pcb = pQueue_peek(blocked_q);
@@ -168,8 +165,8 @@ void *io_listener()
 				packet_destroy(suspendRequest);
 				pQueue_put(suspended_block_q, pcb);
 				sem_post(&sem_multiprogram);
-				sem_post(&any_ready);
-				sem_post(&any_blocked);
+				sem_post(&any_for_ready);
+				sem_post(&any_for_blocked);
 
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger,
@@ -183,7 +180,7 @@ void *io_listener()
 			pcb = pQueue_peek(suspended_block_q);
 			usleep(pcb->pending_io_time);
 			blocked_to_ready(suspended_block_q, suspended_ready_q);
-			sem_post(&any_ready);
+			sem_post(&any_for_ready);
 		}
 	}
 }
@@ -199,16 +196,11 @@ bool receive_process(t_packet *petition, int console_socket)
 
 		list_add_all(pcb->instructions, received_process->instructions);
 		pcb->size = received_process->size;
-		// NO DESTRUIR HASTA QUE ENCONTREMOS LA FORMA DE COPIAR CORRECTAMENTE
-		// process_destroy(received_process);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Received %d sized process with %d instructions",
 				 pcb->size, list_size(pcb->instructions));
 		pthread_mutex_unlock(&mutex_log);
-
-		// ESTO ROMPERIA SI DESTRUIMOS EL RECEIVED_PROCESS PORQUE LAS INSTRUCTIONS SE COPIAN MAL
-		// list_iterate(pcb->instructions, _log_instruction);
 
 		pid++;
 		pcb->pid = pid;
@@ -221,7 +213,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
-		sem_post(&any_ready);
+		sem_post(&any_for_ready);
 	}
 
 	return true;
@@ -243,10 +235,8 @@ void *exit_process(void *args)
 			socket_send_packet(memory_socket, exit_request);
 		}
 
-		sem_post(&sem_multiprogram);
-		sem_post(&any_ready);
-
 		packet_destroy(exit_request);
+		sem_post(&sem_multiprogram);
 
 		// avisar a consola que exit
 	}
@@ -280,7 +270,6 @@ void *readyToExec(void *args)
 void *new_to_ready()
 {
 	t_pcb *pcb = NULL;
-	sem_wait(&sem_multiprogram);
 
 	pcb = (t_pcb *)pQueue_take(new_q);
 
@@ -305,16 +294,11 @@ void *new_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
-
-	pthread_mutex_unlock(&mutexToReady);
-
-	return 0;
 }
 
 void *suspended_to_ready()
 {
 	t_pcb *pcb = NULL;
-	sem_wait(&sem_multiprogram);
 	pcb = pQueue_take(suspended_ready_q);
 
 	// Manejar memoria, sacar de suspendido y traer a "ram"
@@ -324,16 +308,12 @@ void *suspended_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
-
-	pthread_mutex_unlock(&mutexToReady);
-	return 0;
 }
 
 void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 {
 	t_pcb *pcb = pQueue_take(origin);
 	pQueue_put(destination, pcb);
-	sem_post(&suspended_for_ready);
 }
 
 void put_to_ready(t_pcb *pcb)
@@ -365,18 +345,19 @@ void put_to_ready(t_pcb *pcb)
 
 void *toReady()
 {
+	int free_spots;
 	while (1)
 	{
-		pthread_mutex_lock(&mutexToReady);
+		sem_wait(&any_for_ready);
 
-		sem_wait(&any_ready);
-		int freeSpots;
-		sem_getvalue(&sem_multiprogram, &freeSpots);
-		if (freeSpots != 0)
+		sem_getvalue(&sem_multiprogram, &free_spots);
+		if (free_spots != 0)
 		{
-			pthread_mutex_unlock(&mutexToReady);
 			continue;
 		}
+
+		pthread_mutex_lock(&mutexToReady);
+		sem_wait(&sem_multiprogram);
 
 		if (!pQueue_isEmpty(suspended_ready_q))
 		{
@@ -386,11 +367,8 @@ void *toReady()
 		{
 			new_to_ready();
 		}
-		else
-		{
-			pthread_mutex_unlock(&mutexToReady);
-			continue;
-		}
+
+		pthread_mutex_unlock(&mutexToReady);
 	}
 }
 
@@ -433,7 +411,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
 		// y recien ahi se libere el multiprogram
 		sem_post(&sem_multiprogram);
-		sem_post(&any_ready);
+		sem_post(&any_for_ready);
 	}
 
 	return true;
@@ -450,7 +428,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		received_pcb->blocked_time = time_to_ms(now);
 		pQueue_put(blocked_q, (void *)received_pcb);
 		sem_post(&cpu_free);
-		sem_post(&any_blocked);
+		sem_post(&any_for_blocked);
 	}
 	return true;
 }

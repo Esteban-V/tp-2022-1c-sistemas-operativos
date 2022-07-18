@@ -39,7 +39,7 @@ t_pQueue *new_q, *ready_q, *memory_init_q, *blocked_q, *suspended_ready_q, *susp
 pthread_t readyToExecThread,
 	cpu_dispatch_t, memory_t, io_t, exit_process_t;
 
-sem_t sem_multiprogram, any_ready, any_blocked, new_for_ready, suspended_for_ready, ready_for_exec, cpu_free, pcb_table_ready;
+sem_t sem_multiprogram, any_for_ready, any_for_blocked, ready_for_exec, cpu_free, pcb_table_ready;
 
 pthread_mutex_t mutexToReady;
 
