@@ -29,24 +29,24 @@ enum e_sortingAlgorithm
 
 enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 
-struct timespec start_exec_time, last_burst_estimate, now_time;
+int pid = 0;
+t_log *logger;
 
-t_pQueue *newQ, *readyQ, *memoryWaitQ, *blockedQ, *suspended_readyQ, *suspended_blockQ, *exitQ;
-pthread_t newToReadyThread, suspendedToReadyThread, readyToExecThread, thread_mediumTerm,
-	suspendProcessThread, cpuDispatchThread, memoryThread, io_thread, exitProcessThread;
-sem_t somethingToReadyInitialCondition, sem_multiprogram, new_for_ready, suspended_for_ready, ready_for_exec, longTermSemCall, freeCpu, exec_to_ready, any_blocked, pcb_table_ready, bloquear;
-pthread_mutex_t mutex_mediumTerm, mutexToReady;
-// pthread_mutex_t mutex_cupos;
-pthread_cond_t cond_mediumTerm;
-int server_socket;
 struct timespec now;
 
+t_pQueue *new_q, *ready_q, *memory_init_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
+
+pthread_t readyToExecThread,
+	cpu_dispatch_t, memory_t, io_t, exit_process_t;
+
+sem_t sem_multiprogram, any_ready, any_blocked, new_for_ready, suspended_for_ready, ready_for_exec, cpu_free, pcb_table_ready;
+
+pthread_mutex_t mutexToReady;
+
+int server_socket;
 int cpu_interrupt_socket;
 int cpu_dispatch_socket;
 int memory_socket;
-
-int pid = 0;
-t_log *logger;
 
 void *header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
@@ -63,6 +63,8 @@ void put_to_ready(t_pcb *pcb);
 void *cpu_dispatch_listener(void *args);
 void *memory_listener(void *args);
 void *io_listener();
+
+bool handle_interruption(t_packet *petition, int cpu_socket);
 
 void *suspend_process(void *args);
 void *exit_process(void *args);
