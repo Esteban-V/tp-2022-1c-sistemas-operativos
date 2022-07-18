@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include "semaphore.h"
 
-typedef struct memoryConfig
+typedef struct t_memoryConfig
 {
     t_config *config;
     char *listenPort;
@@ -83,7 +83,7 @@ typedef struct pageMetadata
 } t_pageMetadata;
 
 t_memory *memory;
-t_memoryConfig *memoryConfig;
+t_memoryConfig *config;
 t_log *logger;
 t_mem_metadata *metadata;
 uint32_t clock_m_counter;
@@ -91,7 +91,7 @@ uint32_t clock_counter;
 
 uint32_t getFreeFrame(uint32_t start, uint32_t end);
 t_memoryConfig *getMemoryConfig(char *path);
-void destroyMemoryConfig(t_memoryConfig *memoryConfig);
+void destroyMemoryConfig(t_memoryConfig *config);
 sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut;
 

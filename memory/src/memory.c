@@ -4,12 +4,12 @@ int main()
 {
 	// Initialize logger
 	logger = log_create("./cfg/memory-final.log", "MEMORY", 1, LOG_LEVEL_TRACE);
-	memoryConfig = getMemoryConfig("./cfg/memory.config");
+	config = getMemoryConfig("./cfg/memory.config");
 
 	metadata = metadata_init();
 
 	// Creacion de server
-	server_socket = create_server(memoryConfig->listenPort);
+	server_socket = create_server(config->listenPort);
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Memory server ready");
@@ -21,7 +21,7 @@ int main()
 	swap_files = list_create();
 	/* hay que ver como determinar swapfiles y filesize
 	 agregar donde se swappean
-	 list_add(swap_files, swapFile_create(memoryConfig->swap_files[i], memoryConfig->fileSize, memoryConfig->pageSize));
+	 list_add(swap_files, swapFile_create(config->swap_files[i], config->fileSize, config->pageSize));
 	 */
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
@@ -29,11 +29,11 @@ int main()
 	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
 
-	if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK"))
+	if (!strcmp(config->replaceAlgorithm, "CLOCK"))
 	{
 		replace_algo = clock_alg;
 	}
-	else if (!strcmp(memoryConfig->replaceAlgorithm, "CLOCK-M"))
+	else if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
 	{
 		replace_algo = clock_m_alg;
 	}
@@ -47,6 +47,8 @@ int main()
 
 	clock_m_counter = 0;
 
+	cpu_handshake_listener();
+
 	while (1)
 	{
 		server_listen(server_socket, header_handler);
@@ -59,8 +61,7 @@ bool (*memory_handlers[8])(t_packet *petition, int socket) =
 	{
 		// PROCESS_NEW
 		process_new,
-		// MEM_HANDSHAKE
-		cpu_handshake,
+		NULL,
 		// LVL1_TABLE
 		access_lvl1_table,
 		// LVL2_TABLE
@@ -89,10 +90,10 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
-		usleep(memoryConfig->memoryDelay);
+		usleep(config->memoryDelay);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Accessed");
+		log_info(logger, "Memory accessed");
 		pthread_mutex_unlock(&mutex_log);
 
 		memory_access_counter++;
@@ -103,15 +104,29 @@ void *header_handler(void *_client_socket)
 	return 0;
 }
 
-bool cpu_handshake(t_packet *petition, int cpu_socket)
+void cpu_handshake_listener()
+{
+	int client_socket = accept_client(server_socket);
+	bool serve = true;
+	while (serve)
+	{
+		uint8_t header = socket_receive_header(client_socket);
+		if (header == MEM_HANDSHAKE)
+		{
+			serve = cpu_handshake(client_socket);
+		}
+	}
+}
+
+bool cpu_handshake(int cpu_socket)
 {
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Received handshake petition from CPU");
 	pthread_mutex_unlock(&mutex_log);
 
 	t_packet *mem_data = create_packet(TABLE_INFO_TO_CPU, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(mem_data->payload, memoryConfig->pageSize);
-	stream_add_UINT32(mem_data->payload, memoryConfig->entriesPerTable);
+	stream_add_UINT32(mem_data->payload, config->pageSize);
+	stream_add_UINT32(mem_data->payload, config->entriesPerTable);
 	socket_send_packet(cpu_socket, mem_data);
 	packet_destroy(mem_data);
 
@@ -119,7 +134,7 @@ bool cpu_handshake(t_packet *petition, int cpu_socket)
 	log_info(logger, "Relayed relevant memory data to CPU");
 	pthread_mutex_unlock(&mutex_log);
 
-	return 0;
+	return false;
 }
 
 bool process_new(t_packet *petition, int kernel_socket)
@@ -191,7 +206,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		{
 			pthread_mutex_lock(&metadataMut);
 			for (uint32_t i = 0;
-				 i < memoryConfig->framesInMemory / memoryConfig->framesPerProcess;
+				 i < config->framesInMemory / config->framesPerProcess;
 				 i++)
 			{
 				if (metadata->firstFrame[i] == pid)
@@ -354,7 +369,6 @@ bool memory_read(t_packet *petition, int cpu_socket)
 {
 	memory_read_counter++;
 
-
 	sem_wait(&writeRead);
 
 	uint32_t dir = stream_take_UINT32(petition->payload);
@@ -371,7 +385,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 t_memory *memory_init()
 {
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(memoryConfig->framesInMemory, sizeof(uint32_t));
+	mem->memory = calloc(config->framesInMemory, sizeof(uint32_t));
 	return mem;
 }
 
@@ -379,13 +393,13 @@ t_memory *memory_init()
 t_mem_metadata *metadata_init()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
-	metadata->entryQty = memoryConfig->framesInMemory;
+	metadata->entryQty = config->framesInMemory;
 	metadata->clock_counter = 0;
 	metadata->entries = calloc(metadata->entryQty, sizeof(t_frame_metadata));
 	metadata->clock_m_counter = NULL;
 	metadata->firstFrame = NULL;
 
-	uint32_t blockQuantity = memoryConfig->framesInMemory / memoryConfig->framesPerProcess;
+	uint32_t blockQuantity = config->framesInMemory / config->framesPerProcess;
 
 	metadata->firstFrame = calloc(blockQuantity, sizeof(uint32_t));
 	memset(metadata->firstFrame, -1, sizeof(uint32_t) * blockQuantity);
@@ -394,7 +408,7 @@ t_mem_metadata *metadata_init()
 
 	for (int i = 0; i < blockQuantity; i++)
 	{
-		metadata->clock_m_counter[i] = i * memoryConfig->framesPerProcess;
+		metadata->clock_m_counter[i] = i * config->framesPerProcess;
 	}
 
 	for (int i = 0; i < metadata->entryQty; i++)
@@ -422,20 +436,19 @@ void metadata_destroy(t_mem_metadata *meta)
 void terminate_memory(bool error)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Memory Accesses: %d", memory_access_counter);
-	log_info(logger, "Memory Reads: %d", memory_read_counter);
-	log_info(logger, "Memory Writes: %d", memory_write_counter);
+	log_info(logger, "Memory accesses: %d", memory_access_counter);
+	log_info(logger, "Memory reads: %d", memory_read_counter);
+	log_info(logger, "Memory writes: %d", memory_write_counter);
 	/*log_info(logger, "Page Assignments: %d", page_assignment_counter);
 	log_info(logger, "Page Replacements: %d", page_replacement_counter);
 	log_info(logger, "Page Faults: %d", page_faults_counter);*/
 	pthread_mutex_unlock(&mutex_log);
 
 	log_destroy(logger);
-	destroyMemoryConfig(memoryConfig);
+	destroyMemoryConfig(config);
 	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
 
 	if (server_socket)
 		close(server_socket);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
-
 }

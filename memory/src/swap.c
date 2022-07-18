@@ -157,7 +157,7 @@ int getChunk(t_swap_file *sf, uint32_t pid)
     {
         if (i >= sf->maxPages)
             return -1;
-        i += memoryConfig->framesPerProcess;
+        i += config->framesPerProcess;
     }
     if (!sf->entries[i].used)
         return -1;
@@ -169,7 +169,7 @@ int getChunk(t_swap_file *sf, uint32_t pid)
 bool hasFreeChunk(t_swap_file *sf)
 {
     bool hasFreeChunk = false;
-    for (int i = 0; i < sf->maxPages; i += memoryConfig->framesPerProcess)
+    for (int i = 0; i < sf->maxPages; i += config->framesPerProcess)
         if (!sf->entries[i].used)
         {
             hasFreeChunk = true;
@@ -182,7 +182,7 @@ bool hasFreeChunk(t_swap_file *sf)
 // Encuentra el indice de comienzo de un chunk libre (acorde a asignacion fija)
 int findFreeChunk(t_swap_file *sf)
 {
-    for (int i = 0; i < sf->maxPages; i += memoryConfig->framesPerProcess)
+    for (int i = 0; i < sf->maxPages; i += config->framesPerProcess)
     {
         if (!(sf->entries[i].used))
         {
@@ -222,7 +222,7 @@ bool fija_swap(uint32_t pid, uint32_t page, void *pageContent)
         if (base == -1)
             return false;
         int offset = swapFile_countPidPages(file, pid);
-        if (offset == memoryConfig->framesPerProcess)
+        if (offset == config->framesPerProcess)
             return false;
         assignedIndex = base + offset;
     }

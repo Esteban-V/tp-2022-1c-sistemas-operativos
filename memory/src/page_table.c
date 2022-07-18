@@ -11,9 +11,9 @@ int page_table_init(uint32_t process_size)
 	int level1_index = list_add(level1_tables, level1_table);
 
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
-	int pages_required = process_size / (memoryConfig->pageSize);
+	int pages_required = process_size / (config->pageSize);
 	// ceil = (a / b) + ((a % b) != 0)
-	int level2_pages_required = (pages_required / memoryConfig->entriesPerTable) + ((pages_required % memoryConfig->entriesPerTable) != 0);
+	int level2_pages_required = (pages_required / config->entriesPerTable) + ((pages_required % config->entriesPerTable) != 0);
 
 	// Creacion tablas nivel 2
 	for (int i = 0; i < level2_pages_required; i++)
@@ -23,7 +23,7 @@ int page_table_init(uint32_t process_size)
 		level2_table->entries = list_create();
 
 		// Creacion paginas por tabla de nivel 2
-		for (int j = 0; j < memoryConfig->entriesPerTable; j++)
+		for (int j = 0; j < config->entriesPerTable; j++)
 		{
 			// Creacion pagina
 			t_page_entry *page = malloc(sizeof(t_page_entry));
@@ -126,14 +126,14 @@ bool can_assign_frame(t_list *entries)
 	};
 
 	int cant_present = list_count_satisfying(entries, _page_is_present);
-	return cant_present < memoryConfig->framesPerProcess;
+	return cant_present < config->framesPerProcess;
 }
 
 // Retorna un puntero al comienzo del frame en memoria
 void *get_frame(uint32_t frame_number)
 {
 	void *mem_ptr = memory->memory;
-	int frame_index = frame_number * memoryConfig->pageSize;
+	int frame_index = frame_number * config->pageSize;
 	void *frame_ptr = mem_ptr + frame_index;
 	return frame_ptr;
 }
@@ -212,7 +212,7 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	pthread_mutex_unlock(&metadataMut);
 
 	pthread_mutex_lock(&memoryMut);
-	memcpy(frameAddress, from, memoryConfig->pageSize);
+	memcpy(frameAddress, from, config->pageSize);
 	pthread_mutex_unlock(&memoryMut);
 } */
 
@@ -241,10 +241,10 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 		pthread_mutex_unlock(&mutex_log);
 
 		// TODO determinar file size
-		list_add(swapFiles, swapFile_create(memoryConfig->swapPath, PID,
-											4096, memoryConfig->pageSize));
+		list_add(swapFiles, swapFile_create(config->swapPath, PID,
+											4096, config->pageSize));
 
-		usleep(memoryConfig->swapDelay);
+		usleep(config->swapDelay);
 
 		// Enviar pagina reemplazada a swap.
 		pthread_mutex_lock(&metadataMut);
@@ -326,11 +326,11 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 
 	pthread_mutex_lock(&metadataMut);
 	for (uint32_t i = 0;
-		 i < memoryConfig->framesInMemory / memoryConfig->framesPerProcess; i++)
+		 i < config->framesInMemory / config->framesPerProcess; i++)
 	{
 		if ((metadata->firstFrame)[i] == PID)
 		{
-			*start = i * memoryConfig->framesPerProcess;
+			*start = i * config->framesPerProcess;
 			break;
 		}
 	}
@@ -338,12 +338,12 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 	if (*start == -1)
 	{
 		for (uint32_t i = 0;
-			 i < memoryConfig->framesInMemory / memoryConfig->framesPerProcess;
+			 i < config->framesInMemory / config->framesPerProcess;
 			 i++)
 		{
 			if ((metadata->firstFrame)[i] == -1)
 			{
-				*start = i * memoryConfig->framesPerProcess;
+				*start = i * config->framesPerProcess;
 				(metadata->firstFrame)[i] = PID;
 				break;
 			}
@@ -362,7 +362,7 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 		return false;
 	}
 
-	*end = *start + memoryConfig->framesPerProcess;
+	*end = *start + config->framesPerProcess;
 
 	return true;
 }
@@ -380,7 +380,7 @@ uint32_t clock_m_alg(uint32_t start, uint32_t end)
 
 	pthread_mutex_lock(&metadataMut);
 	uint32_t *counter =
-		metadata->firstFrame ? &(metadata->clock_m_counter[start / memoryConfig->framesPerProcess]) : &clock_m_counter;
+		metadata->firstFrame ? &(metadata->clock_m_counter[start / config->framesPerProcess]) : &clock_m_counter;
 
 	while (1)
 	{
@@ -423,7 +423,7 @@ uint32_t clock_alg(uint32_t start, uint32_t end)
 
 	pthread_mutex_lock(&metadataMut);
 	uint32_t *counter =
-		metadata->firstFrame ? &(metadata->clock_counter[start / memoryConfig->framesPerProcess]) : &clock_counter; // TODO chequear
+		metadata->firstFrame ? &(metadata->clock_counter[start / config->framesPerProcess]) : &clock_counter; // TODO chequear
 
 	while (1)
 	{

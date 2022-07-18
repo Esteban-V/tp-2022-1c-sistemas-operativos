@@ -1,13 +1,5 @@
 #include "console.h"
 
-/*
- Listado de instrucciones:
- NO_OP: 1 parámetro
- I/O y READ: 1 parámetro
- COPY y WRITE: 2 parámetros
- EXIT: 0 parámetros
-*/
-
 int main(int argc, char **argv)
 {
 	logger = log_create("./cfg/console.log", "CONSOLE", 1, LOG_LEVEL_INFO);
@@ -15,18 +7,18 @@ int main(int argc, char **argv)
 
 	if (argc < 3)
 	{
-		log_error(logger, "Missing Parameters");
+		log_error(logger, "Missing parameters");
 		return EXIT_FAILURE;
 	}
 
 	if (argc > 3)
 	{
-		log_warning(logger, "Unused Parameters");
+		log_warning(logger, "Unused parameters");
 	}
 
 	if (!config || !config_has_property(config, "IP_KERNEL") || !config_has_property(config, "PUERTO_KERNEL"))
 	{
-		log_error(logger, "Config Failed to Load");
+		log_error(logger, "Config failed to load");
 		return EXIT_FAILURE;
 	}
 
@@ -49,7 +41,6 @@ int main(int argc, char **argv)
 
 	instruction_list = list_create();
 
-	printf("%s \n", code_path);
 	FILE *instruction_file = open_file(code_path, error_opening_file);
 	get_code(instruction_file);
 	fclose(instruction_file);
@@ -57,7 +48,7 @@ int main(int argc, char **argv)
 	if (!list_size(instruction_list))
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_warning(logger, "Provided Code has No Instructions");
+		log_warning(logger, "Provided code has no instructions");
 		pthread_mutex_unlock(&mutex_log);
 		terminate_console(true);
 	}
@@ -72,7 +63,7 @@ int main(int argc, char **argv)
 	process->size = process_size;
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Process Found ; %d Instructions",
+	log_info(logger, "Process found with %d instructions",
 			 list_size(process->instructions));
 	pthread_mutex_unlock(&mutex_log);
 
@@ -90,19 +81,15 @@ int main(int argc, char **argv)
 	if (result)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Process Exited ; Error Code: %d", result);
+		log_error(logger, "Process exited with error code: %d", result);
 		pthread_mutex_unlock(&mutex_log);
 	}
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Process Exited successfully");
+		log_info(logger, "Process exited successfully");
 		pthread_mutex_unlock(&mutex_log);
 	}
-
-	// TODO
-	// t_packet *packet = socket_receive_packet(kernel_socket);
-	// packet_destroy(packet);
 
 	terminate_console(result);
 }
@@ -153,10 +140,6 @@ void error_opening_file()
 
 void terminate_console(bool error)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Console Terminated");
-	pthread_mutex_unlock(&mutex_log);
-
 	log_destroy(logger);
 	config_destroy(config);
 	process_destroy(process);

@@ -19,7 +19,7 @@ bool catch_syscall_err(int code)
 
 int connect_to(char *server_ip, char *server_port)
 {
-	int client_socket = 0;
+	int client_socket = -1;
 
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -39,7 +39,7 @@ int connect_to(char *server_ip, char *server_port)
 					server_info->ai_addrlen)))
 	{
 		freeaddrinfo(server_info);
-		return 0;
+		return -1;
 	}
 
 	freeaddrinfo(server_info);
@@ -48,7 +48,7 @@ int connect_to(char *server_ip, char *server_port)
 
 int create_server(char *server_port)
 {
-	int server_socket = 0;
+	int server_socket = -1;
 
 	struct sockaddr_in server_address;
 

@@ -11,7 +11,7 @@ int main()
 	kernel_interrupt_socket = create_server(config->interruptListenPort);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "CPU Ready for Kernel");
+	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
 
 	sem_init(&pcb_loaded, 0, 0);
@@ -23,18 +23,18 @@ int main()
 	pthread_create(&interruptionThread, 0, listen_interruption, NULL);
 	pthread_detach(interruptionThread);
 
-	// Inicializar memory listener
-	pthread_create(&memoryThread, 0, memory_listener, NULL);
-	pthread_detach(memoryThread);
-
 	pthread_create(&execThread, 0, cpu_cycle, NULL);
 	pthread_detach(execThread);
 
 	sem_init(&interruption_counter, 0, 0);
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
+	if (memory_server_socket == -1)
+	{
+		terminate_cpu(true);
+	}
 
-	// Handshake con Memoria
+	// Handshake con memoria
 	memory_handshake();
 
 	while (1)
@@ -43,7 +43,7 @@ int main()
 	}
 
 	stats();
-	log_destroy(logger);
+	terminate_cpu(false);
 }
 
 void *listen_interruption()
@@ -51,14 +51,6 @@ void *listen_interruption()
 	while (1)
 	{
 		server_listen(kernel_interrupt_socket, header_handler);
-	}
-}
-
-void *memory_listener()
-{
-	while (1)
-	{
-		header_handler(memory_server_socket);
 	}
 }
 
@@ -81,7 +73,7 @@ void pcb_to_kernel(kernel_headers header)
 	pcb_destroy(pcb);
 }
 
-bool (*cpu_handlers[3])(t_packet *petition, int console_socket) =
+bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
 	{
 		// PCB_TO_CPU
 		receive_pcb,
@@ -242,35 +234,39 @@ void execute_exit()
 
 void memory_handshake()
 {
-	if (memory_server_socket != -1)
-	{
-		socket_send_header(memory_server_socket, MEM_HANDSHAKE);
-	}
+	socket_send_header(memory_server_socket, MEM_HANDSHAKE);
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Handshake with memory requested");
 	pthread_mutex_unlock(&mutex_log);
 
 	t_packet *mem_data = socket_receive_packet(memory_server_socket);
+	if (mem_data->header == TABLE_INFO_TO_CPU)
+	{
+		// Recibir datos
+		config->pageSize = stream_take_UINT32(mem_data->payload);
+		config->entriesPerTable = stream_take_UINT32(mem_data->payload);
 
-	// TODO? Errores
-
-	// Recibir datos
-	config->pageSize = stream_take_UINT32(mem_data->payload);
-	config->entriesPerTable = stream_take_UINT32(mem_data->payload);
-
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Handshake with Memory successful");
-	log_info(logger, "Page size: %d | Entries per table: %d", config->pageSize,
-			 config->entriesPerTable);
-	pthread_mutex_unlock(&mutex_log);
-
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Handshake with memory successful");
+		log_info(logger, "Page size: %d | Entries per table: %d", config->pageSize,
+				 config->entriesPerTable);
+		pthread_mutex_unlock(&mutex_log);
+	}
 	packet_destroy(mem_data);
 }
 
-void stats() {
+void stats()
+{
 	pthread_mutex_lock(&mutex_log);
 	/*log_info(logger, "TLB Hits: %d", tlb_hit_counter);
 	log_info(logger, "TLB Misses: %d", tlb_miss_counter);*/
 	pthread_mutex_unlock(&mutex_log);
+}
+
+void terminate_cpu(bool error)
+{
+	log_destroy(logger);
+	config_destroy(config);
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }

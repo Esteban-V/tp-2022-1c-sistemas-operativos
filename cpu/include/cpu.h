@@ -37,7 +37,6 @@ void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
 
 void *listen_interruption();
-void *memory_listener();
 
 void execute_no_op();
 void execute_io(t_list *params);

@@ -16,7 +16,7 @@ t_memoryConfig* getMemoryConfig(char* path){
     return memoryConfig;
 }
 
-void destroyMemoryConfig(t_memoryConfig* memoryConfig){
-    config_destroy(memoryConfig->config);
-    free(memoryConfig);
+void destroyMemoryConfig(t_memoryConfig* config){
+    config_destroy(config->config);
+    free(config);
 }

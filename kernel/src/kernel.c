@@ -18,7 +18,6 @@ int main(void)
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&freeCpu, 0, 1);
 
-
 	sem_init(&somethingToReadyInitialCondition, 0, 0);
 
 	sem_init(&suspended_for_ready, 0, 0);
@@ -33,7 +32,7 @@ int main(void)
 	if (kernelConfig == NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Config Failed to Load");
+		log_error(logger, "Config failed to load");
 		pthread_mutex_unlock(&mutex_log);
 
 		terminate_kernel(true);
@@ -71,13 +70,13 @@ int main(void)
 	// Creacion de server
 	server_socket = create_server(kernelConfig->listenPort);
 
-	if (!server_socket)
+	if (server_socket == -1)
 	{
 		terminate_kernel(true);
 	}
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Kernel ready for console");
+	log_info(logger, "Kernel server ready for console");
 	pthread_mutex_unlock(&mutex_log);
 
 	// Inicializar hilos
@@ -115,7 +114,6 @@ int main(void)
 
 void *cpu_dispatch_listener(void *args)
 {
-	// sem_wait(&bloquear);
 	while (1)
 	{
 		header_handler(cpu_dispatch_socket);
@@ -124,7 +122,6 @@ void *cpu_dispatch_listener(void *args)
 
 void *memory_listener(void *args)
 {
-	// sem_wait(&bloquear);
 	while (1)
 	{
 		header_handler(memory_socket);
@@ -139,21 +136,18 @@ void *exit_process(void *args)
 		pcb = pQueue_take(exitQ);
 
 		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
-				stream_add_UINT32(exit_request->payload, pcb->pid);
-				stream_add_UINT32(exit_request->payload, pcb->page_table);
+		stream_add_UINT32(exit_request->payload, pcb->pid);
+		stream_add_UINT32(exit_request->payload, pcb->page_table);
 
+		if (memory_socket != -1)
+		{
+			socket_send_packet(memory_socket, exit_request);
+		}
 
-			if (memory_socket != -1)
-			{
-				socket_send_packet(memory_socket, exit_request);
-			}
+		sem_post(&sem_multiprogram);
+		sem_post(&somethingToReadyInitialCondition);
 
-			sem_post(&sem_multiprogram);
-			sem_post(&somethingToReadyInitialCondition);
-
-			packet_destroy(exit_request);
-
-
+		packet_destroy(exit_request);
 
 		// avisar a consola que exit
 	}
@@ -186,15 +180,15 @@ void *readyToExec(void *args)
 
 void *newToReady()
 {
-		t_pcb *pcb = NULL;
-		sem_wait(&sem_multiprogram);
+	t_pcb *pcb = NULL;
+	sem_wait(&sem_multiprogram);
 
-		pcb = (t_pcb *)pQueue_take(newQ);
+	pcb = (t_pcb *)pQueue_take(newQ);
 
-		// Pide a memoria creacion de estructuras segun pid y size
-		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(pid_packet->payload, pcb->pid);
-		stream_add_UINT32(pid_packet->payload, pcb->size);
+	// Pide a memoria creacion de estructuras segun pid y size
+	t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(pid_packet->payload, pcb->pid);
+	stream_add_UINT32(pid_packet->payload, pcb->size);
 
 	pQueue_put(memoryWaitQ, (void *)pcb);
 
@@ -267,7 +261,6 @@ void *toReady(void *args)
 	}
 }
 
-
 void *io_t(void *args)
 {
 	t_pcb *pcb;
@@ -310,11 +303,9 @@ void *io_t(void *args)
 
 				// Notifica a memoria de la suspension
 
-
 				t_packet *suspendRequest = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspendRequest->payload, pcb->pid);
 				stream_add_UINT32(suspendRequest->payload, pcb->page_table);
-
 
 				if (memory_socket != -1)
 				{
@@ -350,15 +341,13 @@ void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 	sem_post(&suspended_for_ready);
 }
 
-
-
 void put_to_ready(t_pcb *pcb)
 {
 	pQueue_put(readyQ, (void *)pcb);
 	if (sortingAlgorithm == FIFO)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: FIFO ; Skipping Replan...");
+		log_info(logger, "Short Term Scheduler: FIFO --> Skipping replan...");
 		pthread_mutex_unlock(&mutex_log);
 	}
 
@@ -370,7 +359,7 @@ void put_to_ready(t_pcb *pcb)
 		}
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: SJF -> Replanning...");
+		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(readyQ, SJF_sort);
@@ -436,7 +425,6 @@ bool receive_process(t_packet *petition, int console_socket)
 		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		sem_post(&somethingToReadyInitialCondition);
-
 	}
 
 	return true;
