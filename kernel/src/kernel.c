@@ -471,8 +471,6 @@ bool exit_op(t_packet *petition, int cpu_socket)
 
 		pQueue_put(exitQ, (void *)received_pcb);
 		sem_post(&freeCpu);
-		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
-		// y recien ahi se libere el multiprogram
 		return true;
 	}
 	return false;
