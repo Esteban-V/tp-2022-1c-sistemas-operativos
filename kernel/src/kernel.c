@@ -120,8 +120,6 @@ void *io_listener()
 	int sleep_ms;
 	int remaining_io_time;
 
-	// t_packet* suspendRequest;
-
 	while (1)
 	{
 		sem_wait(&any_for_blocked);
@@ -129,49 +127,58 @@ void *io_listener()
 		{
 			pcb = pQueue_peek(blocked_q);
 
+			// Tiempo que ya estuvo bloqueado
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-
-			// Tiempo desde su bloqueo
 			time_blocked = time_to_ms(now) - pcb->blocked_time;
 
-			// Tiempo a bloquear en caso de que
+			// Tiempo que le falta estar bloqueado (restando del maximo lo que "ya estuvo")
 			sleep_ms = kernelConfig->maxBlockedTime - time_blocked;
 
 			// Tiempo que le faltaria de IO
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
 
-			// Tiempo faltante supera tiempo maximo seteado en config
 			if (remaining_io_time >= 0)
 			{
-				usleep(pcb->pending_io_time);
-				pcb = pQueue_take(blocked_q);
-				put_to_ready(pcb);
+				// Duerme por el tiempo faltante, sin superar el maximo
+				usleep(pcb->pending_io_time * 1000);
+
+				// any for ready
+				//  pcb = pQueue_take(blocked_q);
+				//  put_to_ready(pcb);
 			}
 			else
 			{
-				usleep(sleep_ms);
+				// Tiempo faltante supera tiempo maximo
+
+				// Duerme el maximo
+				usleep(sleep_ms * 1000);
 				pcb = pQueue_take(blocked_q);
+
+				// Se actualiza lo que le queda (por instruccion I/O) restandole lo que ya "durmio"
 				pcb->pending_io_time = pcb->pending_io_time - sleep_ms;
 
-				// Notifica a memoria de la suspension
-
-				t_packet *suspendRequest = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
-				stream_add_UINT32(suspendRequest->payload, pcb->pid);
-				stream_add_UINT32(suspendRequest->payload, pcb->page_table);
+				// Pide suspension a memoria
+				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
+				stream_add_UINT32(suspend_packet->payload, pcb->pid);
+				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
 
 				if (memory_socket != -1)
 				{
-					socket_send_packet(memory_socket, suspendRequest);
+					socket_send_packet(memory_socket, suspend_packet);
 				}
-				packet_destroy(suspendRequest);
+
+				packet_destroy(suspend_packet);
+
+				// Esperar suspension exitosa
+				// Se libera la memoria (sube multiprogramacion)
 				pQueue_put(suspended_block_q, pcb);
 				sem_post(&sem_multiprogram);
-				sem_post(&any_for_ready);
-				sem_post(&any_for_blocked);
+				// any for suspended!!!
+				// sem_post(&any_for_blocked);
 
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger,
-						 "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended Blocked queue",
+						 "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended blocked queue",
 						 pcb->pid);
 				pthread_mutex_unlock(&mutex_log);
 			}
@@ -179,7 +186,7 @@ void *io_listener()
 		else
 		{
 			pcb = pQueue_peek(suspended_block_q);
-			usleep(pcb->pending_io_time);
+			usleep(pcb->pending_io_time * 1000);
 			blocked_to_ready(suspended_block_q, suspended_ready_q);
 			sem_post(&any_for_ready);
 		}
@@ -426,8 +433,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 	if (!!received_pcb)
 	{
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-		received_pcb->blocked_time = time_to_ms(now);
 		pQueue_put(blocked_q, (void *)received_pcb);
+		received_pcb->blocked_time = time_to_ms(now);
 		sem_post(&cpu_free);
 		sem_post(&any_for_blocked);
 	}

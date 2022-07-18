@@ -90,7 +90,7 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
-		usleep(config->memoryDelay);
+		usleep(config->memoryDelay * 1000);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Memory accessed");

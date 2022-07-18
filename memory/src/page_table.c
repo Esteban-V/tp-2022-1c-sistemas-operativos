@@ -244,7 +244,7 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 		list_add(swapFiles, swapFile_create(config->swapPath, PID,
 											4096, config->pageSize));
 
-		usleep(config->swapDelay);
+		usleep(config->swapDelay * 1000);
 
 		// Enviar pagina reemplazada a swap.
 		pthread_mutex_lock(&metadataMut);

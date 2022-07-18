@@ -192,7 +192,7 @@ enum operation fetch_and_decode(t_instruction **instruction)
 
 void execute_no_op()
 {
-	usleep((time_t)config->delayNoOp);
+	usleep(config->delayNoOp * 1000);
 }
 
 void execute_io(t_list *params)
