@@ -142,7 +142,6 @@ void *exit_process(void *args)
 				stream_add_UINT32(exit_request->payload, pcb->pid);
 				stream_add_UINT32(exit_request->payload, pcb->page_table);
 
-			pQueue_put(memoryWaitQ, (void *)pcb);
 
 			if (memory_socket != -1)
 			{
