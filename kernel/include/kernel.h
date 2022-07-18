@@ -36,7 +36,7 @@ struct timespec now;
 
 t_pQueue *new_q, *ready_q, *memory_init_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
 
-pthread_t readyToExecThread,
+pthread_t any_to_ready_t, ready_to_exec_t,
 	cpu_dispatch_t, memory_t, io_t, exit_process_t;
 
 sem_t sem_multiprogram, any_for_ready, any_for_blocked, ready_for_exec, cpu_free, pcb_table_ready;

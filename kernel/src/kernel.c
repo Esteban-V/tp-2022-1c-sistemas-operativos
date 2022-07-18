@@ -66,22 +66,23 @@ int main(void)
 
 	log_info(logger, "Kernel server ready for console");
 
-	// Inicializar hilos
-	// Inicializar Planificador de largo plazo
+	// Planificador de mediano plazo
+	pthread_create(&any_to_ready_t, 0, toReady, NULL);
+	pthread_detach(any_to_ready_t);
 
-	// Inicializar Planificador de corto plazo
-	pthread_create(&readyToExecThread, 0, readyToExec, NULL);
-	pthread_detach(readyToExecThread);
+	// Planificador de corto plazo
+	pthread_create(&ready_to_exec_t, 0, readyToExec, NULL);
+	pthread_detach(ready_to_exec_t);
 
-	// Finalizador de procesos
+	// Planificador de largo plazo
 	pthread_create(&exit_process_t, 0, exit_process, NULL);
 	pthread_detach(exit_process_t);
 
-	// Inicializar cpu dispatch listener
+	// CPU dispatch listener
 	pthread_create(&cpu_dispatch_t, 0, cpu_dispatch_listener, NULL);
 	pthread_detach(cpu_dispatch_t);
 
-	// Inicializar memory listener
+	// Memory listener
 	pthread_create(&memory_t, 0, memory_listener, NULL);
 	pthread_detach(memory_t);
 
@@ -242,7 +243,7 @@ void *exit_process(void *args)
 	}
 }
 
-void *readyToExec(void *args)
+void *readyToExec()
 {
 	t_pcb *pcb = NULL;
 	while (1)
