@@ -20,7 +20,7 @@ int main(void)
 
 	sem_init(&somethingToReadyInitialCondition, 0, 0);
 
-	sem_init(&new_for_ready, 0, 0);
+
 
 	sem_init(&suspended_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
@@ -169,15 +169,15 @@ void *readyToExec(void *args)
 
 void *newToReady()
 {
-	t_pcb *pcb = NULL;
-	sem_wait(&sem_multiprogram);
+		t_pcb *pcb = NULL;
+		sem_wait(&sem_multiprogram);
 
-	pcb = (t_pcb *)pQueue_take(newQ);
+		pcb = (t_pcb *)pQueue_take(newQ);
 
-	// Pide a memoria creacion de estructuras segun pid y size
-	t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(pid_packet->payload, pcb->pid);
-	stream_add_UINT32(pid_packet->payload, pcb->size);
+		// Pide a memoria creacion de estructuras segun pid y size
+		t_packet *pid_packet = create_packet(PROCESS_NEW, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(pid_packet->payload, pcb->pid);
+		stream_add_UINT32(pid_packet->payload, pcb->size);
 
 	pQueue_put(memoryWaitQ, (void *)pcb);
 
@@ -250,6 +250,7 @@ void *toReady(void *args)
 	}
 }
 
+
 void *io_t(void *args)
 {
 	t_pcb *pcb;
@@ -314,6 +315,7 @@ void *io_t(void *args)
 			pcb = pQueue_peek(suspended_blockQ);
 			usleep(pcb->pending_io_time);
 			blocked_to_ready(suspended_blockQ, suspended_readyQ);
+			sem_post(&somethingToReadyInitialCondition);
 		}
 	}
 }
@@ -324,6 +326,8 @@ void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 	pQueue_put(destination, pcb);
 	sem_post(&suspended_for_ready);
 }
+
+
 
 void put_to_ready(t_pcb *pcb)
 {
@@ -409,7 +413,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		log_info(logger, "PID #%d --> New queue", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		sem_post(&somethingToReadyInitialCondition);
-		sem_post(&new_for_ready); // se saca
+
 	}
 
 	return true;
@@ -447,7 +451,7 @@ bool exit_op(t_packet *petition, int cpu_socket)
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
 		// y recien ahi se libere el multiprogram
 		sem_post(&sem_multiprogram);
-		sem_wait(&somethingToReadyInitialCondition);
+		sem_post(&somethingToReadyInitialCondition);
 
 		socket_send_header(received_pcb->client_socket, PROCESS_OK);
 		return true;
@@ -471,7 +475,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
 		// y recien ahi se libere el multiprogram
 		sem_post(&sem_multiprogram);
-		sem_wait(&somethingToReadyInitialCondition);
+		sem_post(&somethingToReadyInitialCondition);
 	}
 
 	return true;
