@@ -52,12 +52,6 @@ typedef struct t_ptbr {
 	t_list *entries; // t_page_entry
 } t_ptbr;
 
-void* readyToExec();
-void* toReady();
-void* thread_longTermFunc();
-
-// int cupos_libres;
-
 float time_to_ms(struct timespec time);
 bool SJF_sort(void *elem1, void *elem2);
 

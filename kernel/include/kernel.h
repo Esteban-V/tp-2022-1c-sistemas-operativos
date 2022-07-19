@@ -32,17 +32,14 @@ enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 int pid = 0;
 t_log *logger;
 
-struct timespec now;
+struct timespec now, toExec, fromExec;
 
 t_pQueue *new_q, *ready_q, *memory_init_q, *memory_exit_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
 
 pthread_t any_to_ready_t, ready_to_exec_t,
 	cpu_dispatch_t, memory_t, io_t, exit_process_t;
 
-sem_t sem_multiprogram, interrupt_ready,any_for_ready, process_for_IO, ready_for_exec, cpu_free, pcb_table_ready;
-struct timespec toExec;
-struct timespec fromExec;
-pthread_mutex_t mutexToReady,planning;
+sem_t sem_multiprogram, interrupt_ready, any_for_ready, process_for_IO, ready_for_exec, cpu_free, pcb_table_ready;
 
 int server_socket;
 int cpu_interrupt_socket;
@@ -51,7 +48,7 @@ int memory_socket;
 
 void *header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
-bool receive_table_index(t_packet *petition, int mem_socket);
+bool table_index_success(t_packet *petition, int mem_socket);
 bool exit_process_success(t_packet *petition, int mem_socket);
 
 bool exit_op(t_packet *petition, int console_socket);
@@ -61,6 +58,9 @@ void *new_to_ready();
 void *suspended_to_ready();
 void blocked_to_ready(t_pQueue *origin, t_pQueue *destination);
 void put_to_ready(t_pcb *pcb);
+
+void *to_exec();
+void *to_ready();
 
 void *cpu_dispatch_listener(void *args);
 void *memory_listener(void *args);

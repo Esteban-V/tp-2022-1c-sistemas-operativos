@@ -11,9 +11,6 @@
 t_list *level1_tables;
 t_list *level2_tables;
 
-pthread_mutex_t pageTablesMut;
-t_dictionary *pageTables;
-
 typedef struct t_page_entry
 {
     // A que frame (index) de la memoria (de void*) corresponde

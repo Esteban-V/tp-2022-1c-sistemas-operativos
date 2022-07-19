@@ -88,63 +88,69 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 	else
 	{
 
-		t_page_entry *pointerIterator = NULL;//dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
-		t_page_entry *actualPointer =  NULL;//dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
-//me falta bastante
-		for(int i=0;i<config->entriesPerTable;i++){
+		t_page_entry *pointerIterator = NULL; // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
+		t_page_entry *actualPointer = NULL;	  // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
+		// me falta bastante
+		for (int i = 0; i < config->entriesPerTable; i++)
+		{
 
-			if(pointerIterator==NULL){
-				//asignFrame(entry);//falta implementar
-				pointerIterator=entry;
-				if(i+1==config->entriesPerTable){
-					entry->next=actualPointer;
-					actualPointer->previous=entry;
+			if (pointerIterator == NULL)
+			{
+				// asignFrame(entry);//falta implementar
+				pointerIterator = entry;
+				if (i + 1 == config->entriesPerTable)
+				{
+					entry->next = actualPointer;
+					actualPointer->previous = entry;
 				}
 				return entry->frame;
 			}
-			entry->previous=pointerIterator;
-			pointerIterator=pointerIterator->next;
+			entry->previous = pointerIterator;
+			pointerIterator = pointerIterator->next;
 		}
 
-		while(1){
-			if(!strcmp(config->replaceAlgorithm, "CLOCK-M")){
-						for(int j=0;j<config->entriesPerTable;j++){
-									if((actualPointer->used==0) && (actualPointer->modified==0)){
-										//swapearrrrrrrrrr
-										actualPointer->present=0;
-										entry->frame=actualPointer->frame;
-										actualPointer->next->previous=entry;
-										actualPointer->previous->next=entry;
-										entry->present=1;
-										entry->next=actualPointer->next;
-										entry->previous=actualPointer->previous;
-										return entry->frame;
-										}
-									actualPointer=actualPointer->next;
-									}
-							}
-						for(int k=0;k<config->entriesPerTable;k++){
-							if(actualPointer->used==0){
-								//swapearrrrrrrrrr
-								actualPointer->present=0;
-								entry->frame=actualPointer->frame;
-								actualPointer->next->previous=entry;
-								actualPointer->previous->next=entry;
-								entry->present=1;
-								entry->next=actualPointer->next;
-								entry->previous=actualPointer->previous;
-								return entry->frame;
-								}
-							actualPointer->used=0;
-							actualPointer=actualPointer->next;
-							}
+		while (1)
+		{
+			if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
+			{
+				for (int j = 0; j < config->entriesPerTable; j++)
+				{
+					if ((actualPointer->used == 0) && (actualPointer->modified == 0))
+					{
+						// swapearrrrrrrrrr
+						actualPointer->present = 0;
+						entry->frame = actualPointer->frame;
+						actualPointer->next->previous = entry;
+						actualPointer->previous->next = entry;
+						entry->present = 1;
+						entry->next = actualPointer->next;
+						entry->previous = actualPointer->previous;
+						return entry->frame;
+					}
+					actualPointer = actualPointer->next;
+				}
+			}
+			for (int k = 0; k < config->entriesPerTable; k++)
+			{
+				if (actualPointer->used == 0)
+				{
+					// swapearrrrrrrrrr
+					actualPointer->present = 0;
+					entry->frame = actualPointer->frame;
+					actualPointer->next->previous = entry;
+					actualPointer->previous->next = entry;
+					entry->present = 1;
+					entry->next = actualPointer->next;
+					entry->previous = actualPointer->previous;
+					return entry->frame;
+				}
+				actualPointer->used = 0;
+				actualPointer = actualPointer->next;
+			}
 		}
 	}
 	return frame;
 }
-
-
-
 
 bool can_assign_frame(t_list *entries)
 {
@@ -189,9 +195,7 @@ uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
 	entry->frame = newFrame;
 	entry->present = false;
 
-	pthread_mutex_lock(&pageTablesMut);
 	list_add(table->entries, entry);
-	pthread_mutex_unlock(&pageTablesMut);
 
 	return list_size(table->entries);
 }
@@ -253,9 +257,9 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	// Chequear que se haya podido traer
 	if (pageFromSwap == NULL)
 	{
-		pthread_mutex_lock(&mutex_log);
+
 		log_error(logger, "Cannot Load Page #%u ; Process #%u", page, PID);
-		pthread_mutex_unlock(&mutex_log);
+
 		return -1;
 	}
 
@@ -264,9 +268,9 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	if (!isFree(victim))
 	{
 
-		pthread_mutex_lock(&mutex_log);
+
 		log_info(logger, "SWAP");
-		pthread_mutex_unlock(&mutex_log);
+
 
 		// TODO determinar file size
 		list_add(swapFiles, swapFile_create(config->swapPath, PID,
@@ -289,38 +293,34 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 		pthread_mutex_unlock(&memoryMut);
 
 		// Modificar tabla de paginas del proceso cuya pagina fue reemplazada.
-		pthread_mutex_lock(&pageTablesMut);
 		t_ptbr2 *ptReemplazado = getPageTable2(victimPID, pt1_entry,
 											   pageTables);
 		((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->present =
 			false; // TODO cambiar victim page por sus entries
 		((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->frame =
 			-1;
-		pthread_mutex_unlock(&pageTablesMut);
 
-		pthread_mutex_lock(&mutex_log);
+
 		log_info(logger,
 				 "Replacement: Frame #%u: ; Page #%u ; Process #%u ;; Victim Page #%u ; Process #%u.",
 				 victim, page, PID, victimPage, victimPID);
-		pthread_mutex_unlock(&mutex_log);
+
 	}
 	else
 	{
-		pthread_mutex_lock(&mutex_log);
+
 		log_info(logger, "Assignment: Frame #%u: ; Page #%u ; Process #%u.",
 				 victim, page, PID);
-		pthread_mutex_unlock(&mutex_log);
+
 	}
 
 	// Escribir pagina traida de swap a memoria.
 	writeFrame(memory, victim, pageFromSwap);
 	free(pageFromSwap);
 	// Modificar tabla de paginas del proceso cuya pagina entra a memoria.
-	pthread_mutex_lock(&pageTablesMut);
 	t_ptbr2 *ptReemplaza = getPageTable2(PID, pt1_entry, pageTables);
 	((t_page_entry *)list_get(ptReemplaza->entries, pt2_entry))->present = true;
 	((t_page_entry *)list_get(ptReemplaza->entries, pt2_entry))->frame = victim;
-	pthread_mutex_unlock(&pageTablesMut);
 
 	// addTLBEntry(PID, page, victim); TODO lo hace CPU, supongo que en este momento debemos pasarle la data
 
@@ -382,10 +382,10 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 
 	if (*start == -1)
 	{
-		pthread_mutex_lock(&mutex_log);
+
 		log_debug(logger, "Could Not Find Available Frames for Process #%u.",
 				  PID);
-		pthread_mutex_unlock(&mutex_log);
+
 		*end = -1;
 		return false;
 	}

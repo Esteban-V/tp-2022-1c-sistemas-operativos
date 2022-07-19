@@ -27,8 +27,6 @@ int main()
 
 	memory = memory_init();
 	metadata->clock_m_counter = 0;
-	pageTables = dictionary_create();
-
 
 	clock_m_counter = 0;
 
@@ -441,7 +439,6 @@ void terminate_memory(bool error)
 
 	log_destroy(logger);
 	destroyMemoryConfig(config);
-	dictionary_destroy_and_destroy_elements(pageTables, page_table_destroy);
 
 	if (server_socket)
 		close(server_socket);
