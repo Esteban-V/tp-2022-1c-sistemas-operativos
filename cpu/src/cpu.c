@@ -112,7 +112,7 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 	if (!!pcb)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Received PID: #%d ; %d Instructions", pcb->pid,
+		log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
 				 list_size(pcb->instructions));
 		pthread_mutex_unlock(&mutex_log);
 		sem_post(&pcb_loaded);
@@ -145,7 +145,7 @@ void *cpu_cycle()
 	while (1)
 	{
 		sem_wait(&pcb_loaded);
-		while (pcb->program_counter < list_size(pcb->instructions))
+		while (!!pcb && pcb->program_counter < list_size(pcb->instructions))
 		{
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
@@ -197,7 +197,7 @@ void execute_no_op()
 
 void execute_io(t_list *params)
 {
-	uint32_t *time = list_get(params, 0);
+	uint32_t time = *((uint32_t *)list_get(params, 0));
 	pcb->pending_io_time = time;
 	pcb_to_kernel(IO_CALL);
 }
@@ -214,16 +214,16 @@ void execute_read(t_list *params)
 
 void execute_copy(t_list *params)
 {
-	uint32_t *l_address = list_get(params, 0);
-	uint32_t *l_value_address = list_get(params, 1);
+	uint32_t l_address = *((uint32_t *)list_get(params, 0));
+	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
 	// uint32_t value = fetch_operand(l_value_address);
 	//  write(l_address, value);
 }
 
 void execute_write(t_list *params)
 {
-	uint32_t *l_address = list_get(params, 0);
-	uint32_t *value = list_get(params, 1);
+	uint32_t l_address = *((uint32_t *)list_get(params, 0));
+	uint32_t value = *((uint32_t *)list_get(params, 1));
 	// write(l_address, value);
 }
 

@@ -46,7 +46,7 @@ int page_table_init(uint32_t process_size)
 }
 
 // Retorna la tabla de nivel 1 segun su indice en su lista global
-t_ptbr1 *get_page_table1(uint32_t pt1_index)
+t_ptbr1 *get_page_table1(int pt1_index)
 {
 	// Obtiene la tabla de nivel 1
 	t_ptbr1 *level1_table = (t_ptbr1 *)list_get(level1_tables, pt1_index);
@@ -64,7 +64,7 @@ int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index)
 }
 
 // Retorna la tabla de nivel 2 segun su indice en su lista global
-t_ptbr2 *get_page_table2(uint32_t pt2_index)
+t_ptbr2 *get_page_table2(int pt2_index)
 {
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = (t_ptbr2 *)list_get(level2_tables, pt2_index);

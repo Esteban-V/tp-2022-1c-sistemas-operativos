@@ -34,7 +34,7 @@ t_log *logger;
 
 struct timespec now;
 
-t_pQueue *new_q, *ready_q, *memory_init_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
+t_pQueue *new_q, *ready_q, *memory_init_q, *memory_exit_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
 
 pthread_t any_to_ready_t, ready_to_exec_t,
 	cpu_dispatch_t, memory_t, io_t, exit_process_t;
@@ -51,6 +51,7 @@ int memory_socket;
 void *header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
 bool receive_table_index(t_packet *petition, int mem_socket);
+bool exit_process_success(t_packet *petition, int mem_socket);
 
 bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);

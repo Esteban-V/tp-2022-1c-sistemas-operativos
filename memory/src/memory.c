@@ -92,10 +92,6 @@ void *header_handler(void *_client_socket)
 		}
 		usleep(config->memoryDelay * 1000);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory accessed");
-		pthread_mutex_unlock(&mutex_log);
-
 		memory_access_counter++;
 
 		serve = memory_handlers[packet->header](packet, client_socket);
@@ -153,6 +149,8 @@ bool process_new(t_packet *petition, int kernel_socket)
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY,
 										   INITIAL_STREAM_SIZE);
+
+		stream_add_UINT32(response->payload, pid);
 		stream_add_UINT32(response->payload, pt1_index);
 		socket_send_packet(kernel_socket, response);
 
@@ -174,7 +172,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
-		t_ptbr1 *pt1 = get_page_table1(pt1_index);
+		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
 		// Se iteran las entries (indices a tablas nivel 2) de pt1 y se ejecuta por cada una:
 		/*
@@ -219,7 +217,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-bool process_exit(t_packet *petition, int cpu_socket)
+bool process_exit(t_packet *petition, int kernel_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
@@ -230,8 +228,9 @@ bool process_exit(t_packet *petition, int cpu_socket)
 		log_info(logger, "Destroying PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
+		printf("pt1 %d\n", pt1_index);
 		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
-		t_ptbr1 *pt1 = get_page_table1(pt1_index);
+		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
 		// Se iteran las entries (indices a tablas nivel 2) de pt1 y se ejecuta por cada una:
 		/*
@@ -266,6 +265,14 @@ bool process_exit(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Destroyed PID #%d successfully", pid);
 		pthread_mutex_unlock(&mutex_log);
+
+		t_packet *response = create_packet(PROCESS_EXIT_READY,
+										   INITIAL_STREAM_SIZE);
+
+		stream_add_UINT32(response->payload, pid);
+		socket_send_packet(kernel_socket, response);
+
+		packet_destroy(response);
 	}
 
 	return true;

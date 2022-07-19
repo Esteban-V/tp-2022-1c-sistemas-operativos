@@ -5,10 +5,8 @@ void pcb_destroy(t_pcb *pcb)
 	if (pcb != NULL)
 	{
 		list_destroy(pcb->instructions);
-		free(pcb->instructions);
 		free(pcb);
 	}
-	pcb = NULL;
 }
 
 t_pcb *create_pcb()
@@ -66,6 +64,18 @@ t_pcb *create_pcb()
 		return NULL;
 	}
 
+	pcb->page_table = malloc(sizeof(uint32_t));
+	if (pcb->page_table == NULL)
+	{
+		free(pcb->pid);
+		free(pcb->size);
+		free(pcb->client_socket);
+		free(pcb->instructions);
+		free(pcb->program_counter);
+		free(pcb);
+		return NULL;
+	}
+
 	pcb->burst_estimation = malloc(sizeof(uint32_t));
 	if (pcb->burst_estimation == NULL)
 	{
@@ -74,6 +84,7 @@ t_pcb *create_pcb()
 		free(pcb->client_socket);
 		free(pcb->instructions);
 		free(pcb->program_counter);
+		free(pcb->page_table);
 		free(pcb);
 		return NULL;
 	}
@@ -86,6 +97,7 @@ t_pcb *create_pcb()
 		free(pcb->client_socket);
 		free(pcb->instructions);
 		free(pcb->program_counter);
+		free(pcb->page_table);
 		free(pcb->burst_estimation);
 		free(pcb);
 		return NULL;
@@ -99,6 +111,7 @@ t_pcb *create_pcb()
 		free(pcb->client_socket);
 		free(pcb->instructions);
 		free(pcb->program_counter);
+		free(pcb->page_table);
 		free(pcb->burst_estimation);
 		free(pcb->blocked_time);
 		free(pcb);
@@ -126,10 +139,17 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb)
 	uint32_t *program_counter = &(pcb->program_counter);
 	stream_take_UINT32P(packet->payload, &program_counter);
 
-	// paginas
+	uint32_t *page_table = &(pcb->page_table);
+	stream_take_UINT32P(packet->payload, &page_table);
 
 	uint32_t *burst_estimation = &(pcb->burst_estimation);
 	stream_take_UINT32P(packet->payload, &burst_estimation);
+
+	uint32_t *blocked_time = &(pcb->blocked_time);
+	stream_take_UINT32P(packet->payload, &blocked_time);
+
+	uint32_t *pending_io_time = &(pcb->pending_io_time);
+	stream_take_UINT32P(packet->payload, &pending_io_time);
 }
 
 void stream_add_pcb(t_packet *packet, t_pcb *pcb)
@@ -138,10 +158,11 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb)
 	stream_add_UINT32(packet->payload, pcb->size);
 	stream_add_UINT32(packet->payload, pcb->client_socket);
 
-	// ESTO ROMPERIA PORQUE LAS INSTRUCTIONS SE COPIAN MAL
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);
 
 	stream_add_UINT32(packet->payload, pcb->program_counter);
-	// paginas
+	stream_add_UINT32(packet->payload, pcb->page_table);
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
+	stream_add_UINT32(packet->payload, pcb->blocked_time);
+	stream_add_UINT32(packet->payload, pcb->pending_io_time);
 }

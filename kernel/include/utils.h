@@ -52,7 +52,8 @@ typedef struct t_ptbr {
 	t_list *entries; // t_page_entry
 } t_ptbr;
 
-void* readyToExec(void *args);
+void* readyToExec();
+void* toReady();
 void* thread_longTermFunc();
 
 // int cupos_libres;
