@@ -12,7 +12,7 @@ t_kernelConfig *getKernelConfig(char *path)
 	kernelConfig->listenPort = config_get_string_value(kernelConfig->config, "PUERTO_ESCUCHA");
 	kernelConfig->schedulerAlgorithm = config_get_string_value(kernelConfig->config, "ALGORITMO_PLANIFICACION");
 	kernelConfig->initialEstimate = config_get_int_value(kernelConfig->config, "ESTIMACION_INICIAL");
-	kernelConfig->alpha = config_get_string_value(kernelConfig->config, "ALFA");
+	kernelConfig->alpha = config_get_double_value(kernelConfig->config, "ALFA");
 	kernelConfig->multiprogrammingLevel = config_get_int_value(kernelConfig->config, "GRADO_MULTIPROGRAMACION");
 	kernelConfig->maxBlockedTime = config_get_int_value(kernelConfig->config, "TIEMPO_MAXIMO_BLOQUEADO");
 	return kernelConfig;

@@ -169,7 +169,7 @@ void *io_listener()
 
 				// Pide suspension a memoria
 				//comento lo de memoria para probar los suspendidos
-				/*
+
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspend_packet->payload, pcb->pid);
 				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
@@ -180,7 +180,7 @@ void *io_listener()
 				}
 
 				packet_destroy(suspend_packet);
-*/
+
 				// Esperar suspension exitosa
 				// Se libera la memoria (sube multiprogramacion)
 				pthread_mutex_lock(&mutex_log);

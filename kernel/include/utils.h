@@ -32,7 +32,7 @@ typedef struct kernelConfig {
 	char *listenPort;
 	char *schedulerAlgorithm;
 	uint32_t initialEstimate;
-	char *alpha;
+	double alpha;
 	int multiprogrammingLevel;
 	int maxBlockedTime;
 } t_kernelConfig;
