@@ -128,7 +128,7 @@ bool process_new(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		uint32_t pt1_index = (uint32_t)page_table_init(size);
-		dictionary_put(clock_pointers_dictionary,string_itoa(pid),NULL);
+		//dictionary_put(clock_pointers_dictionary, string_itoa(pid), NULL);
 
 		// char* swap_filename = swap_init(pid);
 
@@ -307,7 +307,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		log_info(logger, "Getting frame number");
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index,pid);
+		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index, pid);
 
 		t_packet *response = create_packet(FRAME_TO_CPU,
 										   INITIAL_STREAM_SIZE);
