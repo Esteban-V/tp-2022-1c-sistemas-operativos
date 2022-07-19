@@ -213,7 +213,6 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		log_info(logger, "Destroying PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		printf("pt1 %d\n", pt1_index);
 		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 

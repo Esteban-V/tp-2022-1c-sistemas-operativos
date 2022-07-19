@@ -499,9 +499,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 {
 	// No borrar printf
 	printf("Process requested I/O call\n");
-	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Process requested I/O call");
-	pthread_mutex_unlock(&mutex_log);
 
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
