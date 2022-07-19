@@ -72,7 +72,7 @@ t_ptbr2 *get_page_table2(int pt2_index)
 }
 
 // Retorna el numero de frame en memoria (cargandola previamente si fuese necesario)
-int get_frame_number(uint32_t pt2_index, uint32_t entry_index)
+int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 {
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = (t_ptbr2 *)list_get(level2_tables, pt2_index);
@@ -83,40 +83,68 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index)
 	if (entry->present)
 	{
 		frame = entry->frame;
+		return frame;
 	}
 	else
 	{
-		if (can_assign_frame(level2_table->entries))
-		{
-			// - Cargar la pagina en un frame (cual?)
 
-			// TODO: Definir de donde se elije el frame a asignarle
+		t_page_entry *pointerIterator = NULL;//dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
+		t_page_entry *actualPointer =  NULL;//dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
+//me falta bastante
+		for(int i=0;i<config->entriesPerTable;i++){
 
-			// Opcion 1
-			// Tener una pool de frames por proceso ("elegidas" en process_new/page_table_init)
-			// y almacenar cual de esas esta libre
-			// Se elije la primera libre
-			/// Mirar implementacion de fija_memoria (es medio bardo, nos la complica)
-
-			// Opcion 2
-			// Tener un bitmap de frames libres que se actualiza ttodo el tiempo
-			// Se elije de aquellos frames libres "globales", es diferente cada vez
-			// y en diferentes momentos ese frame esta reservado por diferentes procesos sin casarse a ninguno
-
-			// RTA: no deberia ser la primera ya que tenemos asig fija y reemp local?
-		}
-		else
-		{
-			// - Identificar que pagina present==true reemplazar segun algoritmo
+			if(pointerIterator==NULL){
+				//asignFrame(entry);//falta implementar
+				pointerIterator=entry;
+				if(i+1==config->entriesPerTable){
+					entry->next=actualPointer;
+					actualPointer->previous=entry;
+				}
+				return entry->frame;
+			}
+			entry->previous=pointerIterator;
+			pointerIterator=pointerIterator->next;
 		}
 
-		// - Actualizar datos de la entry de su tabla nivel 2 (y de la reemplazada si la hubo)
-		// - Obtener frame en donde se guardo la pagina pedida (luego de la carga o reemplazo)
+		while(1){
+			if(!strcmp(config->replaceAlgorithm, "CLOCK-M")){
+						for(int j=0;j<config->entriesPerTable;j++){
+									if((actualPointer->used==0) && (actualPointer->modified==0)){
+										//swapearrrrrrrrrr
+										actualPointer->present=0;
+										entry->frame=actualPointer->frame;
+										actualPointer->next->previous=entry;
+										actualPointer->previous->next=entry;
+										entry->present=1;
+										entry->next=actualPointer->next;
+										entry->previous=actualPointer->previous;
+										return entry->frame;
+										}
+									actualPointer=actualPointer->next;
+									}
+							}
+						for(int k=0;k<config->entriesPerTable;k++){
+							if(actualPointer->used==0){
+								//swapearrrrrrrrrr
+								actualPointer->present=0;
+								entry->frame=actualPointer->frame;
+								actualPointer->next->previous=entry;
+								actualPointer->previous->next=entry;
+								entry->present=1;
+								entry->next=actualPointer->next;
+								entry->previous=actualPointer->previous;
+								return entry->frame;
+								}
+							actualPointer->used=0;
+							actualPointer=actualPointer->next;
+							}
+		}
 	}
-
-	// Retorna que frame le corresponde, ahora que ya esta cargada en memoria
 	return frame;
 }
+
+
+
 
 bool can_assign_frame(t_list *entries)
 {
@@ -215,8 +243,8 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	memcpy(frameAddress, from, config->pageSize);
 	pthread_mutex_unlock(&memoryMut);
 } */
-
-/* uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
+/*
+ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
 				 uint32_t pt2_entry, uint32_t page)
 {
 	// Traer pagina pedida de swap.
@@ -366,78 +394,4 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 
 	return true;
 }
- */
-uint32_t clock_m_alg(uint32_t start, uint32_t end)
-{
-	uint32_t frame = getFreeFrame(start, end);
-
-	if (frame != -1)
-	{
-		return frame;
-	}
-
-	uint32_t total = end - start;
-
-	pthread_mutex_lock(&metadataMut);
-	uint32_t *counter =
-		metadata->firstFrame ? &(metadata->clock_m_counter[start / config->framesPerProcess]) : &clock_m_counter;
-
-	while (1)
-	{
-		for (uint32_t i = 0; i < total; i++)
-		{
-			if (!metadata->entries[*counter].u && !metadata->entries[*counter].modified)
-			{
-				pthread_mutex_unlock(&metadataMut);
-				frame = *counter;
-				*counter = start + ((*counter + 1) % total);
-				return frame;
-			}
-			*counter = start + ((*counter + 1) % total);
-		}
-		for (uint32_t i = 0; i < total; i++)
-		{
-			if (!metadata->entries[*counter].u)
-			{
-				pthread_mutex_unlock(&metadataMut);
-				frame = *counter;
-				*counter = start + ((*counter + 1) % total);
-				return frame;
-			}
-			metadata->entries[*counter].u = false;
-			*counter = start + ((*counter + 1) % total);
-		}
-	}
-}
-
-uint32_t clock_alg(uint32_t start, uint32_t end)
-{
-	uint32_t frame = getFreeFrame(start, end);
-
-	if (frame != -1)
-	{
-		return frame;
-	}
-
-	uint32_t total = end - start;
-
-	pthread_mutex_lock(&metadataMut);
-	uint32_t *counter =
-		metadata->firstFrame ? &(metadata->clock_counter[start / config->framesPerProcess]) : &clock_counter; // TODO chequear
-
-	while (1)
-	{
-		for (uint32_t i = 0; i < total; i++)
-		{
-			if (!metadata->entries[*counter].u)
-			{
-				pthread_mutex_unlock(&metadataMut);
-				frame = *counter;
-				*counter = start + ((*counter + 1) % total);
-				return frame;
-			}
-			metadata->entries[*counter].u = false;
-			*counter = start + ((*counter + 1) % total);
-		}
-	}
-}
+*/

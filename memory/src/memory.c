@@ -29,21 +29,6 @@ int main()
 	metadata->clock_m_counter = 0;
 	pageTables = dictionary_create();
 
-	if (!strcmp(config->replaceAlgorithm, "CLOCK"))
-	{
-		replace_algo = clock_alg;
-	}
-	else if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
-	{
-		replace_algo = clock_m_alg;
-	}
-	else
-	{
-		pthread_mutex_lock(&mutex_log);
-		log_warning(logger,
-					"Wrong replacing algorithm set in config --> Using CLOCK");
-		pthread_mutex_unlock(&mutex_log);
-	}
 
 	clock_m_counter = 0;
 
@@ -145,6 +130,8 @@ bool process_new(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		uint32_t pt1_index = (uint32_t)page_table_init(size);
+		dictionary_put(clock_pointers_dictionary,string_itoa(pid),NULL);
+
 		// char* swap_filename = swap_init(pid);
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY,
@@ -314,6 +301,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 	// page_number = floor(instruction_param_address / config->pageSize)
 	// entry_index =  page_number % config->entriesPerTable
 	uint32_t entry_index = stream_take_UINT32(petition->payload);
+	uint32_t pid = stream_take_UINT32(petition->payload);
 
 	if (pt2_index != -1)
 	{
@@ -321,7 +309,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		log_info(logger, "Getting frame number");
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index);
+		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index,pid);
 
 		t_packet *response = create_packet(FRAME_TO_CPU,
 										   INITIAL_STREAM_SIZE);

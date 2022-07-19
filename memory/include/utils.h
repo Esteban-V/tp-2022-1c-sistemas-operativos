@@ -59,7 +59,7 @@ typedef struct t_mem_metadata
     uint32_t entryQty;
     uint32_t *firstFrame; // Array de PIDS donde el indice es el numero de "bloque" asignado en asig fija.
     uint32_t *clock_m_counter;
-    uint32_t *clock_counter;
+    uint32_t clock_counter;
     t_frame_metadata *entries;
 } t_mem_metadata;
 

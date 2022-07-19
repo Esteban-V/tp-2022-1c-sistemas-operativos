@@ -15,6 +15,7 @@ bool process_suspend(t_packet *petition, int cpu_socket);
 bool cpu_handshake(int cpu_socket);
 void *header_handler(void *_client_socket);
 
+t_dictionary *clock_pointers_dictionary;
 int server_socket;
 t_list *swap_files;
 int memory_access_counter = 0;

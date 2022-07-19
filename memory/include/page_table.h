@@ -24,6 +24,10 @@ typedef struct t_page_entry
     bool used;
     // Bit de modificado
     bool modified;
+
+    struct t_page_entry *next;
+
+    struct t_page_entry *previous;
 } t_page_entry;
 
 typedef struct t_ptbr2
@@ -47,7 +51,7 @@ t_ptbr1 *get_page_table1(int pt1_index);
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
 t_ptbr2 *get_page_table2(int pt2_index);
 
-int get_frame_number(uint32_t pt2_index, uint32_t entry_index);
+int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid);
 void *get_frame(uint32_t frame_number);
 uint32_t get_frame_value(void *frame_ptr, uint32_t offset);
 
