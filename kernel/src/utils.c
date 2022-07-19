@@ -33,5 +33,5 @@ bool SJF_sort(void *elem1, void *elem2)
 {
 	t_pcb *pcb1 = (t_pcb *)elem1;
 	t_pcb *pcb2 = (t_pcb *)elem2;
-	return (pcb1->burst_estimation - pcb1->program_counter) <= (pcb2->burst_estimation - pcb2->program_counter);
+	return (pcb1->burst_estimation) <= (pcb2->burst_estimation);
 }

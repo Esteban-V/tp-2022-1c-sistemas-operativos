@@ -17,14 +17,15 @@ int main(void)
 
 	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
 	sem_init(&cpu_free, 0, 1);
-
-	sem_init(&any_for_blocked, 0, 0);
+	sem_init(&interrupt_ready, 0, 0);
+	sem_init(&process_for_IO, 0, 0);
 	sem_init(&any_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 
 	sem_init(&pcb_table_ready, 0, 0);
 
 	pthread_mutex_init(&mutexToReady, NULL);
+	pthread_mutex_init(&planning,NULL);
 
 	if (kernelConfig == NULL)
 	{
@@ -123,7 +124,7 @@ void *io_listener()
 
 	while (1)
 	{
-		sem_wait(&any_for_blocked);
+		sem_wait(&process_for_IO);
 		if (!pQueue_isEmpty(blocked_q))
 		{
 			pcb = pQueue_take(blocked_q);
@@ -133,10 +134,10 @@ void *io_listener()
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &curr_time);
 			time_blocked = time_to_ms(curr_time) - pcb->blocked_time;
 
-			// Tiempo que le falta estar bloqueado (restando del maximo lo que "ya estuvo")
+			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
 			sleep_ms = kernelConfig->maxBlockedTime - time_blocked;
 
-			// Tiempo que le faltaria de IO
+			// Tiempo extra luego de hacer su io
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
 
 			if (remaining_io_time >= 0)
@@ -155,16 +156,20 @@ void *io_listener()
 				// Tiempo faltante supera tiempo maximo
 				pthread_mutex_lock(&mutex_log);
 				log_warning(logger, "Rafaga supera tiempo maximo de %dms", kernelConfig->maxBlockedTime);
-				log_info(logger, "PID #%d --> Rafaga I/O %dms", sleep_ms);
+				log_info(logger, "PID #%d --> Rafaga I/O %d", sleep_ms);
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme el maximo
 				usleep(sleep_ms * 1000);
-
-				// Se actualiza lo que le queda (por instruccion I/O) restandole lo que ya "durmio"
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger, "Termina la rafaga");
+				pthread_mutex_unlock(&mutex_log);
+			// Se actualiza lo que le queda (por instruccion I/O) restandole lo que ya "durmio"
 				pcb->pending_io_time = pcb->pending_io_time - sleep_ms;
 
 				// Pide suspension a memoria
+				//comento lo de memoria para probar los suspendidos
+				/*
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspend_packet->payload, pcb->pid);
 				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
@@ -175,13 +180,16 @@ void *io_listener()
 				}
 
 				packet_destroy(suspend_packet);
-
+*/
 				// Esperar suspension exitosa
 				// Se libera la memoria (sube multiprogramacion)
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger, "Quedan %d de rafaga",pcb->pending_io_time);
+				pthread_mutex_unlock(&mutex_log);
 				pQueue_put(suspended_block_q, (void *)pcb);
 				sem_post(&sem_multiprogram);
 				// any for suspended!!!
-				// sem_post(&any_for_blocked);
+				sem_post(&process_for_IO);
 
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger,
@@ -192,9 +200,28 @@ void *io_listener()
 		}
 		else
 		{
-			pcb = pQueue_peek(suspended_block_q);
+
+			pcb = pQueue_take(suspended_block_q);
+			pthread_mutex_lock(&mutex_log);
+						log_info(logger,
+							"Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended io",
+								pcb->pid);
+						pthread_mutex_unlock(&mutex_log);
 			usleep(pcb->pending_io_time * 1000);
-			blocked_to_ready(suspended_block_q, suspended_ready_q);
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger,
+				"Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended finish io",
+					pcb->pid);
+			pthread_mutex_unlock(&mutex_log);
+
+
+			pQueue_put(suspended_ready_q, (void *)pcb);
+
+				pthread_mutex_lock(&mutex_log);
+							log_info(logger,
+								"ARRIVEEEE");
+							pthread_mutex_unlock(&mutex_log);
+			//blocked_to_ready(suspended_block_q, suspended_ready_q);
 			sem_post(&any_for_ready);
 		}
 	}
@@ -263,6 +290,7 @@ void *readyToExec()
 	{
 		sem_wait(&ready_for_exec);
 		sem_wait(&cpu_free);
+		pthread_mutex_lock(&planning);
 		pcb = pQueue_take(ready_q);
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
@@ -272,12 +300,14 @@ void *readyToExec()
 		{
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
 
 		packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_unlock(&planning);
 	}
 }
 
@@ -307,20 +337,22 @@ void *new_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
+	return 0;
 }
 
 void *suspended_to_ready()
 {
 	t_pcb *pcb = NULL;
 	pcb = pQueue_take(suspended_ready_q);
-
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
+	pthread_mutex_unlock(&mutex_log);
 	// Manejar memoria, sacar de suspendido y traer a "ram"
 
 	put_to_ready(pcb);
 
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Long Term Scheduler: PID #%d [SUSPENDED READY] --> Ready queue", pcb->pid);
-	pthread_mutex_unlock(&mutex_log);
+
+	return 0;
 }
 
 void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
@@ -331,6 +363,7 @@ void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 
 void put_to_ready(t_pcb *pcb)
 {
+	pthread_mutex_lock(&planning);
 	pQueue_put(ready_q, (void *)pcb);
 	if (sortingAlgorithm == FIFO)
 	{
@@ -341,19 +374,51 @@ void put_to_ready(t_pcb *pcb)
 
 	if (sortingAlgorithm == SRT)
 	{
-		if (cpu_interrupt_socket != -1)
-		{
-			socket_send_header(cpu_interrupt_socket, INTERRUPT);
+		/* si enviamos la interrupcion aunque la cpu este libre
+		 if (cpu_interrupt_socket != -1)
+			{
+				socket_send_header(cpu_interrupt_socket, INTERRUPT);
+			}
+			sem_wait(&interrupt_ready);
+			//esperar que vuelva el cpu
+
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
+			pthread_mutex_unlock(&mutex_log);
+
+			pQueue_sort(ready_q, SJF_sort);
+		 */
+
+		int isFree;
+		sem_getvalue(&cpu_free,&isFree);
+		if(isFree==0){
+			if (cpu_interrupt_socket != -1)
+			{
+				socket_send_header(cpu_interrupt_socket, INTERRUPT);
+			}
+			sem_wait(&interrupt_ready);
+			//esperar que vuelva el cpu
+
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
+			pthread_mutex_unlock(&mutex_log);
+
+			pQueue_sort(ready_q, SJF_sort);
+			sem_post(&cpu_free);
+
+		}else{
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
+			pthread_mutex_unlock(&mutex_log);
+
+			pQueue_sort(ready_q, SJF_sort);
 		}
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
-		pthread_mutex_unlock(&mutex_log);
 
-		pQueue_sort(ready_q, SJF_sort);
 	}
 
 	sem_post(&ready_for_exec);
+	pthread_mutex_unlock(&planning);
 }
 
 void *toReady()
@@ -361,6 +426,7 @@ void *toReady()
 	while (1)
 	{
 		sem_wait(&any_for_ready);
+
 		sem_wait(&sem_multiprogram);
 
 		pthread_mutex_lock(&mutexToReady);
@@ -455,13 +521,12 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d --> Desalojado de CPU", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
-		put_to_ready(received_pcb);
-		sem_post(&cpu_free);
-		// debe haber un post al sem de exit, donde se limpien verdaderamente los espacios de memoria
-		// y recien ahi se libere el multiprogram
-		sem_post(&sem_multiprogram);
-		sem_post(&any_for_ready);
+		received_pcb->burst_estimation=received_pcb->burst_estimation-(time_to_ms(toExec)-time_to_ms(fromExec));
+
+		pQueue_put(ready_q, received_pcb);
+		sem_post(&interrupt_ready);
 	}
 
 	return true;
@@ -482,6 +547,11 @@ bool io_op(t_packet *petition, int cpu_socket)
 		log_info(logger, "PID #%d --> Blocked queue", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
+
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+
+		received_pcb->burst_estimation=(kernelConfig->alpha*(time_to_ms(toExec)-time_to_ms(fromExec)))+((1-kernelConfig->alpha)*received_pcb->burst_estimation);
+
 		struct timespec blocked_time;
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
 		received_pcb->blocked_time = time_to_ms(blocked_time);
@@ -489,7 +559,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		pQueue_put(blocked_q, (void *)received_pcb);
 
 		sem_post(&cpu_free);
-		sem_post(&any_for_blocked);
+		sem_post(&process_for_IO);
 	}
 	return true;
 }
