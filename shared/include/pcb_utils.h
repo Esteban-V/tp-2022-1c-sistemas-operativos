@@ -38,6 +38,7 @@ typedef struct pcb
 	uint32_t burst_estimation;
 	uint32_t blocked_time;
 	uint32_t pending_io_time;
+	uint32_t left_burst_estimation;
 } t_pcb;
 
 void stream_take_pcb(t_packet *, t_pcb *);

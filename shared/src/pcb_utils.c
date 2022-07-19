@@ -118,6 +118,22 @@ t_pcb *create_pcb()
 		return NULL;
 	}
 
+	pcb->left_burst_estimation = malloc(sizeof(uint32_t));
+		if (pcb->left_burst_estimation == NULL)
+		{
+			free(pcb->pid);
+			free(pcb->size);
+			free(pcb->client_socket);
+			free(pcb->instructions);
+			free(pcb->program_counter);
+			free(pcb->page_table);
+			free(pcb->burst_estimation);
+			free(pcb->blocked_time);
+			free(pcb->pending_io_time);
+			free(pcb);
+			return NULL;
+		}
+
 	return pcb;
 }
 
@@ -150,6 +166,9 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb)
 
 	uint32_t *pending_io_time = &(pcb->pending_io_time);
 	stream_take_UINT32P(packet->payload, &pending_io_time);
+
+	uint32_t *left_burst_estimation = &(pcb->left_burst_estimation);
+	stream_take_UINT32P(packet->payload, &left_burst_estimation);
 }
 
 void stream_add_pcb(t_packet *packet, t_pcb *pcb)
@@ -165,4 +184,5 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb)
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
 	stream_add_UINT32(packet->payload, pcb->blocked_time);
 	stream_add_UINT32(packet->payload, pcb->pending_io_time);
+	stream_add_UINT32(packet->payload, pcb->left_burst_estimation);
 }

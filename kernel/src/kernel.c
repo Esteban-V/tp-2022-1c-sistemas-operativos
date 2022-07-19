@@ -249,6 +249,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		pcb->client_socket = console_socket;
 		pcb->program_counter = 0;
 		pcb->burst_estimation = kernelConfig->initialEstimate;
+		pcb->left_burst_estimation = kernelConfig->initialEstimate;
 
 		pQueue_put(new_q, (void *)pcb);
 
@@ -523,7 +524,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		pthread_mutex_unlock(&mutex_log);
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
-		received_pcb->burst_estimation=received_pcb->burst_estimation-(time_to_ms(toExec)-time_to_ms(fromExec));
+		received_pcb->left_burst_estimation=received_pcb->left_burst_estimation-(time_to_ms(toExec)-time_to_ms(fromExec));
 
 		pQueue_put(ready_q, received_pcb);
 		sem_post(&interrupt_ready);
@@ -551,6 +552,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
 		received_pcb->burst_estimation=(kernelConfig->alpha*(time_to_ms(toExec)-time_to_ms(fromExec)))+((1-kernelConfig->alpha)*received_pcb->burst_estimation);
+		received_pcb->left_burst_estimation=(kernelConfig->alpha*(time_to_ms(toExec)-time_to_ms(fromExec)))+((1-kernelConfig->alpha)*received_pcb->burst_estimation);
 
 		struct timespec blocked_time;
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
