@@ -4,9 +4,9 @@ t_cpu_config *get_cpu_config(char *path)
 {
 	t_cpu_config *cpu_config = malloc(sizeof(t_cpu_config));
 	cpu_config->config = config_create(path);
-	cpu_config->tlbEntries = config_get_int_value(cpu_config->config,
+	cpu_config->tlbEntryQty = config_get_int_value(cpu_config->config,
 												  "ENTRADAS_TLB");
-	cpu_config->tlbReplace = config_get_string_value(cpu_config->config,
+	cpu_config->tlb_alg = config_get_string_value(cpu_config->config,
 													 "REEMPLAZO_TLB");
 	cpu_config->delayNoOp = config_get_int_value(cpu_config->config,
 												 "RETARDO_NOOP");
@@ -23,8 +23,8 @@ t_cpu_config *get_cpu_config(char *path)
 
 void destroy_cpu_config(t_cpu_config *cpu_config)
 {
-	free(cpu_config->tlbEntries);
-	free(cpu_config->tlbReplace);
+	free(cpu_config->tlbEntryQty);
+	free(cpu_config->tlb_alg);
 	free(cpu_config->delayNoOp);
 	free(cpu_config->memoryIP);
 	free(cpu_config->memoryPort);

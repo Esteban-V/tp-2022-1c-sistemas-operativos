@@ -200,7 +200,6 @@ uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
 	return list_size(table->entries);
 }
 
-//////////////
 bool isFree(int frame_number)
 {
 	pthread_mutex_lock(&metadataMut);

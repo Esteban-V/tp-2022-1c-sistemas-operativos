@@ -19,8 +19,8 @@ enum operation get_op(char *);
 
 typedef struct cpu_config{
     t_config* config;
-    int tlbEntries;
-    char* tlbReplace;
+    int tlbEntryQty;
+    char* tlb_alg;
     int delayNoOp;
     char* memoryIP;
     char* memoryPort;

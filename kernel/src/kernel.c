@@ -21,7 +21,6 @@ int main(void)
 	sem_init(&process_for_IO, 0, 0);
 	sem_init(&any_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
-
 	sem_init(&pcb_table_ready, 0, 0);
 
 	if (kernelConfig == NULL)

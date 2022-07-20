@@ -24,10 +24,24 @@
 
 #define CPU_MEMORY_SECRET = "CMSMC"
 
+typedef struct tlbEntry {
+    uint32_t page;
+    int32_t frame;
+    bool isFree;
+} t_tlbEntry;
+
+typedef struct tlb {
+    t_tlbEntry* entries;
+    uint32_t entryQty;
+    t_list* victimQueue;
+} t_tlb;
+
 sem_t interruption_counter;
 
 t_pcb *pcb;
 t_cpu_config *config;
+
+t_tlb * tlb;
 
 bool receive_pcb(t_packet *petition, int console_socket);
 bool receive_interruption(t_packet *petition, int console_socket);
@@ -47,19 +61,27 @@ void execute_exit();
 
 void pcb_to_kernel(kernel_headers header);
 
-pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;
+pthread_mutex_t mutex_kernel_socket, mutex_has_interruption, tlb_mutex;
 bool new_interruption;
 int kernel_client_socket;
-
 int memory_server_socket;
 sem_t pcb_loaded;
 t_log *logger;
-
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
+
 void stats();
 pthread_t interruptionThread, execThread;
-
+void terminate_cpu(bool error);
 void memory_handshake();
+
+// TLB
+
+t_tlb* create_tlb();
+void lru_tlb(t_tlbEntry* entry);
+void fifo_tlb(t_tlbEntry* entry);
+void (*update_victim_queue)(t_tlbEntry*);
+void destroy_tlb();
+void clean_tlb();
 
 #endif /* INCLUDE_CPU_H_ */
