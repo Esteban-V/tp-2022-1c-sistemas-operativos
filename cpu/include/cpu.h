@@ -45,6 +45,7 @@ t_tlb * tlb;
 bool receive_pcb(t_packet *petition, int console_socket);
 bool receive_interruption(t_packet *petition, int console_socket);
 
+void *dispatch_header_handler(void *_kernel_client_socket);
 void *header_handler(void *_kernel_client_socket);
 void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
