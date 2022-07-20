@@ -329,7 +329,7 @@ void add_tlb_entry(uint32_t pid, uint32_t page, int32_t frame) {
             tlb->entries[i].isFree = false;
 
             pthread_mutex_lock(&mutex_log);
-            log_debug(logger, "TLB Assignment: Free Entry Used %d ; PID: %u, Page: %u, Frame: %u", i, pid, page, frame);
+            log_info(logger, "TLB Assignment: Free Entry Used %d ; PID: %u, Page: %u, Frame: %u", i, pid, page, frame);
             pthread_mutex_unlock(&mutex_log);
 
             any_free_entry = true;

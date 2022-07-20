@@ -382,7 +382,7 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 	if (*start == -1)
 	{
 
-		log_debug(logger, "Could Not Find Available Frames for Process #%u.",
+		log_info(logger, "Could Not Find Available Frames for Process #%u.",
 				  PID);
 
 		*end = -1;
