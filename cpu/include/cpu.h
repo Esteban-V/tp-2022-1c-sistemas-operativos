@@ -40,7 +40,6 @@ sem_t interruption_counter;
 
 t_pcb *pcb;
 t_cpu_config *config;
-
 t_tlb * tlb;
 
 bool receive_pcb(t_packet *petition, int console_socket);
@@ -49,16 +48,13 @@ bool receive_interruption(t_packet *petition, int console_socket);
 void *header_handler(void *_kernel_client_socket);
 void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
-
 void *listen_interruption();
-
 void execute_no_op();
 void execute_io(t_list *params);
 void execute_read(t_list *params);
 void execute_copy(t_list *params);
 void execute_write(t_list *params);
 void execute_exit();
-
 void pcb_to_kernel(kernel_headers header);
 
 pthread_mutex_t mutex_kernel_socket, mutex_has_interruption, tlb_mutex;
@@ -77,6 +73,8 @@ void memory_handshake();
 
 // TLB
 
+int tlb_hit_counter = 0;
+int tlb_miss_counter = 0;
 t_tlb* create_tlb();
 void lru_tlb(t_tlbEntry* entry);
 void fifo_tlb(t_tlbEntry* entry);

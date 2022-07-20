@@ -265,8 +265,8 @@ void memory_handshake()
 void stats()
 {
 	pthread_mutex_lock(&mutex_log);
-	/*log_info(logger, "TLB Hits: %d", tlb_hit_counter);
-	log_info(logger, "TLB Misses: %d", tlb_miss_counter);*/
+	log_info(logger, "TLB Hits: %d", tlb_hit_counter);
+	log_info(logger, "TLB Misses: %d", tlb_miss_counter);
 	pthread_mutex_unlock(&mutex_log);
 }
 
@@ -308,10 +308,12 @@ int32_t get_tlb_frame(uint32_t pid, uint32_t page) {
         if(tlb->entries[i].page == page && tlb->entries[i].isFree == false) {
             update_victim_queue(&(tlb->entries[i]));
             frame = tlb->entries[i].frame;
+            tlb_hit_counter++;
         }
     }
-
     pthread_mutex_unlock(&tlb_mutex);
+
+    tlb_miss_counter++;
 
     return frame;
 }
