@@ -64,13 +64,6 @@ typedef struct t_mem_metadata
     t_frame_metadata *entries;
 } t_mem_metadata;
 
-typedef struct swapInterface
-{
-    int pageSize;
-    int socket;
-    pthread_mutex_t mutex;
-} t_swapInterface;
-
 typedef struct mem
 {
     void *memory;
@@ -99,7 +92,7 @@ sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut;
 
 // Algoritmo de Reemplazo
-uint32_t (*replace_algo)(uint32_t start, uint32_t end);
+uint32_t (*replaceAlgorithm)(uint32_t start, uint32_t end);
 
 int ceil_div(int a, int b);
 

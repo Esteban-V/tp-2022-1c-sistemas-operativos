@@ -398,7 +398,7 @@ void fifo_tlb(t_tlbEntry *entry)
 }
 
 // TODO ejecutar en memoria cuando se va a reemplazar pag
-void drop_tlb_ntry(uint32_t pid, uint32_t page)
+void drop_tlb_entry(uint32_t pid, uint32_t page)
 {
 	pthread_mutex_lock(&tlb_mutex);
 

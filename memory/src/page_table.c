@@ -112,12 +112,12 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 	}
 	/* else
 	{
-
 		// replaceAlgorithm
 		// CLOCK = 0 --> false
 
 		t_page_entry *pointerIterator = NULL; // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
 		t_page_entry *actualPointer = NULL;	  // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
+
 		// me falta bastante
 		for (int i = 0; i < config->entriesPerTable; i++)
 		{
@@ -247,9 +247,39 @@ int find_first_free_frame(t_bitarray *bitmap)
 	return -1;
 }
 
-void *readPage(uint32_t dir)
+/*void *readPage(uint32_t dir)
 {
 	// leer
+}*/
+
+void* readPage(uint32_t pid, uint32_t pageNumber){
+
+	t_swap_file* file = pidExists(pid);
+
+    if(file == NULL){
+
+    	pthread_mutex_lock(&mutex_log);
+    	    	log_info(logger, "File PID Not Found");
+    	pthread_mutex_unlock(&mutex_log);
+
+        return 0;
+    }
+    int index = swapFile_getIndex(file, pid, pageNumber);
+    if(index == -1){
+
+    	pthread_mutex_lock(&mutex_log);
+    		log_info(logger, "File Index Out of Bounds");
+    	pthread_mutex_unlock(&mutex_log);
+
+        return 0;
+    }
+
+    pthread_mutex_lock(&mutex_log);
+    	log_info(logger, "File %s: Page %i Recovered ; Process %i ; Index %i", file->path, pageNumber, pid, index);
+    pthread_mutex_unlock(&mutex_log);
+
+    return swapFile_readAtIndex(file, index); //Page Data
+
 }
 
 bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
@@ -262,9 +292,14 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	return rc;
 }
 
-/* void writeFrame(t_memory *mem, uint32_t frame, void *from)
+void *memory_getFrame(uint32_t frame){
+	void* ptr = memory->memory + frame * config->pageSize;
+	return ptr;
+}
+
+void writeFrame(uint32_t frame, void *from)
 {
-	void *frameAddress = memory_getFrame(mem, frame);
+	void *frameAddress = memory_getFrame(frame);
 
 	pthread_mutex_lock(&metadataMut);
 	metadata->entries[frame].modified = true;
@@ -274,18 +309,17 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	pthread_mutex_lock(&memoryMut);
 	memcpy(frameAddress, from, config->pageSize);
 	pthread_mutex_unlock(&memoryMut);
-} */
-/*
- uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt1_entry,
-				 uint32_t pt2_entry, uint32_t page)
+}
+
+//asigna y reemplaza
+uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt2_index, uint32_t page) // TODO quitar metadata y adaptar a la estructura nueva
 {
 	// Traer pagina pedida de swap.
-	void *pageFromSwap = readPage(page); // creo q read page
+	void *pageFromSwap = readPage(PID, page);
 
 	// Chequear que se haya podido traer
 	if (pageFromSwap == NULL)
 	{
-
 		log_error(logger, "Cannot Load Page #%u ; Process #%u", page, PID);
 
 		return -1;
@@ -296,13 +330,10 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	if (!isFree(victim))
 	{
 
-
 		log_info(logger, "SWAP");
 
-
-		// TODO determinar file size
-		list_add(swapFiles, swapFile_create(config->swapPath, PID,
-											4096, config->pageSize));
+		// TODO pasar tamanio del proceso para determinar el file size
+		list_add(swapFiles, swapFile_create(config->swapPath, PID, /*filesize*/ 4096, config->pageSize));
 
 		usleep(config->swapDelay * 1000);
 
@@ -313,44 +344,39 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 		bool modified = (metadata->entries)[victim].modified;
 		pthread_mutex_unlock(&metadataMut);
 
-		// dropTLBEntry(victimPID, victimPage); TODO lo hace CPU, supongo que en este momento debemos pasarle la data
+		// drop_tlb_entry(victimPID, victimPage); TODO pasar a CPU
 
 		pthread_mutex_lock(&memoryMut);
-		if (modified)
-			savePage(victimPID, victimPage, memory_getFrame(memory, victim));
+		if (modified) savePage(victimPID, victimPage, memory_getFrame(victim));
 		pthread_mutex_unlock(&memoryMut);
 
 		// Modificar tabla de paginas del proceso cuya pagina fue reemplazada.
-		t_ptbr2 *ptReemplazado = getPageTable2(victimPID, pt1_entry,
-											   pageTables);
+		t_ptbr2 *ptReemplazado = get_page_table2(pt2_index);
 		((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->present =
 			false; // TODO cambiar victim page por sus entries
 		((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->frame =
 			-1;
 
-
 		log_info(logger,
 				 "Replacement: Frame #%u: ; Page #%u ; Process #%u ;; Victim Page #%u ; Process #%u.",
 				 victim, page, PID, victimPage, victimPID);
-
 	}
 	else
 	{
-
 		log_info(logger, "Assignment: Frame #%u: ; Page #%u ; Process #%u.",
 				 victim, page, PID);
-
 	}
 
 	// Escribir pagina traida de swap a memoria.
-	writeFrame(memory, victim, pageFromSwap);
+	writeFrame(victim, pageFromSwap);
 	free(pageFromSwap);
-	// Modificar tabla de paginas del proceso cuya pagina entra a memoria.
-	t_ptbr2 *ptReemplaza = getPageTable2(PID, pt1_entry, pageTables);
-	((t_page_entry *)list_get(ptReemplaza->entries, pt2_entry))->present = true;
-	((t_page_entry *)list_get(ptReemplaza->entries, pt2_entry))->frame = victim;
 
-	// addTLBEntry(PID, page, victim); TODO lo hace CPU, supongo que en este momento debemos pasarle la data
+	// Modificar tabla de paginas del proceso cuya pagina entra a memoria.
+	t_ptbr2 *ptReemplaza = get_page_table2(pt2_index);
+	((t_page_entry *)list_get(ptReemplaza->entries, pt2_index))->present = true;
+	((t_page_entry *)list_get(ptReemplaza->entries, pt2_index))->frame = victim;
+
+	// add_tlb_entry(PID, page, victim); TODO pasar a CPU
 
 	// Modificar frame metadata.
 	pthread_mutex_lock(&metadataMut);
@@ -364,25 +390,24 @@ bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
 	return victim;
 }
 
-uint32_t swapPage(uint32_t PID, uint32_t pt1_entry, uint32_t pt2_entry,
-				  uint32_t page)
+// Tmb swapea
+uint32_t assignPage(uint32_t PID, uint32_t pt2_index, uint32_t page)
 {
-
-	uint32_t start, end;
+	/*uint32_t start, end;
 	fija_memoria(&start, &end, PID);
 
-	uint32_t frameVictima = replace_algo(start, end);
+	uint32_t frameVictima = replaceAlgorithm(start, end);
 
-	return replace(frameVictima, PID, pt1_entry, pt2_entry, page);
+	return replace(frameVictima, PID, pt2_index, page);*/
 }
 
+/*
 bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 {
 	*start = -1;
 
 	pthread_mutex_lock(&metadataMut);
-	for (uint32_t i = 0;
-		 i < config->framesInMemory / config->framesPerProcess; i++)
+	for (uint32_t i = 0 ; i < config->framesInMemory / config->framesPerProcess; i++)
 	{
 		if ((metadata->firstFrame)[i] == PID)
 		{
@@ -410,7 +435,6 @@ bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t PID)
 
 	if (*start == -1)
 	{
-
 		log_info(logger, "Could Not Find Available Frames for Process #%u.",
 				  PID);
 
