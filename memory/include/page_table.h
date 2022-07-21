@@ -54,7 +54,7 @@ typedef struct t_ptbr1
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame);
 void pageTable_destroyLastEntry(t_ptbr1 *pt);
 
-int page_table_init(uint32_t process_size, int level1_index, int frames_index);
+int page_table_init(uint32_t process_size, int *level1_index, int *frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);
 
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);

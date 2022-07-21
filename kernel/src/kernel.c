@@ -417,8 +417,8 @@ bool table_index_success(t_packet *petition, int mem_socket)
 		if (pcb->pid == pid)
 		{
 			// Almacenar index a tabla de paginas nivel 1 y listado de framess dados por memoria
-			pcb->page_table = (int)level1_table_index;
-			pcb->assigned_frames = (int)process_frame_index;
+			pcb->page_table = level1_table_index;
+			pcb->assigned_frames = process_frame_index;
 			found = true;
 		}
 	};

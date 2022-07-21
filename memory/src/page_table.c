@@ -1,14 +1,14 @@
 #include "page_table.h"
 
 // Crea tabla de nivel 1 y tablas de nivel 2 correspondientes, y retorna el indice de la 1era
-int page_table_init(uint32_t process_size, int level1_index, int frames_index)
+int page_table_init(uint32_t process_size, int *level1_index, int *frames_index)
 {
 	// Creacion tabla nivel 1
 	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
 	level1_table->entries = list_create();
 
 	// Se agrega a lista global 1 y se obtiene su posicion en la misma para retornar
-	level1_index = list_add(level1_tables, level1_table);
+	*level1_index = list_add(level1_tables, level1_table);
 
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
 	int pages_required = process_size / (config->pageSize);
@@ -41,17 +41,18 @@ int page_table_init(uint32_t process_size, int level1_index, int frames_index)
 		list_add(level1_table->entries, level2_index);
 	}
 
+	// Asignacion de frames fija
 	t_list *frames = list_create();
-	// Asignacion de frames
 	for (int i = 0; i < config->framesPerProcess; i++)
 	{
-		// Creacion pagina
 		t_frame_entry *frame_entry = malloc(sizeof(t_frame_entry));
-
-		int frame_index = find_first_free_frame(frames_bitmap);
+		int frame_index = find_first_unassigned_frame(frames_bitmap);
 		if (frame_index != -1)
 		{
-			// Se le asigna una frame libre
+			// Se marca el frame como asignado
+			frame_set_assigned(frames_bitmap, frame_index);
+
+			// Se le asigna un frame libre de memoria
 			frame_entry->frame = frame_index;
 			frame_entry->page_data = NULL;
 			list_add(frames, frame_entry);
@@ -66,7 +67,8 @@ int page_table_init(uint32_t process_size, int level1_index, int frames_index)
 	process_frame->frames = frames;
 	process_frame->clock_hand = 0;
 
-	frames_index = list_add(process_frames, process_frame);
+	// Se agrega a lista global de frames y se obtiene su posicion en la misma para retornar
+	*frames_index = list_add(process_frames, process_frame);
 }
 
 // Retorna la tabla de nivel 1 segun su indice en su lista global
@@ -233,18 +235,6 @@ bool isFree(int frame_number)
 	bool free = (metadata->entries)[frame_number].isFree;
 	pthread_mutex_unlock(&metadataMut);
 	return free;
-}
-
-int find_first_free_frame(t_bitarray *bitmap)
-{
-	for (int i = 0; i < config->framesInMemory; i++)
-	{
-		if (!bitarray_test_bit(bitmap, i))
-		{
-			return i;
-		}
-	}
-	return -1;
 }
 
 void *readPage(uint32_t dir)

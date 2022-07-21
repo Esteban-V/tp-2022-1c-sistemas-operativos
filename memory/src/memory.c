@@ -29,6 +29,8 @@ int main()
 	level2_tables = list_create();
 
 	swap_files = list_create();
+	process_frames = list_create();
+
 	/* hay que ver como determinar swapfiles y filesize
 	 agregar donde se swappean
 	 list_add(swap_files, swapFile_create(config->swap_files[i], config->fileSize, config->pageSize));
@@ -36,7 +38,6 @@ int main()
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
 	memory = memory_init();
-	metadata->clock_m_counter = 0;
 
 	clock_m_counter = 0;
 
@@ -252,10 +253,6 @@ bool process_exit(t_packet *petition, int kernel_socket)
 			}
 		}*/
 
-		/*t_packet *response = create_packet(OK, 0);
-		 socket_send_packet(cpu_socket, response);
-		 packet_destroy(response);*/
-
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Destroyed PID #%d successfully", pid);
 		pthread_mutex_unlock(&mutex_log);
@@ -386,21 +383,21 @@ bool memory_read(t_packet *petition, int cpu_socket)
 
 t_memory *memory_init()
 {
-	int cantFrames = config->framesInMemory;
+	int cant_frames = config->framesInMemory;
 
 	// Crea espacio de memoria contiguo
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(cantFrames, sizeof(uint32_t));
+	mem->memory = calloc(cant_frames, sizeof(uint32_t));
 
 	// Crea bitmap de frames libres/ocupados
-	void *ptr = malloc(cantFrames);
-	frames_bitmap = bitarray_create_with_mode(ptr, ceil_div(cantFrames, 8), LSB_FIRST);
-	msync(frames_bitmap->bitarray, cantFrames, MS_SYNC);
+	void *ptr = malloc(cant_frames);
+	frames_bitmap = bitarray_create_with_mode(ptr, ceil_div(cant_frames, 8), LSB_FIRST);
+	msync(frames_bitmap->bitarray, cant_frames, MS_SYNC);
 
-	for (int i = 0; i < cantFrames; i++)
+	for (int i = 0; i < cant_frames; i++)
 	{
-		// Inicializa bitmap en false, todos los frames estan vacios
-		bitarray_clean_bit(cantFrames, i);
+		// Inicializa todos los frames como vacios/no asignados
+		bitarray_clean_bit(frames_bitmap, i);
 	}
 
 	return mem;

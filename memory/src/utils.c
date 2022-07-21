@@ -27,3 +27,32 @@ int ceil_div(int a, int b)
 {
     return (a / b) + ((a % b) != 0);
 }
+
+int find_first_unassigned_frame(t_bitarray *bitmap)
+{
+    for (int i = 0; i < config->framesInMemory; i++)
+    {
+        if (!bitarray_test_bit(bitmap, i))
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int frame_set_assigned(t_bitarray *bitmap, int index)
+{
+    bitarray_set_bit(bitmap, index);
+    sync_bitmap(bitmap);
+}
+
+int frame_clear_assigned(t_bitarray *bitmap, int index)
+{
+    bitarray_clean_bit(bitmap, index);
+    sync_bitmap(bitmap);
+}
+
+void sync_bitmap(t_bitarray *bitmap)
+{
+    msync(bitmap->bitarray, config->framesInMemory, MS_SYNC);
+}
