@@ -13,7 +13,7 @@ t_list *level2_tables;
 
 typedef struct t_page_entry
 {
-    // A que frame (index) de la memoria (de void*) corresponde
+    // A que frame (index) de la memoria (de void*) corresponde (y con presencia en false estaria desactualizado)
     int frame;
     // Bit de presencia
     bool present;
@@ -21,11 +21,23 @@ typedef struct t_page_entry
     bool used;
     // Bit de modificado
     bool modified;
-
-    struct t_page_entry *next;
-
-    struct t_page_entry *previous;
 } t_page_entry;
+
+typedef struct t_process_frame
+{
+    t_list *frames; // t_frame_entry
+    // A que index de frames apunta
+    int clock_hand;
+} t_process_frame;
+
+typedef struct t_frame_entry
+{
+    // A que frame (index) de la memoria (de void*) corresponde
+    int frame;
+    t_page_entry *page_data; // t_page_entry
+} t_frame_entry;
+
+t_list *process_frames; // t_process_frames
 
 typedef struct t_ptbr2
 {
@@ -42,7 +54,7 @@ typedef struct t_ptbr1
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame);
 void pageTable_destroyLastEntry(t_ptbr1 *pt);
 
-int page_table_init(uint32_t process_size);
+int page_table_init(uint32_t process_size, int level1_index, int frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);
 
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);

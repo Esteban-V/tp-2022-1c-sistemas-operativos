@@ -1,7 +1,8 @@
-#include"utils.h"
+#include "utils.h"
 
-t_memoryConfig* getMemoryConfig(char* path){
-    t_memoryConfig* memoryConfig = malloc(sizeof(t_memoryConfig));
+t_memoryConfig *getMemoryConfig(char *path)
+{
+    t_memoryConfig *memoryConfig = malloc(sizeof(t_memoryConfig));
     memoryConfig->config = config_create(path);
     memoryConfig->listenPort = config_get_string_value(memoryConfig->config, "PUERTO_ESCUCHA");
     memoryConfig->memorySize = config_get_int_value(memoryConfig->config, "TAM_MEMORIA");
@@ -16,7 +17,13 @@ t_memoryConfig* getMemoryConfig(char* path){
     return memoryConfig;
 }
 
-void destroyMemoryConfig(t_memoryConfig* config){
+void destroyMemoryConfig(t_memoryConfig *config)
+{
     config_destroy(config->config);
     free(config);
+}
+
+int ceil_div(int a, int b)
+{
+    return (a / b) + ((a % b) != 0);
 }

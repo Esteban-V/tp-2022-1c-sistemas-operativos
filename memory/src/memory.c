@@ -6,14 +6,24 @@ int main()
 	logger = log_create("./cfg/memory-final.log", "MEMORY", 1, LOG_LEVEL_TRACE);
 	config = getMemoryConfig("./cfg/memory.config");
 
-	metadata = metadata_init();
+	if (!strcmp(config->replaceAlgorithm, "CLOCK"))
+	{
+		replaceAlgorithm = CLOCK;
+	}
+	else if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
+	{
+		replaceAlgorithm = CLOCK_M;
+	}
+	else
+	{
+		log_warning(logger,
+					"Wrong replace algorithm set in config --> Using CLOCK");
+	}
 
 	// Creacion de server
 	server_socket = create_server(config->listenPort);
 
-	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Memory server ready");
-	pthread_mutex_unlock(&mutex_log);
 
 	level1_tables = list_create();
 	level2_tables = list_create();
@@ -127,16 +137,16 @@ bool process_new(t_packet *petition, int kernel_socket)
 		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t pt1_index = (uint32_t)page_table_init(size);
-		//dictionary_put(clock_pointers_dictionary, string_itoa(pid), NULL);
+		int pt1_index, frames_index;
+		page_table_init(size, &pt1_index, &frames_index);
 
 		// char* swap_filename = swap_init(pid);
 
-		t_packet *response = create_packet(PROCESS_MEMORY_READY,
-										   INITIAL_STREAM_SIZE);
+		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
 
 		stream_add_UINT32(response->payload, pid);
-		stream_add_UINT32(response->payload, pt1_index);
+		stream_add_UINT32(response->payload, (uint32_t)pt1_index);
+		stream_add_UINT32(response->payload, (uint32_t)frames_index);
 		socket_send_packet(kernel_socket, response);
 
 		packet_destroy(response);
@@ -376,12 +386,28 @@ bool memory_read(t_packet *petition, int cpu_socket)
 
 t_memory *memory_init()
 {
+	int cantFrames = config->framesInMemory;
+
+	// Crea espacio de memoria contiguo
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(config->framesInMemory, sizeof(uint32_t));
+	mem->memory = calloc(cantFrames, sizeof(uint32_t));
+
+	// Crea bitmap de frames libres/ocupados
+	void *ptr = malloc(cantFrames);
+	frames_bitmap = bitarray_create_with_mode(ptr, ceil_div(cantFrames, 8), LSB_FIRST);
+	msync(frames_bitmap->bitarray, cantFrames, MS_SYNC);
+
+	for (int i = 0; i < cantFrames; i++)
+	{
+		// Inicializa bitmap en false, todos los frames estan vacios
+		bitarray_clean_bit(cantFrames, i);
+	}
+
 	return mem;
 }
 
 // TODO: Checkear que sirva/tenga sentido
+/*
 t_mem_metadata *metadata_init()
 {
 	t_mem_metadata *metadata = malloc(sizeof(t_mem_metadata));
@@ -423,7 +449,7 @@ void metadata_destroy(t_mem_metadata *meta)
 	free(meta->entries);
 	free(meta);
 }
-//
+*/
 
 void terminate_memory(bool error)
 {
