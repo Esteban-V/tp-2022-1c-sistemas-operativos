@@ -128,7 +128,7 @@ bool process_new(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		uint32_t pt1_index = (uint32_t)page_table_init(size);
-		//dictionary_put(clock_pointers_dictionary, string_itoa(pid), NULL);
+		// dictionary_put(clock_pointers_dictionary, string_itoa(pid), NULL);
 
 		// char* swap_filename = swap_init(pid);
 
@@ -260,6 +260,38 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	}
 
 	return true;
+}
+
+void *create_swap(uint32_t pid, int frame_index, int psize)
+{
+	log_info(logger, "PID #%d - Creating swap file - Size: %d", pid, psize);
+
+	uint32_t frame_start = frame_index * sizeof(uint32_t);
+	uint32_t frame_end = frame_start + config->pageSize;
+	
+	//Leer memoria
+	usleep(config->swapDelay * 1000);
+}
+
+void *delete_swap(uint32_t pid, int psize)
+{
+	log_info(logger, "PID #%d - Deleting swap file", pid);
+
+	char* path = config->swapPath;
+	char swap_file_path[50];
+	char* swap_file[10];
+	sprintf(swap_file, "%d.swap", pid);
+	strcat(strcpy(swap_file_path, path), "/");
+	strcat(swap_file_path, swap_file);
+
+	uint32_t pages = psize/config->pageSize;
+	if(psize % config->pageSize != 0) pages++;
+
+	uint32_t nro_tablas_segundo_nivel = pages / config->entriesPerTable;
+	if(pages % config->entriesPerTable != 0) nro_tablas_segundo_nivel++;
+
+	usleep(config->swapDelay * 1000);
+	remove(swap_file_path);
 }
 
 // Recibe index de pt1 en lista global (guardado del pcb) y entrada de la tabla 1 a la que acceder
