@@ -37,7 +37,7 @@ typedef struct kernelConfig {
 	int maxBlockedTime;
 } t_kernelConfig;
 
-t_kernelConfig *kernelConfig;
+t_kernelConfig *config;
 t_process *process;
 
 t_kernelConfig* getKernelConfig(char *path);
