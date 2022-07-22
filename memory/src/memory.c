@@ -310,6 +310,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 
 	uint32_t entry_index = stream_take_UINT32(petition->payload);
 	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t framesIndex = stream_take_UINT32(petition->payload);
 
 	if (pt2_index != -1)
 	{
@@ -317,7 +318,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		log_info(logger, "Getting frame number");
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index, pid);
+		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index, pid,framesIndex);
 
 		t_packet *response = create_packet(FRAME_TO_CPU,
 										   INITIAL_STREAM_SIZE);

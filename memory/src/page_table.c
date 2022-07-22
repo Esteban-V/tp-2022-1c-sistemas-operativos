@@ -98,7 +98,7 @@ t_ptbr2 *get_page_table2(int pt2_index)
 }
 
 // Retorna el numero de frame en memoria (cargandola previamente si fuese necesario)
-int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
+int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uint32_t framesIndex)
 {
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = (t_ptbr2 *)list_get(level2_tables, pt2_index);
@@ -111,6 +111,45 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 		// entry->used = true;
 		frame = entry->frame;
 		return frame;
+	}else{
+		t_process_frame* processFrames = list_get(process_frames,framesIndex);
+		if(processFrames->clock_hand<config->framesPerProcess){
+			entry->present=1;
+			t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand);
+			currentFrame->page_data=entry;
+			processFrames->clock_hand++;
+			frame= currentFrame->frame;
+			return frame;
+		}else{
+			while(1){
+				if(!strcmp(config->replaceAlgorithm, "CLOCK-M")){
+					for(int i=0;i<config->framesPerProcess;i++){
+						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand);
+						t_page_entry* pageInFrame =	currentFrame->page_data;
+						processFrames->clock_hand++;
+						if((pageInFrame->used==0) && (pageInFrame->modified==0)){
+							pageInFrame->present=0;
+							currentFrame->page_data=entry;
+							frame=currentFrame->frame;
+							return frame;
+						}
+					}
+				}
+				for(int i=0;i<config->framesPerProcess;i++){
+						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand);
+						t_page_entry* pageInFrame =	currentFrame->page_data;
+						processFrames->clock_hand++;
+						if(pageInFrame->used==0){
+							pageInFrame->present=0;
+							currentFrame->page_data=entry;
+							frame=currentFrame->frame;
+							return frame;
+						}
+						pageInFrame->used=0;
+				}
+			}
+		}
+
 	}
 	/* else
 	{
