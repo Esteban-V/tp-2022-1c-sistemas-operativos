@@ -260,11 +260,12 @@ void *memory_getFrame(uint32_t frame)
 	return ptr;
 }
 
-void writeFrame(uint32_t frame, void *from)
+void writeFrame(uint32_t frame, void *from) // TODO adaptar a la estructura nueva
 {
 	void *frameAddress = memory_getFrame(frame);
 
 	pthread_mutex_lock(&metadataMut);
+
 	metadata->entries[frame].modified = true;
 	metadata->entries[frame].u = true;
 	pthread_mutex_unlock(&metadataMut);
@@ -295,9 +296,6 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt2_index, uint32_t pag
 
 		log_info(logger, "SWAP");
 
-		// TODO pasar tamanio del proceso para determinar el file size
-		list_add(swapFiles, swapFile_create(config->swapPath, PID, /*filesize*/ 4096, config->pageSize));
-
 		usleep(config->swapDelay * 1000);
 
 		// Enviar pagina reemplazada a swap.
@@ -310,8 +308,7 @@ uint32_t replace(uint32_t victim, uint32_t PID, uint32_t pt2_index, uint32_t pag
 		// drop_tlb_entry(victimPID, victimPage); TODO pasar a CPU
 
 		pthread_mutex_lock(&memoryMut);
-		if (modified)
-			savePage(victimPID, victimPage, memory_getFrame(victim));
+		if (modified) savePage(victimPID, victimPage, memory_getFrame(victim));
 		pthread_mutex_unlock(&memoryMut);
 
 		// Modificar tabla de paginas del proceso cuya pagina fue reemplazada.

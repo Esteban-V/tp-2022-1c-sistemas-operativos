@@ -41,14 +41,12 @@ t_list *process_frames; // t_process_frames
 
 typedef struct t_ptbr2
 {
-    // t_page_entry
-    t_list *entries;
+    t_list *entries; // t_page_entry
 } t_ptbr2;
 
 typedef struct t_ptbr1
 {
-    // int a t_ptbr2
-    t_list *entries;
+    t_list *entries; // int a t_ptbr2
 } t_ptbr1;
 
 uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame);

@@ -31,10 +31,6 @@ int main()
 	swap_files = list_create();
 	process_frames = list_create();
 
-	/* hay que ver como determinar swapfiles y filesize
-	 agregar donde se swappean
-	 list_add(swap_files, swapFile_create(config->swap_files[i], config->fileSize, config->pageSize));
-	 */
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
 	memory = memory_init();
@@ -140,13 +136,15 @@ bool process_new(t_packet *petition, int kernel_socket)
 
 		int pt1_index, frames_index;
 		page_table_init(process_size, &pt1_index, &frames_index);
+		
+		list_add(swap_files, swapFile_create(config->swapPath, pid, process_size, config->pageSize));
+
+		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
 
 		stream_add_UINT32(response->payload, pid);
 		stream_add_UINT32(response->payload, (uint32_t)pt1_index);
 		stream_add_UINT32(response->payload, (uint32_t)frames_index);
 		socket_send_packet(kernel_socket, response);
-
-		// list_add(swap_files, swapFile_create(config->swapPath, pid, process_size, config->pageSize));
 
 		packet_destroy(response);
 	}
