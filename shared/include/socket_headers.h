@@ -30,6 +30,8 @@ typedef enum cpu_headers
 	// Memory response headers
 	SWAP_OK = 5,
 	SWAP_ERROR = 6,
+	TLB_ADD = 7,
+	TLB_DROP = 8
 } cpu_headers;
 
 typedef enum memory_headers

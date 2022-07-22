@@ -1,24 +1,25 @@
 #include "swap.h"
 
 
-t_swap_file *swapFile_create(char *path, uint32_t PID, size_t process_size, size_t pageSize)
+t_swap_file *swapFile_create(uint32_t PID, size_t process_size)
 {
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "PID #%d - Creating Swap File - Size: %d", PID, process_size);
+	pthread_mutex_lock(&mutex_log);
+
     t_swap_file *self = malloc(sizeof(t_swap_file));
 
-    char *_PID = string_duplicate(string_itoa(PID));
-    string_append(&_PID, ".swap");
-    char *aux = "/";
-    string_append(&aux, _PID);
-    string_append(&path, aux);
+    char *path = string_from_format("%s/%d.swap", config->swapPath, PID);
 
     self->path = string_duplicate(path);
     self->size = process_size;
-    self->pageSize = pageSize;
-    self->maxPages = process_size / pageSize;
+    self->pageSize = config->pageSize;
+    self->maxPages = process_size / config->pageSize;
     self->fd = open(self->path, O_RDWR | O_CREAT, S_IRWXU);
     ftruncate(self->fd, self->size);
-    void *mappedFile = mmap(NULL, self->size, PROT_READ | PROT_WRITE,
-                            MAP_SHARED, self->fd, 0);
+
+    void *mappedFile = mmap(NULL, self->size, PROT_READ | PROT_WRITE, MAP_SHARED, self->fd, 0);
+
     memset(mappedFile, 0, self->size);
     msync(mappedFile, self->size, MS_SYNC);
     munmap(mappedFile, self->size);
@@ -121,6 +122,10 @@ bool destroy_swap_page(uint32_t pid, uint32_t page)
 {
     t_swap_file *file = pidExists(pid);
 
+    pthread_mutex_lock(&mutex_log);
+	log_info(logger, "PID #%d - Deleting Swap File", pid);
+	pthread_mutex_unlock(&mutex_log);
+
     if (file == NULL)
     {
         return true;
@@ -137,8 +142,7 @@ bool destroy_swap_page(uint32_t pid, uint32_t page)
     file->entries[index].used = false;
 
     pthread_mutex_lock(&mutex_log);
-    log_info(logger, "File %s: Page %d Erased ; #PID %d", file->path, page,
-             pid);
+    log_info(logger, "File %s: Page %d Erased ; #PID %d", file->path, page, pid);
     pthread_mutex_unlock(&mutex_log);
 
     return false;
@@ -165,11 +169,13 @@ bool hasFreeChunk(t_swap_file *sf)
 {
     bool hasFreeChunk = false;
     for (int i = 0; i < sf->maxPages; i += config->framesPerProcess)
+    {
         if (!sf->entries[i].used)
         {
             hasFreeChunk = true;
             break;
         }
+    }
 
     return hasFreeChunk;
 }
@@ -205,22 +211,30 @@ bool fija_swap(uint32_t pid, uint32_t page, void *pageContent)
 
     if (file == NULL)
         file = list_find(swapFiles, _hasFreeChunk);
+
     if (file == NULL)
         return false;
 
     int assignedIndex = swapFile_getIndex(file, pid, page);
+
     if (assignedIndex == -1)
     {
         int base = getChunk(file, pid);
+
         if (base == -1)
             base = findFreeChunk(file);
+
         if (base == -1)
             return false;
+
         int offset = swapFile_countPidPages(file, pid);
+
         if (offset == config->framesPerProcess)
             return false;
+
         assignedIndex = base + offset;
     }
+
     swapFile_writeAtIndex(file, assignedIndex, pageContent);
     swapFile_register(file, pid, page, assignedIndex);
 

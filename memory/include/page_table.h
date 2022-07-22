@@ -71,7 +71,6 @@ uint32_t createPage(uint32_t pid, uint32_t pt1_entry);
 //void *readPage(uint32_t dir);
 void* readPage(uint32_t pid, uint32_t pageNumber);
 bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent);
-uint32_t assignPage(uint32_t pid, uint32_t pt2_entry, uint32_t page);
 
 void destroyPage(uint32_t pid, uint32_t page);
 
@@ -80,5 +79,7 @@ void page_table_destroy(t_ptbr1 *table);
 uint32_t clock_m_alg(uint32_t start, uint32_t end);
 uint32_t clock_alg(uint32_t start, uint32_t end);
 bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t pid);
+uint32_t replace(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page, int cpu_socket);
+
 
 #endif /* PAGETABLE_H_ */

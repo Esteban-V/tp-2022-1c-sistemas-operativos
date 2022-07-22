@@ -143,7 +143,7 @@ void *io_listener()
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme por el tiempo faltante, sin superar el maximo
-				usleep(pcb->pending_io_time * 1000);
+				usleep(pcb->pending_io_time);
 
 				put_to_ready(pcb);
 			}
@@ -156,7 +156,7 @@ void *io_listener()
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme el maximo
-				usleep(sleep_ms * 1000);
+				usleep(sleep_ms);
 
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger, "Finished I/O burst");
@@ -169,6 +169,7 @@ void *io_listener()
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspend_packet->payload, pcb->pid);
 				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
+				stream_add_UINT32(suspend_packet->payload, pcb->process_frames_index);
 
 				if (memory_socket != -1)
 				{
@@ -180,7 +181,7 @@ void *io_listener()
 				// Esperar suspension exitosa
 				// Se libera la memoria (sube multiprogramacion)
 				pthread_mutex_lock(&mutex_log);
-				log_info(logger, "%dms left", pcb->pending_io_time);
+				log_info(logger, "%dms Left", pcb->pending_io_time);
 				pthread_mutex_unlock(&mutex_log);
 
 				pQueue_put(suspended_block_q, (void *)pcb);
@@ -201,7 +202,7 @@ void *io_listener()
 
 			pcb = pQueue_take(suspended_block_q);
 
-			usleep(pcb->pending_io_time * 1000);
+			usleep(pcb->pending_io_time);
 
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Finished I/O burst");
@@ -262,6 +263,7 @@ void *exit_process(void *args)
 		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(exit_request->payload, pcb->pid);
 		stream_add_UINT32(exit_request->payload, pcb->page_table);
+		stream_add_UINT32(exit_request->payload, pcb->process_frames_index);
 
 		if (memory_socket != -1)
 		{
@@ -418,7 +420,7 @@ bool table_index_success(t_packet *petition, int mem_socket)
 		{
 			// Almacenar index a tabla de paginas nivel 1 y listado de framess dados por memoria
 			pcb->page_table = level1_table_index;
-			pcb->assigned_frames = process_frame_index;
+			pcb->process_frames_index = process_frame_index;
 			found = true;
 		}
 	};

@@ -76,8 +76,8 @@ t_pcb *create_pcb()
 		return NULL;
 	}
 
-	pcb->assigned_frames = malloc(sizeof(uint32_t));
-	if (pcb->assigned_frames == NULL)
+	pcb->process_frames_index = malloc(sizeof(uint32_t));
+	if (pcb->process_frames_index == NULL)
 	{
 		free(pcb->pid);
 		free(pcb->size);
@@ -98,7 +98,7 @@ t_pcb *create_pcb()
 		free(pcb->instructions);
 		free(pcb->program_counter);
 		free(pcb->page_table);
-		free(pcb->assigned_frames);
+		free(pcb->process_frames_index);
 		free(pcb);
 		return NULL;
 	}
@@ -112,7 +112,7 @@ t_pcb *create_pcb()
 		free(pcb->instructions);
 		free(pcb->program_counter);
 		free(pcb->page_table);
-		free(pcb->assigned_frames);
+		free(pcb->process_frames_index);
 		free(pcb->burst_estimation);
 		free(pcb);
 		return NULL;
@@ -127,7 +127,7 @@ t_pcb *create_pcb()
 		free(pcb->instructions);
 		free(pcb->program_counter);
 		free(pcb->page_table);
-		free(pcb->assigned_frames);
+		free(pcb->process_frames_index);
 		free(pcb->burst_estimation);
 		free(pcb->blocked_time);
 		free(pcb);
@@ -143,7 +143,7 @@ t_pcb *create_pcb()
 		free(pcb->instructions);
 		free(pcb->program_counter);
 		free(pcb->page_table);
-		free(pcb->assigned_frames);
+		free(pcb->process_frames_index);
 		free(pcb->burst_estimation);
 		free(pcb->blocked_time);
 		free(pcb->pending_io_time);
@@ -175,7 +175,7 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb)
 	uint32_t *page_table = &(pcb->page_table);
 	stream_take_UINT32P(packet->payload, &page_table);
 
-	uint32_t *assigned_frames = &(pcb->assigned_frames);
+	uint32_t *assigned_frames = &(pcb->process_frames_index);
 	stream_take_UINT32P(packet->payload, &assigned_frames);
 
 	uint32_t *burst_estimation = &(pcb->burst_estimation);
@@ -201,7 +201,7 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb)
 
 	stream_add_UINT32(packet->payload, pcb->program_counter);
 	stream_add_UINT32(packet->payload, pcb->page_table);
-	stream_add_UINT32(packet->payload, pcb->assigned_frames);
+	stream_add_UINT32(packet->payload, pcb->process_frames_index);
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
 	stream_add_UINT32(packet->payload, pcb->blocked_time);
 	stream_add_UINT32(packet->payload, pcb->pending_io_time);

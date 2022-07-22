@@ -202,7 +202,7 @@ enum operation fetch_and_decode(t_instruction **instruction)
 
 void execute_no_op()
 {
-	usleep(config->delayNoOp * 1000);
+	usleep(config->delayNoOp);
 }
 
 void execute_io(t_list *params)
@@ -314,7 +314,6 @@ t_tlb *create_tlb()
 // TODO ejecutar en memoria cuando se  pide frame
 int32_t get_tlb_frame(uint32_t pid, uint32_t page)
 {
-
 	pthread_mutex_lock(&tlb_mutex);
 	int32_t frame = -1;
 	for (int i = 0; i < tlb->entryQty; i++)

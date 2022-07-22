@@ -20,10 +20,8 @@ typedef struct t_swap_file
     t_pageMetadata *entries;
 } t_swap_file;
 
-t_swap_file *swapFile_create(char *path, uint32_t pid, size_t size, size_t pageSize);
-void swapFile_register(t_swap_file *sf, uint32_t pid, uint32_t pageNumber,
-                       int index);
-
+t_swap_file *swapFile_create(uint32_t PID, size_t process_size);
+void swapFile_register(t_swap_file *sf, uint32_t pid, uint32_t pageNumber, int index);
 int swapFile_getIndex(t_swap_file *sf, uint32_t pid, uint32_t pageNumber);
 void *swapFile_readAtIndex(t_swap_file *sf, int index);
 void swapFile_writeAtIndex(t_swap_file *sf, int index, void *pagePtr);

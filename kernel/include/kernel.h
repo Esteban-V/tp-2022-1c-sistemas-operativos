@@ -27,7 +27,7 @@ enum e_sortingAlgorithm
 	SRT = 1
 };
 
-enum e_sortingAlgorithm sortingAlgorithm = FIFO; // TODO. Ta bien esto?
+enum e_sortingAlgorithm sortingAlgorithm = FIFO;
 
 int pid = 0;
 t_log *logger;
