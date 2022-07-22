@@ -1,19 +1,18 @@
 #include "page_table.h"
 
 // Crea tabla de nivel 1 y tablas de nivel 2 correspondientes, y retorna el indice de la 1era
-int page_table_init(uint32_t process_size)
+int page_table_init(uint32_t process_size, int level1_index, int frames_index)
 {
 	// Creacion tabla nivel 1
 	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
 	level1_table->entries = list_create();
 
 	// Se agrega a lista global 1 y se obtiene su posicion en la misma para retornar
-	int level1_index = list_add(level1_tables, level1_table);
+	level1_index = list_add(level1_tables, level1_table);
 
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
 	int pages_required = process_size / (config->pageSize);
-	// ceil = (a / b) + ((a % b) != 0)
-	int level2_pages_required = (pages_required / config->entriesPerTable) + ((pages_required % config->entriesPerTable) != 0);
+	int level2_pages_required = ceil_div(pages_required, config->entriesPerTable);
 
 	// Creacion tablas nivel 2
 	for (int i = 0; i < level2_pages_required; i++)
@@ -42,7 +41,32 @@ int page_table_init(uint32_t process_size)
 		list_add(level1_table->entries, level2_index);
 	}
 
-	return level1_index;
+	t_list *frames = list_create();
+	// Asignacion de frames
+	for (int i = 0; i < config->framesPerProcess; i++)
+	{
+		// Creacion pagina
+		t_frame_entry *frame_entry = malloc(sizeof(t_frame_entry));
+
+		int frame_index = find_first_free_frame(frames_bitmap);
+		if (frame_index != -1)
+		{
+			// Se le asigna una frame libre
+			frame_entry->frame = frame_index;
+			frame_entry->page_data = NULL;
+			list_add(frames, frame_entry);
+		}
+		else
+		{
+			// No encuentra frame libre :(
+		}
+	}
+
+	t_process_frame *process_frame = malloc(sizeof(t_process_frame));
+	process_frame->frames = frames;
+	process_frame->clock_hand = 0;
+
+	frames_index = list_add(process_frames, process_frame);
 }
 
 // Retorna la tabla de nivel 1 segun su indice en su lista global
@@ -82,11 +106,15 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 	int frame = -1;
 	if (entry->present)
 	{
+		// entry->used = true;
 		frame = entry->frame;
 		return frame;
 	}
-	else
+	/* else
 	{
+
+		// replaceAlgorithm
+		// CLOCK = 0 --> false
 
 		t_page_entry *pointerIterator = NULL; // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
 		t_page_entry *actualPointer = NULL;	  // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
@@ -108,7 +136,6 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 			entry->previous = pointerIterator;
 			pointerIterator = pointerIterator->next;
 		}
-
 		while (1)
 		{
 			if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
@@ -148,7 +175,7 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid)
 				actualPointer = actualPointer->next;
 			}
 		}
-	}
+	} */
 	return frame;
 }
 
@@ -208,12 +235,14 @@ bool isFree(int frame_number)
 	return free;
 }
 
-uint32_t getFreeFrame(uint32_t start, uint32_t end)
+int find_first_free_frame(t_bitarray *bitmap)
 {
-	for (uint32_t i = start; i < end; i++)
+	for (int i = 0; i < config->framesInMemory; i++)
 	{
-		if (isFree(i))
+		if (!bitarray_test_bit(bitmap, i))
+		{
 			return i;
+		}
 	}
 	return -1;
 }

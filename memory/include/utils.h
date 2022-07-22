@@ -10,6 +10,7 @@
 #include <commons/config.h>
 #include <commons/string.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 #include "serialization.h"
 #include "networking.h"
 #include "pcb_utils.h"
@@ -75,6 +76,8 @@ typedef struct mem
     void *memory;
 } t_memory;
 
+t_bitarray *frames_bitmap;
+
 typedef struct pageMetadata
 {
     uint32_t pid;
@@ -97,5 +100,9 @@ pthread_mutex_t memoryMut, metadataMut;
 
 // Algoritmo de Reemplazo
 uint32_t (*replace_algo)(uint32_t start, uint32_t end);
+
+int ceil_div(int a, int b);
+
+int find_first_free_frame(t_bitarray *frames_bitmap);
 
 #endif /* UTILS_H_ */

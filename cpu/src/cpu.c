@@ -217,9 +217,11 @@ void execute_read(t_list *params)
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
 	// MMU debe calcular:
-	/*uint32_t page_number = floor(l_address / config->pageSize);
-	uint32_t entry_index = floor(page_number / config->entriesPerTable);*/
+	uint32_t page_number = floor(l_address / config->pageSize);
+	uint32_t entry_index = floor(page_number / config->entriesPerTable);
+	
 	// Pedir LVL1_TABLE con pcb->page_table
+
 }
 
 void execute_copy(t_list *params)

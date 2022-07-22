@@ -407,21 +407,23 @@ bool table_index_success(t_packet *petition, int mem_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t level1_table_index = stream_take_UINT32(petition->payload);
+	uint32_t process_frame_index = stream_take_UINT32(petition->payload);
 
 	bool found = false;
-	void _page_table_to_pid(void *elem)
+	void _memory_data_to_pid(void *elem)
 	{
 		t_pcb *pcb = (t_pcb *)elem;
 		// Encontrar el pcb correspondiente al pid
 		if (pcb->pid == pid)
 		{
-			// Almacenar puntero a tabla de paginas nivel 1 dado por memoria
+			// Almacenar index a tabla de paginas nivel 1 y listado de framess dados por memoria
 			pcb->page_table = (int)level1_table_index;
+			pcb->assigned_frames = (int)process_frame_index;
 			found = true;
 		}
 	};
 
-	pQueue_iterate(memory_init_q, _page_table_to_pid);
+	pQueue_iterate(memory_init_q, _memory_data_to_pid);
 	if (found)
 	{
 		// Avisar de pcb listo para memoria
