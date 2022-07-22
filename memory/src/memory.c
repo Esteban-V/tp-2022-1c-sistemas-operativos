@@ -29,6 +29,8 @@ int main()
 	level2_tables = list_create();
 
 	swap_files = list_create();
+	process_frames = list_create();
+
 	/* hay que ver como determinar swapfiles y filesize
 	 agregar donde se swappean
 	 list_add(swap_files, swapFile_create(config->swap_files[i], config->fileSize, config->pageSize));
@@ -36,7 +38,6 @@ int main()
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
 	memory = memory_init();
-	metadata->clock_m_counter = 0;
 
 	clock_m_counter = 0;
 
@@ -129,7 +130,7 @@ bool cpu_handshake(int cpu_socket)
 bool process_new(t_packet *petition, int kernel_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t size = stream_take_UINT32(petition->payload);
+	uint32_t process_size = stream_take_UINT32(petition->payload);
 
 	if (pid != NULL)
 	{
@@ -137,12 +138,15 @@ bool process_new(t_packet *petition, int kernel_socket)
 		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		page_table_init(size, &pt1_index, &frames_index);
+		int pt1_index, frames_index;
+		page_table_init(process_size, &pt1_index, &frames_index);
 
 		stream_add_UINT32(response->payload, pid);
 		stream_add_UINT32(response->payload, (uint32_t)pt1_index);
 		stream_add_UINT32(response->payload, (uint32_t)frames_index);
 		socket_send_packet(kernel_socket, response);
+
+		// list_add(swap_files, swapFile_create(config->swapPath, pid, process_size, config->pageSize));
 
 		packet_destroy(response);
 	}
@@ -161,6 +165,8 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		log_info(logger, "Process suspension requested for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
+
+		// meter en un page_table_destroy con toda la logica
 		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
@@ -215,15 +221,14 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroying PID #%d", pid);
+		log_info(logger, "Destroying PID #%d memory structures", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		// TODO: Definir si se deben recorrer todas las entradas de la pt1 del proceso
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
 		// Se iteran las entries (indices a tablas nivel 2) de pt1 y se ejecuta por cada una:
-		/*
-		t_ptbr2 *pt2 = get_page_table2(pt2_index);
+		/*t_ptbr2 *pt2 = get_page_table2(pt2_index);
 		int page_cant = list_size(pt2->entries);
 		// No page_cant, usar list_iterate
 		for (int i = 0; i < page_cant; i++)
@@ -247,12 +252,8 @@ bool process_exit(t_packet *petition, int kernel_socket)
 			}
 		}*/
 
-		/*t_packet *response = create_packet(OK, 0);
-		 socket_send_packet(cpu_socket, response);
-		 packet_destroy(response);*/
-
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroyed PID #%d successfully", pid);
+		log_info(logger, "Memory structures destroyed successfully");
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response = create_packet(PROCESS_EXIT_READY,
@@ -351,8 +352,10 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 	// CPU debe calcular:
 	// page_number = floor(instruction_param_address / config->pageSize)
 	// entry_index =  page_number % config->entriesPerTable
+
 	uint32_t entry_index = stream_take_UINT32(petition->payload);
 	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t framesIndex = stream_take_UINT32(petition->payload);
 
 	if (pt2_index != -1)
 	{
@@ -360,7 +363,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		log_info(logger, "Getting frame number");
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index, pid);
+		uint32_t frame_num = (uint32_t)get_frame_number(pt2_index, entry_index, pid,framesIndex);
 
 		t_packet *response = create_packet(FRAME_TO_CPU,
 										   INITIAL_STREAM_SIZE);
@@ -376,37 +379,37 @@ bool memory_write(t_packet *petition, int cpu_socket)
 {
 	memory_write_counter++;
 
-	sem_wait(&writeRead);
-
+	// Q corno es cada cosa????
 	uint32_t dir = stream_take_UINT32(petition->payload);
 	uint32_t toWrite = stream_take_UINT32(petition->payload);
-	/*
-		if (!!toWrite)
+
+	/*if (!!toWrite)
+	{
+		sem_wait(&writeRead);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory Write Request");
+		pthread_mutex_unlock(&mutex_log);
+
+		// Cargar página
+		uint32_t frameVictima = assignPage(pid, pt2_entry, page);
+
+		t_packet *response;
+		if (frameVictima == -1)
 		{
-
-			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Memory Write Request");
-			pthread_mutex_unlock(&mutex_log);
-
-			// Cargar página
-			uint32_t frameVictima = swapPage(pid, pt1_entry, pt2_entry, page);
-
-			t_packet *response;
-			if (frameVictima == -1)
-			{
-				response = create_packet(SWAP_ERROR, 0);
-			}
-			else
-			{
-				response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
-			}
-
-			stream_add_UINT32(response->payload, frameVictima);
-			socket_send_packet(cpu_socket, response);
-			packet_destroy(response);
+			response = create_packet(SWAP_ERROR, 0);
 		}
-	 */
-	sem_post(&writeRead);
+		else
+		{
+			response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
+		}
+
+		stream_add_UINT32(response->payload, frameVictima);
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);
+
+		sem_post(&writeRead);
+	}*/
 
 	return false;
 }
@@ -419,6 +422,8 @@ bool memory_read(t_packet *petition, int cpu_socket)
 
 	uint32_t dir = stream_take_UINT32(petition->payload);
 
+	sem_wait(&writeRead);
+
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Reading Memory");
 	pthread_mutex_unlock(&mutex_log);
@@ -430,21 +435,21 @@ bool memory_read(t_packet *petition, int cpu_socket)
 
 t_memory *memory_init()
 {
-	int cantFrames = config->framesInMemory;
+	int cant_frames = config->framesInMemory;
 
 	// Crea espacio de memoria contiguo
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(cantFrames, sizeof(uint32_t));
+	mem->memory = calloc(cant_frames, sizeof(uint32_t));
 
 	// Crea bitmap de frames libres/ocupados
-	void *ptr = malloc(cantFrames);
-	frames_bitmap = bitarray_create_with_mode(ptr, ceil_div(cantFrames, 8), LSB_FIRST);
-	msync(frames_bitmap->bitarray, cantFrames, MS_SYNC);
+	void *ptr = malloc(cant_frames);
+	frames_bitmap = bitarray_create_with_mode(ptr, ceil_div(cant_frames, 8), LSB_FIRST);
+	msync(frames_bitmap->bitarray, cant_frames, MS_SYNC);
 
-	for (int i = 0; i < cantFrames; i++)
+	for (int i = 0; i < cant_frames; i++)
 	{
-		// Inicializa bitmap en false, todos los frames estan vacios
-		bitarray_clean_bit(cantFrames, i);
+		// Inicializa todos los frames como vacios/no asignados
+		bitarray_clean_bit(frames_bitmap, i);
 	}
 
 	return mem;

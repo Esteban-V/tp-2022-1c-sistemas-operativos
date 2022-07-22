@@ -3,7 +3,7 @@
 int main(void)
 {
 	logger = log_create("./cfg/kernel-final.log", "KERNEL", 1, LOG_LEVEL_INFO);
-	kernelConfig = getKernelConfig("./cfg/kernel.config");
+	config = getKernelConfig("./cfg/kernel.config");
 
 	// Inicializar estructuras de estado
 	new_q = pQueue_create();
@@ -15,7 +15,7 @@ int main(void)
 	suspended_ready_q = pQueue_create();
 	exit_q = pQueue_create();
 
-	sem_init(&sem_multiprogram, 0, kernelConfig->multiprogrammingLevel);
+	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
 	sem_init(&cpu_free, 0, 1);
 	sem_init(&interrupt_ready, 0, 0);
 	sem_init(&process_for_IO, 0, 0);
@@ -23,17 +23,17 @@ int main(void)
 	sem_init(&ready_for_exec, 0, 0);
 	sem_init(&pcb_table_ready, 0, 0);
 
-	if (kernelConfig == NULL)
+	if (config == NULL)
 	{
 		log_error(logger, "Config failed to load");
 		terminate_kernel(true);
 	}
 
-	if (!strcmp(kernelConfig->schedulerAlgorithm, "SRT"))
+	if (!strcmp(config->schedulerAlgorithm, "SRT"))
 	{
 		sortingAlgorithm = SRT;
 	}
-	else if (!strcmp(kernelConfig->schedulerAlgorithm, "FIFO"))
+	else if (!strcmp(config->schedulerAlgorithm, "FIFO"))
 	{
 		sortingAlgorithm = FIFO;
 	}
@@ -43,9 +43,9 @@ int main(void)
 					"Wrong scheduler algorithm set in config --> Using FIFO");
 	}
 
-	cpu_dispatch_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortDispatch);
-	cpu_interrupt_socket = connect_to(kernelConfig->cpuIP, kernelConfig->cpuPortInterrupt);
-	memory_socket = connect_to(kernelConfig->memoryIP, kernelConfig->memoryPort);
+	cpu_dispatch_socket = connect_to(config->cpuIP, config->cpuPortDispatch);
+	cpu_interrupt_socket = connect_to(config->cpuIP, config->cpuPortInterrupt);
+	memory_socket = connect_to(config->memoryIP, config->memoryPort);
 
 	if (cpu_dispatch_socket == -1 || cpu_interrupt_socket == -1 || memory_socket == -1)
 	{
@@ -55,7 +55,7 @@ int main(void)
 	log_info(logger, "Kernel connected to CPU and memory");
 
 	// Creacion de server
-	server_socket = create_server(kernelConfig->listenPort);
+	server_socket = create_server(config->listenPort);
 
 	if (server_socket == -1)
 	{
@@ -131,7 +131,7 @@ void *io_listener()
 			time_blocked = time_to_ms(curr_time) - pcb->blocked_time;
 
 			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
-			sleep_ms = kernelConfig->maxBlockedTime - time_blocked;
+			sleep_ms = config->maxBlockedTime - time_blocked;
 
 			// Tiempo extra luego de hacer su io
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
@@ -151,7 +151,7 @@ void *io_listener()
 			{
 				// Tiempo faltante supera tiempo maximo
 				pthread_mutex_lock(&mutex_log);
-				log_warning(logger, "Burst exceeds %dms max", kernelConfig->maxBlockedTime);
+				log_warning(logger, "Burst exceeds %dms max", config->maxBlockedTime);
 				log_info(logger, "PID #%d --> I/O burst %dms", sleep_ms);
 				pthread_mutex_unlock(&mutex_log);
 
@@ -237,8 +237,8 @@ bool receive_process(t_packet *petition, int console_socket)
 		pcb->pid = pid;
 		pcb->client_socket = console_socket;
 		pcb->program_counter = 0;
-		pcb->burst_estimation = kernelConfig->initialEstimate;
-		pcb->left_burst_estimation = kernelConfig->initialEstimate;
+		pcb->burst_estimation = config->initialEstimate;
+		pcb->left_burst_estimation = config->initialEstimate;
 
 		pQueue_put(new_q, (void *)pcb);
 
@@ -417,8 +417,8 @@ bool table_index_success(t_packet *petition, int mem_socket)
 		if (pcb->pid == pid)
 		{
 			// Almacenar index a tabla de paginas nivel 1 y listado de framess dados por memoria
-			pcb->page_table = (int)level1_table_index;
-			pcb->assigned_frames = (int)process_frame_index;
+			pcb->page_table = level1_table_index;
+			pcb->assigned_frames = process_frame_index;
 			found = true;
 		}
 	};
@@ -514,8 +514,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
-		received_pcb->burst_estimation = (kernelConfig->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - kernelConfig->alpha) * received_pcb->burst_estimation);
-		received_pcb->left_burst_estimation = (kernelConfig->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - kernelConfig->alpha) * received_pcb->burst_estimation);
+		received_pcb->burst_estimation = (config->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - config->alpha) * received_pcb->burst_estimation);
+		received_pcb->left_burst_estimation = (config->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - config->alpha) * received_pcb->burst_estimation);
 
 		struct timespec blocked_time;
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
@@ -591,7 +591,7 @@ void *header_handler(void *_client_socket)
 void terminate_kernel(bool error)
 {
 	log_destroy(logger);
-	destroyKernelConfig(kernelConfig);
+	destroyKernelConfig(config);
 	if (cpu_interrupt_socket)
 		close(cpu_interrupt_socket);
 	if (cpu_dispatch_socket)

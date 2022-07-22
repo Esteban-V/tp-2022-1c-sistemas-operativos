@@ -82,5 +82,6 @@ void fifo_tlb(t_tlbEntry* entry);
 void (*update_victim_queue)(t_tlbEntry*);
 void destroy_tlb();
 void clean_tlb();
+void drop_tlb_entry(uint32_t pid, uint32_t page);
 
 #endif /* INCLUDE_CPU_H_ */

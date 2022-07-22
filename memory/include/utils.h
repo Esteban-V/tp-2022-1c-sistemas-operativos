@@ -64,13 +64,6 @@ typedef struct t_mem_metadata
     t_frame_metadata *entries;
 } t_mem_metadata;
 
-typedef struct swapInterface
-{
-    int pageSize;
-    int socket;
-    pthread_mutex_t mutex;
-} t_swapInterface;
-
 typedef struct mem
 {
     void *memory;
@@ -98,11 +91,10 @@ void destroyMemoryConfig(t_memoryConfig *config);
 sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut;
 
-// Algoritmo de Reemplazo
-uint32_t (*replace_algo)(uint32_t start, uint32_t end);
-
 int ceil_div(int a, int b);
 
-int find_first_free_frame(t_bitarray *frames_bitmap);
-
+int find_first_unassigned_frame(t_bitarray *frames_bitmap);
+int frame_set_assigned(t_bitarray *frames_bitmap, int index);
+int frame_clear_assigned(t_bitarray *frames_bitmap, int index);
+void sync_bitmap(t_bitarray *bitmap);
 #endif /* UTILS_H_ */

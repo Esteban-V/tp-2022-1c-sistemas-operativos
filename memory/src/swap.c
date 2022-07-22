@@ -1,9 +1,8 @@
 #include "swap.h"
 
 
-t_swap_file *swapFile_create(char *path, uint32_t PID, size_t size,
-                             size_t pageSize)
-{ // TODO Asignar PID
+t_swap_file *swapFile_create(char *path, uint32_t PID, size_t process_size, size_t pageSize)
+{
     t_swap_file *self = malloc(sizeof(t_swap_file));
 
     char *_PID = string_duplicate(string_itoa(PID));
@@ -12,14 +11,10 @@ t_swap_file *swapFile_create(char *path, uint32_t PID, size_t size,
     string_append(&aux, _PID);
     string_append(&path, aux);
 
-    pthread_mutex_lock(&mutex_log);
-    log_info(logger, "- - - - - - PATH %s - - - - - -", path);
-    pthread_mutex_unlock(&mutex_log);
-
     self->path = string_duplicate(path);
-    self->size = size;
+    self->size = process_size;
     self->pageSize = pageSize;
-    self->maxPages = size / pageSize;
+    self->maxPages = process_size / pageSize;
     self->fd = open(self->path, O_RDWR | O_CREAT, S_IRWXU);
     ftruncate(self->fd, self->size);
     void *mappedFile = mmap(NULL, self->size, PROT_READ | PROT_WRITE,
