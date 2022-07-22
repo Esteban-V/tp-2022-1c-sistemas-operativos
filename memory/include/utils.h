@@ -97,4 +97,5 @@ int find_first_unassigned_frame(t_bitarray *frames_bitmap);
 int frame_set_assigned(t_bitarray *frames_bitmap, int index);
 int frame_clear_assigned(t_bitarray *frames_bitmap, int index);
 void sync_bitmap(t_bitarray *bitmap);
+
 #endif /* UTILS_H_ */

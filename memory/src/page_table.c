@@ -326,7 +326,7 @@ uint32_t replace(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32
 	{
 		log_info(logger, "SWAP");
 
-		usleep(config->swapDelay);
+		usleep(config->swapDelay*1000);
 
 		// Enviar pagina reemplazada a swap.
 		//t_frame_entry* frame_entry = process_get_frame_entry(/*PID de la pagina a ser reemplazada*/, victim_frame);
@@ -337,6 +337,7 @@ uint32_t replace(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32
 		pthread_mutex_unlock(&metadataMut);
 
 		// drop_tlb_entry(victimPID, victimPage); TODO pasar a CPU
+
 		t_packet *response = create_packet(TLB_DROP, INITIAL_STREAM_SIZE);
 		//stream_add_UINT32(response->payload, *PID de la pagina a ser reemplazada*/);
 		stream_add_UINT32(response->payload, page);
@@ -379,11 +380,12 @@ uint32_t replace(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32
 
 	// Modificar frame metadata.
 	pthread_mutex_lock(&metadataMut); // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
-	(metadata->entries)[victim_frame].page = page;
-	(metadata->entries)[victim_frame].PID = PID;
-	(metadata->entries)[victim_frame].isFree = false;
-	(metadata->entries)[victim_frame].modified = false;
-	(metadata->entries)[victim_frame].u = true;
+	(metadata->entries)[victim_frame].page = page; // process frames y page entry
+
+	(metadata->entries)[victim_frame].modified = false; // page entry
+	(metadata->entries)[victim_frame].u = true; // page entry
+
+	(metadata->entries)[victim_frame].isFree = false; // bitmap
 	pthread_mutex_unlock(&metadataMut);
 
 	return victim_frame;

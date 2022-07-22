@@ -202,7 +202,7 @@ enum operation fetch_and_decode(t_instruction **instruction)
 
 void execute_no_op()
 {
-	usleep(config->delayNoOp);
+	usleep(config->delayNoOp*1000);
 }
 
 void execute_io(t_list *params)
@@ -219,7 +219,7 @@ void execute_read(t_list *params)
 	// MMU debe calcular:
 	uint32_t page_number = floor(l_address / config->pageSize);
 	uint32_t entry_index = floor(page_number / config->entriesPerTable);
-	
+
 	// Pedir LVL1_TABLE con pcb->page_table
 
 }
@@ -366,7 +366,7 @@ void add_tlb_entry(uint32_t pid, uint32_t page, int32_t frame)
 
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "TLB Replacement: Replacement in Entry %d ; Old Entry Data: Page: %u, Frame: %u ; New Entry Data: Page: %u, Frame: %u ; PID: %u",
-					 (victim - tlb->entries), victim->page, victim->frame, pid, page, frame); // ?
+					 (victim - tlb->entries), victim->page, victim->frame, pid, page, frame);
 			pthread_mutex_unlock(&mutex_log);
 
 			victim->page = page;

@@ -152,7 +152,7 @@ void *io_listener()
 				// Tiempo faltante supera tiempo maximo
 				pthread_mutex_lock(&mutex_log);
 				log_warning(logger, "Burst exceeds %dms max", config->maxBlockedTime);
-				log_info(logger, "PID #%d --> I/O burst %dms", sleep_ms);
+				log_info(logger, "PID #%d --> I/O burst %dms", pcb->pid, sleep_ms);
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme el maximo
@@ -169,7 +169,6 @@ void *io_listener()
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspend_packet->payload, pcb->pid);
 				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
-				stream_add_UINT32(suspend_packet->payload, pcb->process_frames_index);
 
 				if (memory_socket != -1)
 				{
