@@ -124,11 +124,12 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 			while(1){
 				if(!strcmp(config->replaceAlgorithm, "CLOCK-M")){
 					for(int i=0;i<config->framesPerProcess;i++){
-						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand);
+						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand%config->framesPerProcess);
 						t_page_entry* pageInFrame =	currentFrame->page_data;
 						processFrames->clock_hand++;
 						if((pageInFrame->used==0) && (pageInFrame->modified==0)){
 							pageInFrame->present=0;
+							//SWAP
 							currentFrame->page_data=entry;
 							frame=currentFrame->frame;
 							return frame;
@@ -136,11 +137,12 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 					}
 				}
 				for(int i=0;i<config->framesPerProcess;i++){
-						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand);
+						t_frame_entry* currentFrame=(t_frame_entry *)list_get(processFrames->frames,processFrames->clock_hand%config->framesPerProcess);
 						t_page_entry* pageInFrame =	currentFrame->page_data;
 						processFrames->clock_hand++;
 						if(pageInFrame->used==0){
 							pageInFrame->present=0;
+							//SWAP
 							currentFrame->page_data=entry;
 							frame=currentFrame->frame;
 							return frame;
@@ -151,72 +153,6 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 		}
 
 	}
-	/* else
-	{
-		// replaceAlgorithm
-		// CLOCK = 0 --> false
-
-		t_page_entry *pointerIterator = NULL; // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
-		t_page_entry *actualPointer = NULL;	  // dictionary_get(clock_pointers_dictionary,string_itoa(pid));//getPointer();//falta implementar
-
-		// me falta bastante
-		for (int i = 0; i < config->entriesPerTable; i++)
-		{
-
-			if (pointerIterator == NULL)
-			{
-				// asignFrame(entry);//falta implementar
-				pointerIterator = entry;
-				if (i + 1 == config->entriesPerTable)
-				{
-					entry->next = actualPointer;
-					actualPointer->previous = entry;
-				}
-				return entry->frame;
-			}
-			entry->previous = pointerIterator;
-			pointerIterator = pointerIterator->next;
-		}
-		while (1)
-		{
-			if (!strcmp(config->replaceAlgorithm, "CLOCK-M"))
-			{
-				for (int j = 0; j < config->entriesPerTable; j++)
-				{
-					if ((actualPointer->used == 0) && (actualPointer->modified == 0))
-					{
-						// swapearrrrrrrrrr
-						actualPointer->present = 0;
-						entry->frame = actualPointer->frame;
-						actualPointer->next->previous = entry;
-						actualPointer->previous->next = entry;
-						entry->present = 1;
-						entry->next = actualPointer->next;
-						entry->previous = actualPointer->previous;
-						return entry->frame;
-					}
-					actualPointer = actualPointer->next;
-				}
-			}
-			for (int k = 0; k < config->entriesPerTable; k++)
-			{
-				if (actualPointer->used == 0)
-				{
-					// swapearrrrrrrrrr
-					actualPointer->present = 0;
-					entry->frame = actualPointer->frame;
-					actualPointer->next->previous = entry;
-					actualPointer->previous->next = entry;
-					entry->present = 1;
-					entry->next = actualPointer->next;
-					entry->previous = actualPointer->previous;
-					return entry->frame;
-				}
-				actualPointer->used = 0;
-				actualPointer = actualPointer->next;
-			}
-		}
-	} */
 	return frame;
 }
 
