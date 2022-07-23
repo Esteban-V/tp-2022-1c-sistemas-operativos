@@ -143,7 +143,7 @@ void *io_listener()
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme por el tiempo faltante, sin superar el maximo
-				usleep(pcb->pending_io_time);
+				usleep(pcb->pending_io_time*1000);
 
 				put_to_ready(pcb);
 			}
@@ -156,7 +156,7 @@ void *io_listener()
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme el maximo
-				usleep(sleep_ms);
+				usleep(sleep_ms*1000);
 
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger, "Finished I/O burst");
@@ -201,7 +201,7 @@ void *io_listener()
 
 			pcb = pQueue_take(suspended_block_q);
 
-			usleep(pcb->pending_io_time);
+			usleep(pcb->pending_io_time*1000);
 
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "Finished I/O burst");
