@@ -69,7 +69,7 @@ bool isFree(int frame_number);
 uint32_t createPage(uint32_t pid, uint32_t pt1_entry);
 
 //void *readPage(uint32_t dir);
-void* readPage(uint32_t pid, uint32_t pageNumber);
+void* read_swap_page(uint32_t pid, uint32_t pageNumber);
 bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent);
 
 void destroyPage(uint32_t pid, uint32_t page);

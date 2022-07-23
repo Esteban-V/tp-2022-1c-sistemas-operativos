@@ -351,10 +351,10 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		log_info(logger, "Getting Frame Number");
 		pthread_mutex_unlock(&mutex_log);
 
-		uint32_t victim_frame = (uint32_t)get_frame_number(pt2_index, entry_index, pid,framesIndex);
+		uint32_t victim_frame = (uint32_t) get_frame_number(pt2_index, entry_index, pid,framesIndex);
 
 		// Traer contenido de pagina pedida de swap.
-		void *pageFromSwap = readPage(pid, pageNumber);
+		void *pageFromSwap = read_swap_page(pid, pageNumber);
 
 		// Chequear que se haya podido traer
 		if (pageFromSwap == NULL)
@@ -421,6 +421,11 @@ bool memory_write(t_packet *petition, int cpu_socket)
 {
 	uint32_t dir = stream_take_UINT32(petition->payload);
 	uint32_t toWrite = stream_take_UINT32(petition->payload);
+	/*uint32_t pt2_index = stream_take_UINT32(petition->payload);
+	uint32_t entry_index = stream_take_UINT32(petition->payload);
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t framesIndex = stream_take_UINT32(petition->payload);
+	uint32_t pageNumber = stream_take_UINT32(petition->payload);*/
 
 	if (!!toWrite)
 	{
@@ -432,22 +437,22 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		// Cargar página
-		uint32_t frameVictima; // = replace(frameVictima, PID, pt2_index, page, cpu_socket);
+		//uint32_t frameVictima = get_frame_number(pt2_index, entry_index, pid, framesIndex);
 		//writeFrame(PID, victim_frame, pageFromSwap);
 
-		t_packet *response;
+		/*t_packet *response;
 		if (frameVictima == -1)
 		{
-			response = create_packet(SWAP_ERROR, 0);
+			//response = create_packet(NO OK, 0);
 		}
 		else
 		{
-			response = create_packet(SWAP_OK, INITIAL_STREAM_SIZE);
+			//response = create_packet(OK, INITIAL_STREAM_SIZE);
 		}
 
 		stream_add_UINT32(response->payload, frameVictima);
 		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);
+		packet_destroy(response);*/
 
 		sem_post(&writeRead);
 	}
@@ -470,7 +475,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 
 		usleep(config->memoryDelay*1000);
 
-		//void *pageFromSwap = readPage(PID, pageNumber);
+		void *pageFromSwap = read_swap_page(PID, pageNumber);
 
 		sem_post(&writeRead);
 	}

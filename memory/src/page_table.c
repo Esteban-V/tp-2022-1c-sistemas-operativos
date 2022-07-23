@@ -225,7 +225,7 @@ uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
 	return list_size(table->entries);
 }
 
-void *readPage(uint32_t pid, uint32_t pageNumber)
+void *read_swap_page(uint32_t pid, uint32_t pageNumber)
 {
 
 	t_swap_file *file = pidExists(pid);
@@ -287,6 +287,7 @@ void writeFrame(uint32_t pid, uint32_t frame, void *from)
 
 	// TODO chequear que este bien, o si falta actualizar algo
 	t_frame_entry* frame_entry = process_get_frame_entry(pid, frame);
+
 	pthread_mutex_lock(&metadataMut);
 	frame_entry->page_data->modified = true;
 	frame_entry->page_data->used = true;
