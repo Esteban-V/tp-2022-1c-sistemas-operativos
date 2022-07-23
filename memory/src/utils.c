@@ -75,17 +75,13 @@ bool has_free_frame(t_process_frame *process_frames)
 
 int find_first_free_frame(t_process_frame *process_frames)
 {
-    for (int i = 0; i < config->framesInMemory; i++)
+
+    bool _is_free(void *entry)
     {
-        t_frame_entry *entry = (t_frame_entry *)list_get(process_frames->frames, i);
+        return ((t_frame_entry *)entry)->frame != -1;
+    };
 
-        if (entry->frame != -1)
-        {
-            return i;
-        }
-    }
-
-    return -1;
+    return list_find(process_frames->frames, _is_free);
 }
 
 int find_first_unassigned_frame(t_bitarray *bitmap)

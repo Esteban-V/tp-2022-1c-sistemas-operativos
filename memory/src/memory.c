@@ -29,10 +29,9 @@ int main()
 	level1_tables = list_create();
 	level2_tables = list_create();
 
-	swap_files = list_create();
 	processes_frames = list_create();
 
-	sem_init(&writeRead, 0, 1); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
+	sem_init(&writeRead, 0, 1);
 
 	memory = memory_init();
 
@@ -144,7 +143,7 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		int pt1_index = page_table_init(process_size);
+		int pt1_index = page_table_init(process_size, replaceAlgorithm);
 		int process_frames_index = assign_process_frames();
 
 		create_swap(pid, process_size);

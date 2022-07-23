@@ -20,13 +20,18 @@ int page_fault_counter;
 int page_assignment_counter;
 int page_replacement_counter;
 
-int page_table_init(uint32_t process_size);
+int replaceAlgorithm2;
+
+// 0 = CLOCK
+// 1 = CLOCK_M
+int page_table_init(uint32_t process_size, int algorithm);
 int assign_process_frames();
 void unassign_process_frames(int process_frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
 t_ptbr2 *get_page_table2(int pt2_index);
-void replace_page_in_frame(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page);
+
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid);
+int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *(*replace)(t_frame_entry *, t_page_entry *));
 
 #endif /* PAGETABLE_H_ */
