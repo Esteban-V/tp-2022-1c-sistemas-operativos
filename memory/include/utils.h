@@ -122,9 +122,9 @@ int find_first_unassigned_frame(t_bitarray *frames_bitmap);
 bool has_free_frame(t_process_frame *process_frames);
 int find_first_free_frame(t_process_frame *process_frames);
 
-int frame_set_assigned(t_bitarray *frames_bitmap, int index);
-int frame_clear_assigned(t_bitarray *frames_bitmap, int index);
-
+void frame_set_assigned(t_bitarray *frames_bitmap, int index);
+void frame_clear_assigned(t_bitarray *frames_bitmap, int index);
+void write_frame_value(void *frame_ptr, void *value);
 void increment_clock_hand(int *clock_hand);
 
 void sync_bitmap(t_bitarray *bitmap);

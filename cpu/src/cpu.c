@@ -397,13 +397,13 @@ void fifo_tlb(t_tlbEntry *entry)
 }
 
 // TODO ejecutar en memoria cuando se va a reemplazar pag
-void drop_tlb_entry(uint32_t pid, uint32_t page)
+void drop_tlb_entry(uint32_t page, uint32_t frame)
 {
 	pthread_mutex_lock(&tlb_mutex);
 
 	for (int i = 0; i < tlb->entryQty; i++)
 	{
-		if (tlb->entries[i].page == page)
+		if (tlb->entries[i].page == page && tlb->entries[i].frame == frame)
 		{
 			tlb->entries[i].isFree = true;
 			pthread_mutex_unlock(&tlb_mutex);
