@@ -45,7 +45,7 @@ int page_table_init(uint32_t process_size)
 }
 
 // Asigna primeros framesPerProcess libres e inicializa estructura para recorrerlas con clock/clock-m, y retorna el indice de la misma
-int process_assign_frames()
+int assign_process_frames()
 {
 	// Asignacion de frames fija
 	t_list *frames = list_create();
@@ -229,61 +229,4 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 			old_page->used = false;
 		}
 	}
-}
-
-// De aca en adelante estas funciones no se revisaron
-
-void *read_swap_page(uint32_t pid, uint32_t pageNumber)
-{
-	t_swap_file *file = pidExists(pid);
-
-	if (file == NULL)
-	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "File PID Not Found");
-		pthread_mutex_unlock(&mutex_log);
-
-		return 0;
-	}
-
-	int index = swapFile_getIndex(file, pid, pageNumber);
-
-	if (index == -1)
-	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "File index out of bounds");
-		pthread_mutex_unlock(&mutex_log);
-
-		return 0;
-	}
-
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d --> Recovered page %d index %d from file %s", pid, pageNumber, index, file->path);
-	pthread_mutex_unlock(&mutex_log);
-
-	return swapFile_readAtIndex(file, index); // Page data
-}
-
-t_frame_entry *process_get_frame_entry(int index, int frame)
-{
-	t_process_frame *process_frames = (t_process_frame *)list_get(processes_frames, index);
-	t_frame_entry *frame_entry = (t_frame_entry *)list_get(process_frames->frames, frame);
-	return frame_entry;
-}
-
-void writeFrame(int frames_index, uint32_t frame, void *from)
-{
-	void *frameAddress = memory_getFrame(frame);
-
-	// TODO chequear que este bien, o si falta actualizar algo
-	t_frame_entry *frame_entry = process_get_frame_entry(frames_index, frame);
-
-	pthread_mutex_lock(&metadataMut);
-	frame_entry->page_data->modified = true;
-	frame_entry->page_data->used = true;
-	pthread_mutex_unlock(&metadataMut);
-
-	pthread_mutex_lock(&memoryMut);
-	memcpy(frameAddress, from, config->pageSize);
-	pthread_mutex_unlock(&memoryMut);
 }

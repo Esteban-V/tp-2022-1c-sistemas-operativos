@@ -141,7 +141,7 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		int pt1_index = page_table_init(process_size);
 		int process_frames_index = assign_process_frames();
 
-		list_add(swap_files, swapFile_create(pid, process_size));
+		create_swap(pid, process_size);
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
 
@@ -201,6 +201,22 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 bool process_exit(t_packet *petition, int kernel_socket)
 {
+	void _free_frames(void *elem)
+	{
+		int pt2_index = *((int *)elem);
+		t_ptbr2 *pt2 = get_page_table2(pt2_index);
+		int page_cant = list_size(pt2->entries);
+
+		for (int i = 0; i < page_cant; i++)
+		{
+			// Cambiar valores
+			if (((t_page_entry *)list_get(pt2->entries, i))->present == true)
+			{
+				uint32_t frame = ((t_page_entry *)list_get(pt2->entries, i))->frame;
+			}
+		}
+	};
+
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
 	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
@@ -213,26 +229,8 @@ bool process_exit(t_packet *petition, int kernel_socket)
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
-		void _destroy_pt2(void *elem)
-		{
-			int pt2_index = *((int *)elem);
-			t_ptbr2 *pt2 = get_page_table2(pt2_index);
-			int page_cant = list_size(pt2->entries);
-
-			// Borrar swap
-			for (int i = 0; i < page_cant; i++)
-			{
-				bool error = destroy_swap_page(pid, i);
-
-				// Cambiar valores
-				if (((t_page_entry *)list_get(pt2->entries, i))->present == true)
-				{
-					uint32_t frame = ((t_page_entry *)list_get(pt2->entries, i))->frame;
-				}
-			}
-		}
-
-		list_iterate(pt1->entries, _destroy_pt2);
+		list_iterate(pt1->entries, _free_frames);
+		delete_swap(pid);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Memory structures destroyed successfully");

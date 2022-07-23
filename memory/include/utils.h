@@ -21,14 +21,6 @@
 #include <fcntl.h>
 #include "semaphore.h"
 
-enum e_replaceAlgorithm
-{
-    CLOCK = 0,
-    CLOCK_M = 1
-};
-
-enum e_replaceAlgorithm replaceAlgorithm = CLOCK;
-
 typedef struct t_memoryConfig
 {
     t_config *config;

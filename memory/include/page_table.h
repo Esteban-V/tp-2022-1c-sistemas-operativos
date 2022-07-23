@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <commons/collections/dictionary.h>
 #include <pthread.h>
-#include "utils.h"
 #include "swap.h"
 
 // Lista de t_ptbr1
@@ -14,15 +13,12 @@ t_list *level1_tables;
 t_list *level2_tables;
 
 int page_table_init(uint32_t process_size);
-int process_assign_frames();
+int assign_process_frames();
 
 t_ptbr1 *get_page_table1(int pt1_index);
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
 t_ptbr2 *get_page_table2(int pt2_index);
 
 void replace_page_in_frame(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page);
-
-// toda shit
-void *read_swap_page(uint32_t pid, uint32_t pageNumber);
 
 #endif /* PAGETABLE_H_ */
