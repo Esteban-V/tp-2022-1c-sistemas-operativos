@@ -160,6 +160,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
+	uint32_t pt2_index = stream_take_UINT32(petition->payload);
 
 	if (pid != NULL)
 	{
@@ -167,34 +168,37 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		log_info(logger, "Process Suspension Requested for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		// Swappear Pages
-		void _swap2(void *elem){
-			t_page_entry *entry = (t_page_entry *) elem;
+		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
-			// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
-			if (entry->present && entry->modified)
+		void _swap(void *elem){
+			t_ptbr2 *pt2 = get_page_table2(elem);
+			int page_cant = list_size(pt2->entries);
+
+			for (int i = 0; i < page_cant; i++)
 			{
-				int frame = entry->frame;
-				void *pageContent = (void *) memory_getFrame(frame);
+				t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, i);
 
-				//savePage(pid, pageNumber, pageContent);
+				// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
+				if (entry->present && entry->modified)
+				{
+					int frame = entry->frame;
+					void *pageContent = (void *)memory_getFrame(memory, frame);
+					savePage(pid, i, pageContent);
 
-				// TODO settear frame en free en process_frames (o en las tablas globales, nidea)
-				pthread_mutex_lock(&metadataMut);
-				//metadata->entries[frame].isFree = true;
-				pthread_mutex_unlock(&metadataMut);
-				entry->present = false;
+					/*pthread_mutex_lock(&metadataMut);
+					metadata->entries[frame].isFree =
+						true;
+					pthread_mutex_unlock(&metadataMut);*/
+
+					entry->present = false;
+				}
+
 			}
 		}
 
-		void _swap1(void *elem){
-			list_iterate(((t_ptbr2 *) elem)->entries, _swap2);
-		}
-
-		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
-		list_iterate(pt1->entries, _swap1);
-
+		list_iterate(pt1->entries, _swap);
 	}
+
 
 	return false;
 }
