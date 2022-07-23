@@ -130,20 +130,24 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 
 		t_process_frame *process_frames = list_get(process_frames, frames_index);
 		// Al haber un page fault, se actualiza el puntero del clock
-		process_frames->clock_hand++;
+		increment_clock_hand(&process_frames->clock_hand);
 
 		// Chequear si se puede asignar directo
-		if (has_free_frame(level2_table->entries))
+		if (has_free_frame(process_frames))
 		{
 			// todo
-			t_frame_entry *free_frame = (t_frame_entry *)list_get(process_frames->frames, 0);
+			int first_free_frame_index = find_first_free_frame(process_frames);
+			if (first_free_frame_index != -1) // No deberia pasar porque ya entro
+			{
+				t_frame_entry *free_frame = (t_frame_entry *)list_get(process_frames->frames, first_free_frame_index);
 
-			entry->present = true;
+				entry->present = true;
+				entry->frame = free_frame->frame;
+				free_frame->page_data = entry;
+				frame = free_frame->frame;
 
-			free_frame->page_data = entry;
-			frame = free_frame->frame;
-
-			return frame;
+				return frame;
+			}
 		}
 		else
 		{
@@ -186,6 +190,7 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 
 						return frame;
 					}
+
 					pageInFrame->used = 0;
 				}
 			}
@@ -332,7 +337,7 @@ void replace_page_in_frame(uint32_t victim_frame, uint32_t PID, uint32_t pt2_ind
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "PID #%d --> Replaced frame #%d for page #%d",
 			 PID, victim_frame, page);
-	og_info(logger, "[Replaced] PID #%d --> Page #%u",
-			victimPID, victimPage);
+	log_info(logger, "[Replaced] PID #%d --> Page #%u",
+			 victimPID, victimPage);
 	pthread_mutex_unlock(&mutex_log);
 }

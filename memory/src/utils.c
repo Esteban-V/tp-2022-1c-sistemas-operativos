@@ -40,6 +40,21 @@ bool has_free_frame(t_process_frame *process_frames)
     return cant_present < config->framesPerProcess;
 }
 
+int find_first_free_frame(t_process_frame *process_frames)
+{
+    for (int i = 0; i < config->framesInMemory; i++)
+    {
+        t_frame_entry *entry = (t_frame_entry *)list_get(process_frames->frames, i);
+
+        if (entry->frame != -1)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 int find_first_unassigned_frame(t_bitarray *bitmap)
 {
     for (int i = 0; i < config->framesInMemory; i++)
@@ -62,6 +77,15 @@ int frame_clear_assigned(t_bitarray *bitmap, int index)
 {
     bitarray_clean_bit(bitmap, index);
     sync_bitmap(bitmap);
+}
+
+void increment_clock_hand(int *clock_hand)
+{
+    *clock_hand++;
+    if (*clock_hand >= config->framesInMemory)
+    {
+        *clock_hand = *clock_hand % config->framesInMemory;
+    }
 }
 
 void sync_bitmap(t_bitarray *bitmap)
