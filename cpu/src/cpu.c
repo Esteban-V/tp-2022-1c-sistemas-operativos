@@ -70,10 +70,14 @@ void pcb_to_kernel(kernel_headers header)
 		pthread_mutex_unlock(&mutex_kernel_socket);
 
 		pthread_mutex_lock(&mutex_log);
-
 		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 	}
+	else
+	{
+		pthread_mutex_unlock(&mutex_kernel_socket);
+	}
+
 	packet_destroy(pcb_packet);
 	pcb_destroy(pcb);
 }
@@ -165,12 +169,13 @@ void *cpu_cycle()
 			pthread_mutex_lock(&mutex_has_interruption);
 			if (new_interruption)
 			{
+				log_info(logger, "Encuntered interruption, sending to kernel");
+				// Desalojar proceso actual
+				pcb_to_kernel(INTERRUPT_DISPATCH);
+
 				// Resetea la interrupcion
 				new_interruption = false;
 				pthread_mutex_unlock(&mutex_has_interruption);
-
-				// Desalojar proceso actual
-				pcb_to_kernel(INTERRUPT_DISPATCH);
 			}
 			else
 			{

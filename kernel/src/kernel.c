@@ -319,19 +319,17 @@ void *new_to_ready()
 	{
 		socket_send_packet(memory_socket, pid_packet);
 	}
-
 	packet_destroy(pid_packet);
 
 	pQueue_put(memory_init_q, (void *)pcb);
 	sem_wait(&pcb_table_ready);
 
 	put_to_ready(pcb);
+	log_info(logger, "Put to ready");
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
-
-	return 0;
 }
 
 void *suspended_to_ready()
@@ -393,7 +391,6 @@ void *to_ready()
 	while (1)
 	{
 		sem_wait(&any_for_ready);
-
 		sem_wait(&sem_multiprogram);
 
 		if (!pQueue_isEmpty(suspended_ready_q))
@@ -499,9 +496,10 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - (time_to_ms(toExec) - time_to_ms(fromExec));
 
 		pQueue_put(ready_q, received_pcb);
-		sem_post(&cpu_free);
-		sem_post(&interrupt_ready);
 	}
+
+	sem_post(&cpu_free);
+	sem_post(&interrupt_ready);
 
 	return true;
 }

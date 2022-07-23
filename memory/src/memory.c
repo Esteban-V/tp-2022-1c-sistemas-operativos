@@ -117,7 +117,7 @@ void cpu_handshake_listener()
 bool cpu_handshake(int cpu_socket)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Received Handshake Petition from CPU");
+	log_info(logger, "Received handshake petition from CPU");
 	pthread_mutex_unlock(&mutex_log);
 
 	t_packet *mem_data = create_packet(TABLE_INFO_TO_CPU, INITIAL_STREAM_SIZE);
@@ -127,7 +127,7 @@ bool cpu_handshake(int cpu_socket)
 	packet_destroy(mem_data);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Relayed Relevant Memory Data to CPU");
+	log_info(logger, "Relayed relevant memory data to CPU");
 	pthread_mutex_unlock(&mutex_log);
 
 	return false;
