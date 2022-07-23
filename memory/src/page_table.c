@@ -215,7 +215,6 @@ void get_swap(int frame_number, int page_number, int pid)
 	pthread_mutex_unlock(&mutex_log);
 }
 
-<<<<<<< Updated upstream
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid)
 {
 	int _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
@@ -227,14 +226,6 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 			save_swap(curr_frame->frame, old_page->page, pid);
 		}
 		old_page->present = false;
-=======
-void *memory_getFrame(uint32_t frame)
-{
-	void *ptr = memory->memory + frame * config->pageSize;
-
-	return ptr;
-}
->>>>>>> Stashed changes
 
 		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
 		get_swap(curr_frame, entry->page, pid);
