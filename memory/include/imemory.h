@@ -25,11 +25,6 @@ t_dictionary *clock_pointers_dictionary;
 int server_socket;
 t_list *swap_files;
 
-// Stats
-int memory_access_counter;
-int memory_read_counter;
-int memory_write_counter;
-
 // t_mem_metadata *metadata_init();
 // void metadata_destroy(t_mem_metadata *meta);
 

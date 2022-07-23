@@ -56,7 +56,7 @@ void *get_frame_value(void *frame_ptr)
 }
 
 // Escribe en toda la pagina de pageSize ubicada en el frame (con comienzo en frame_ptr) el valor recibido
-void *write_frame_value(void *frame_ptr, void *value)
+void write_frame_value(void *frame_ptr, void *value)
 {
     memcpy(frame_ptr, &value, config->pageSize);
 }
@@ -100,13 +100,13 @@ int find_first_unassigned_frame(t_bitarray *bitmap)
     return -1;
 }
 
-int frame_set_assigned(t_bitarray *bitmap, int index)
+void frame_set_assigned(t_bitarray *bitmap, int index)
 {
     bitarray_set_bit(bitmap, index);
     sync_bitmap(bitmap);
 }
 
-int frame_clear_assigned(t_bitarray *bitmap, int index)
+void frame_clear_assigned(t_bitarray *bitmap, int index)
 {
     bitarray_clean_bit(bitmap, index);
     sync_bitmap(bitmap);
@@ -114,7 +114,7 @@ int frame_clear_assigned(t_bitarray *bitmap, int index)
 
 void increment_clock_hand(int *clock_hand)
 {
-    *clock_hand++;
+    (*clock_hand)++;
     if (*clock_hand >= config->framesInMemory)
     {
         *clock_hand = *clock_hand % config->framesInMemory;

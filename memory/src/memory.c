@@ -16,8 +16,7 @@ int main()
 	}
 	else
 	{
-		log_warning(logger,
-					"Wrong replace algorithm set in config --> Using CLOCK");
+		log_warning(logger, "Wrong replace algorithm set in config --> Using CLOCK");
 	}
 
 	// Creacion de server
@@ -38,6 +37,13 @@ int main()
 	memory = memory_init();
 
 	clock_m_counter = 0;
+	// Stats
+	memory_access_counter = 0;
+	memory_read_counter = 0;
+	memory_write_counter = 0;
+	page_fault_counter = 0;
+	page_assignment_counter = 0 ;
+	page_replacement_counter = 0 ;
 
 	cpu_handshake_listener();
 
@@ -184,7 +190,8 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				{
 					int frame = entry->frame;
 					void *pageContent = get_frame(frame);
-					// SWAP
+					// TODO SWAP
+
 					/*pthread_mutex_lock(&metadataMut);
 					metadata->entries[frame].isFree =
 						true;
@@ -224,7 +231,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroying PID #%d memory structures", pid);
+		log_info(logger, "Destroying PID #%d Memory Structures", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
@@ -232,7 +239,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		delete_swap(pid);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory structures destroyed successfully");
+		log_info(logger, "Memory Structures Destroyed Successfully");
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response = create_packet(PROCESS_EXIT_READY, INITIAL_STREAM_SIZE);
@@ -349,10 +356,12 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory write request");
+		log_info(logger, "Memory Write Request");
 		pthread_mutex_unlock(&mutex_log);
 
 		// Write
+		// TODO
+
 		sem_post(&writeRead);
 	}
 
@@ -369,10 +378,12 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory read request");
+		log_info(logger, "Memory Read Request");
 		pthread_mutex_unlock(&mutex_log);
 
 		// Read
+		// TODO
+
 		sem_post(&writeRead);
 	}
 
@@ -407,9 +418,9 @@ void terminate_memory(bool error)
 	log_info(logger, "Memory Accesses: %d", memory_access_counter);
 	log_info(logger, "Memory Reads: %d", memory_read_counter);
 	log_info(logger, "Memory Writes: %d", memory_write_counter);
-	/*log_info(logger, "Page Assignments: %d", page_assignment_counter);
+	log_info(logger, "Page Assignments: %d", page_assignment_counter);
 	log_info(logger, "Page Replacements: %d", page_replacement_counter);
-	log_info(logger, "Page Faults: %d", page_faults_counter);*/
+	log_info(logger, "Page Faults: %d", page_fault_counter);
 	pthread_mutex_unlock(&mutex_log);
 
 	log_destroy(logger);
