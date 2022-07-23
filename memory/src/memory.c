@@ -33,7 +33,7 @@ int main()
 	swap_files = list_create();
 	processes_frames = list_create();
 
-	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
+	sem_init(&writeRead, 0, 1); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
 	memory = memory_init();
 
@@ -247,46 +247,6 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	}
 
 	return true;
-}
-
-void *create_swap(uint32_t pid, int frame_index, size_t psize)
-{
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d --> Creating swap file sized %d", pid, psize);
-	pthread_mutex_lock(&mutex_log);
-
-	char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);
-
-	// uint32_t frame_start = frame_index * sizeof(uint32_t);
-	// uint32_t frame_end = frame_start + config->pageSize;
-
-	usleep(config->swapDelay * 1000);
-
-	// Crear archivo
-	int swap_file = catch_syscall_err(open(swap_file_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
-	catch_syscall_err(ftruncate(swap_file, psize));
-
-	free(swap_file_path);
-}
-
-void *delete_swap(uint32_t pid, int psize)
-{
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d --> Deleting swap file", pid);
-	pthread_mutex_unlock(&mutex_log);
-
-	char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);
-
-	uint32_t pages = psize / config->pageSize;
-	if (psize % config->pageSize != 0)
-		pages++;
-
-	uint32_t nro_tablas_segundo_nivel = pages / config->entriesPerTable;
-	if (pages % config->entriesPerTable != 0)
-		nro_tablas_segundo_nivel++;
-
-	usleep(config->swapDelay * 1000);
-	remove(swap_file_path);
 }
 
 // Recibe index de pt1 en lista global (guardado del pcb) y entrada de la tabla 1 a la que acceder
