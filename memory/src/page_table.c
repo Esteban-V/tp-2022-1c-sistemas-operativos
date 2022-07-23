@@ -1,8 +1,9 @@
 #include "page_table.h"
 
 // Crea tabla de nivel 1 y tablas de nivel 2 correspondientes, y retorna el indice de la 1era
-int page_table_init(uint32_t process_size)
+int page_table_init(uint32_t process_size, int algorithm)
 {
+	replaceAlgorithm2 = algorithm;
 	// Creacion tabla nivel 1
 	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
 	level1_table->entries = list_create();
@@ -132,17 +133,12 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 		t_process_frame *process_frames = list_get(process_frames, frames_index);
 		page_fault_counter++;
 
-		// Al haber un page fault, se actualiza el puntero del clock
-		increment_clock_hand(&process_frames->clock_hand);
-
 		// Chequear si se puede asignar directo
 		if (has_free_frame(process_frames))
 		{
-			int first_free_frame_index = find_first_free_frame(process_frames);
-			if (first_free_frame_index != -1) // No deberia pasar porque ya entro
+			t_frame_entry *free_frame = find_first_free_frame(process_frames);
+			if (free_frame != NULL) // No deberia pasar porque ya entro a has_free_frame
 			{
-				t_frame_entry *free_frame = (t_frame_entry *)list_get(process_frames->frames, first_free_frame_index);
-
 				// Actualiza pagina en tabla de paginas
 				entry->present = true;
 				entry->frame = free_frame->frame;
@@ -155,11 +151,8 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 		else
 		{
 			// Reemplazo ++, no hay mas libres y se debe reemplazar con una existente
-			while (1)
-			{
-				page_replacement_counter++;
-				frame = replace_algorithm(process_frames, entry, pid);
-			}
+			page_replacement_counter++;
+			frame = replace_algorithm(process_frames, entry, pid);
 		}
 	}
 
@@ -177,10 +170,10 @@ void save_swap(int frame_number, int page_number, int pid)
 	// Lo escribe en la pagina correspondiente en swap
 	swap_write_page(pid, page_number, memory_value);
 
-	page_assignment_counter++;
+	// page_assignment_counter++;
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Removed PID #%d's Page #%d from Memory", pid, page_number);
+	log_info(logger, "Removed PID #%d's page #%d from memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);
 }
 
@@ -196,18 +189,20 @@ void get_swap(int frame_number, int page_number, int pid)
 	write_frame_value(frame_ptr, swap_value);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Loaded PID #%d's Page #%d into Memory",  pid, page_number);
+	log_info(logger, "Loaded PID #%d's page #%d into memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);
 }
 
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid)
 {
-	int _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
+	void _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
 	{
 		// Lleva a disco la pagina a reemplazar y la marca como no presente
-		if (old_page->modified){
+		if (old_page->present && old_page->modified)
+		{
 			// TODO drop_tlb_entry(old_page->page, old_page->frame);
 			save_swap(curr_frame->frame, old_page->page, pid);
+			old_page->modified = false;
 		}
 		old_page->present = false;
 
@@ -221,25 +216,88 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 		// Actualiza frame del proceso
 		curr_frame->page_data = entry;
 
-		// TODO add_tlb_entry(pid, entry->page, entry->frame);
-
-		return entry->frame;
+		// TODO: (en CPU)
+		// add_tlb_entry(pid, entry->page, entry->frame);
 	};
 
-	for (int i = 0; i < config->framesPerProcess; i++)
+	int frame = -1;
+	for (int i = 0; i < (replaceAlgorithm2 == 1 ? 2 : 1); i++)
 	{
-		t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
-		t_page_entry *old_page = curr_frame->page_data;
-
-		if (!old_page->used)
+		frame = two_clock_turns(process_frames, replaceAlgorithm2 == 1, _replace);
+		if (frame != -1)
 		{
-			return _replace(curr_frame, old_page);
-		}
-		else
-		{
-			old_page->used = false;
+			return frame;
 		}
 	}
 
-	return -1;
+	return frame;
+}
+
+int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *(*replace)(t_frame_entry *, t_page_entry *))
+{
+	int frame = -1;
+	for (int j = 0; j < 2; j++)
+	{
+		// Vuelta numero j+1 del reloj
+		for (int k = 0; k < config->framesPerProcess; k++)
+		{
+			// Empezando de donde apunta el puntero del clock, fijarse si es reemplazable o pasar a proxima frame
+			t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
+			t_page_entry *curr_page = curr_frame->page_data;
+
+			if (check_modified)
+			{
+				// El algoritmo es CLOCK-M
+				if (!curr_page->used && !curr_page->modified)
+				{
+					// Si no esta en uso ni modificado (0, 0): Reemplaza
+					replace(curr_frame, curr_page);
+					// Deja el puntero incrementado para proxima vez
+					increment_clock_hand(&process_frames->clock_hand);
+					return curr_frame->frame;
+				}
+
+				// 2da vuelta (j = 1): Ignora si esta modificada
+				if (j == 1)
+				{
+					if (!curr_page->used)
+					{
+						// Si no esta en uso y pero si modificado (0, 1): Reemplaza
+						replace(curr_frame, curr_page);
+						// Deja el puntero incrementado para proxima vez
+						increment_clock_hand(process_frames->clock_hand);
+						return curr_frame->frame;
+					}
+					else
+					{
+						// Si esta en uso: Marca uso en 0 para proxima vuelta
+						// - (1, 0) --> (0, 0)
+						// - (1, 1) --> (0, 1)
+						curr_page->used = false;
+					}
+				}
+				// Si no reemplaza, pasa de frame
+				increment_clock_hand(process_frames->clock_hand);
+			}
+			else
+			{
+				// El algoritmo es CLOCK
+				if (!curr_page->used)
+				{
+					// Si no esta en uso: Reemplaza
+					replace(curr_frame, curr_page);
+					// Deja el puntero incrementado para proxima vez
+					increment_clock_hand(process_frames->clock_hand);
+					return curr_frame->frame;
+				}
+				else
+				{
+					// Si esta en uso: Marca uso en 0 para proxima vuelta y pasa de frame
+					curr_page->used = false;
+					increment_clock_hand(process_frames->clock_hand);
+				}
+			}
+		}
+	}
+	return frame;
 }

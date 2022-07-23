@@ -13,6 +13,8 @@ bool process_suspend(t_packet *petition, int cpu_socket);
 bool cpu_handshake(int cpu_socket);
 void *header_handler(void *_client_socket);
 
+int server_socket;
+
 enum e_replaceAlgorithm
 {
     CLOCK = 0,
@@ -20,13 +22,6 @@ enum e_replaceAlgorithm
 };
 
 enum e_replaceAlgorithm replaceAlgorithm = CLOCK;
-
-t_dictionary *clock_pointers_dictionary;
-int server_socket;
-t_list *swap_files;
-
-// t_mem_metadata *metadata_init();
-// void metadata_destroy(t_mem_metadata *meta);
 
 t_memory *memory_init();
 void terminate_memory(bool error);
