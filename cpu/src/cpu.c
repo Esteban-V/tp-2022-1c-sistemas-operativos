@@ -137,6 +137,7 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 
 bool receive_interruption(t_packet *petition, int kernel_socket)
 {
+	printf("Received interruption\n");
 	pthread_mutex_lock(&mutex_has_interruption);
 	new_interruption = true;
 	pthread_mutex_unlock(&mutex_has_interruption);
@@ -169,7 +170,7 @@ void *cpu_cycle()
 			pthread_mutex_lock(&mutex_has_interruption);
 			if (new_interruption)
 			{
-				log_info(logger, "Encuntered interruption, sending to kernel");
+				log_info(logger, "Encountered interruption, sending to kernel");
 				// Desalojar proceso actual
 				pcb_to_kernel(INTERRUPT_DISPATCH);
 
@@ -205,9 +206,10 @@ enum operation fetch_and_decode(t_instruction **instruction)
 	return op;
 }
 
-void execute_no_op()
+void execute_no_op(t_list *params)
 {
-	usleep(config->delayNoOp*1000);
+	uint32_t times = *((uint32_t *)list_get(params, 0));
+	usleep(config->delayNoOp * 1000 * times);
 }
 
 void execute_io(t_list *params)

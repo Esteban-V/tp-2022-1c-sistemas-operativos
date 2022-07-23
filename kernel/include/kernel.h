@@ -41,6 +41,8 @@ pthread_t any_to_ready_t, ready_to_exec_t,
 
 sem_t sem_multiprogram, interrupt_ready, any_for_ready, process_for_IO, ready_for_exec, cpu_free, pcb_table_ready, waiting_for_suspension;
 
+pthread_mutex_t execution_mutex;
+
 int server_socket;
 int cpu_interrupt_socket;
 int cpu_dispatch_socket;

@@ -25,6 +25,7 @@ int main(void)
 
 	sem_init(&waiting_for_suspension, 0, 1);
 
+	pthread_mutex_init(&execution_mutex, NULL);
 	if (config == NULL)
 	{
 		log_error(logger, "Config failed to load");
@@ -285,6 +286,7 @@ void *to_exec()
 	{
 		sem_wait(&ready_for_exec);
 		sem_wait(&cpu_free);
+		pthread_mutex_lock(&execution_mutex);
 		pcb = pQueue_take(ready_q);
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
@@ -301,6 +303,7 @@ void *to_exec()
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_unlock(&execution_mutex);
 	}
 }
 
@@ -356,6 +359,7 @@ void blocked_to_ready(t_pQueue *origin, t_pQueue *destination)
 
 void put_to_ready(t_pcb *pcb)
 {
+	pthread_mutex_lock(&execution_mutex);
 	pQueue_put(ready_q, (void *)pcb);
 	if (sortingAlgorithm == FIFO)
 	{
@@ -368,13 +372,18 @@ void put_to_ready(t_pcb *pcb)
 	{
 		// Se envia la interrupcion
 		// Si se manda otra por "encima" de la anterior, la CPU siempre usa la mas nueva
-		if (cpu_interrupt_socket != -1)
+		int freeCpu;
+		sem_getvalue(&cpu_free, &freeCpu);
+		if (!freeCpu)
 		{
-			socket_send_header(cpu_interrupt_socket, INTERRUPT);
-		}
+			if (cpu_interrupt_socket != -1)
+			{
+				socket_send_header(cpu_interrupt_socket, INTERRUPT);
+			}
 
-		// Se espera a que vuelva de CPU
-		sem_wait(&interrupt_ready);
+			// Se espera a que vuelva de CPU
+			sem_wait(&interrupt_ready);
+		}
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
@@ -384,6 +393,7 @@ void put_to_ready(t_pcb *pcb)
 	}
 
 	sem_post(&ready_for_exec);
+	pthread_mutex_unlock(&execution_mutex);
 }
 
 void *to_ready()
@@ -497,7 +507,6 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 
 		pQueue_put(ready_q, received_pcb);
 	}
-
 	sem_post(&cpu_free);
 	sem_post(&interrupt_ready);
 
