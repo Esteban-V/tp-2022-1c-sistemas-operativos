@@ -370,13 +370,11 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		{
 			replace_page_in_frame(victim_frame, pid, pt2_index, pageNumber);
 
-			// drop_tlb_entry(victimPID, victimPage); TODO pasar a CPU
-
 			t_packet *response = create_packet(TLB_DROP, INITIAL_STREAM_SIZE);
 			//stream_add_UINT32(response->payload, *PID de la pagina a ser reemplazada*/);
-			/*stream_add_UINT32(response->payload, page);
+			//stream_add_UINT32(response->payload, page);
 			socket_send_packet(cpu_socket, response);
-			packet_destroy(response);*/
+			packet_destroy(response);
 		}
 		else
 		{
@@ -393,12 +391,12 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		((t_page_entry *)list_get(ptReemplaza->entries, pt2_index))->frame = victim_frame;
 
 		// add_tlb_entry(PID, page, victim); TODO pasar a CPU
-		/*t_packet *response = create_packet(TLB_ADD, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, PID);
-		stream_add_UINT32(response->payload, page);
-		stream_add_UINT32(response->payload, victim_frame);
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);*/
+		t_packet *add_tlb_entry = create_packet(TLB_ADD, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(add_tlb_entry->payload, pid);
+		stream_add_UINT32(add_tlb_entry->payload, pageNumber);
+		stream_add_UINT32(add_tlb_entry->payload, victim_frame);
+		socket_send_packet(cpu_socket, add_tlb_entry);
+		packet_destroy(add_tlb_entry);
 
 		// Modificar frame metadata.
 		pthread_mutex_lock(&metadataMut); // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
@@ -410,10 +408,10 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		(metadata->entries)[victim_frame].isFree = false; // bitmap
 		pthread_mutex_unlock(&metadataMut);
 
-		t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, victim_frame);
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);
+		t_packet *drop_tlb_entry = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(drop_tlb_entry->payload, victim_frame);
+		socket_send_packet(cpu_socket, drop_tlb_entry);
+		packet_destroy(drop_tlb_entry);
 	}
 
 	return false;
