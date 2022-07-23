@@ -28,6 +28,18 @@ int ceil_div(int a, int b)
     return (a / b) + ((a % b) != 0);
 }
 
+// Determina si de las framesPerProcess frames asignadas al proceso, hay libres para cargarles paginas
+bool has_free_frame(t_process_frame *process_frames)
+{
+    bool _has_frame(void *entry)
+    {
+        return ((t_frame_entry *)entry)->frame != -1;
+    };
+
+    int cant_present = list_count_satisfying(process_frames->frames, _has_frame);
+    return cant_present < config->framesPerProcess;
+}
+
 int find_first_unassigned_frame(t_bitarray *bitmap)
 {
     for (int i = 0; i < config->framesInMemory; i++)

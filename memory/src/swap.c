@@ -1,11 +1,10 @@
 #include "swap.h"
 
-
 t_swap_file *swapFile_create(uint32_t PID, size_t process_size)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d - Creating Swap File - Size: %d", PID, process_size);
-	pthread_mutex_lock(&mutex_log);
+    pthread_mutex_lock(&mutex_log);
+    log_info(logger, "PID #%d - Creating Swap File - Size: %d", PID, process_size);
+    pthread_mutex_lock(&mutex_log);
 
     t_swap_file *self = malloc(sizeof(t_swap_file));
 
@@ -123,8 +122,8 @@ bool destroy_swap_page(uint32_t pid, uint32_t page)
     t_swap_file *file = pidExists(pid);
 
     pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d - Deleting Swap File", pid);
-	pthread_mutex_unlock(&mutex_log);
+    log_info(logger, "PID #%d - Deleting Swap File", pid);
+    pthread_mutex_unlock(&mutex_log);
 
     if (file == NULL)
     {

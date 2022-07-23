@@ -84,10 +84,10 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
-		usleep(config->memoryDelay*1000);
 
 		memory_access_counter++;
 
+		usleep(config->memoryDelay * 1000);
 		serve = memory_handlers[packet->header](packet, client_socket);
 		packet_destroy(packet);
 	}
@@ -127,7 +127,7 @@ bool cpu_handshake(int cpu_socket)
 	return false;
 }
 
-bool process_new(t_packet *petition, int kernel_socket) //Listo
+bool process_new(t_packet *petition, int kernel_socket) // Listo
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t process_size = stream_take_UINT32(petition->payload);
@@ -138,9 +138,9 @@ bool process_new(t_packet *petition, int kernel_socket) //Listo
 		log_info(logger, "Initializing Memory Structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		int pt1_index, process_frames_index;
-		page_table_init(process_size, &pt1_index, &process_frames_index);
-		
+		int pt1_index = page_table_init(process_size);
+		int process_frames_index = assign_process_frames();
+
 		list_add(swap_files, swapFile_create(pid, process_size));
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
@@ -165,25 +165,26 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Process Suspension Requested for PID #%d", pid);
+		log_info(logger, "Process suspension requested for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
-		void _swap(void *elem){
-			t_ptbr2 *pt2 = get_page_table2(elem);
-			int page_cant = list_size(pt2->entries);
+		for (int i = 0; i < list_size(pt1->entries); i++)
+		{
+			int pt2_index = *((int *)list_get(pt1->entries, i));
+			t_ptbr2 *pt2 = get_page_table2(pt2_index);
 
-			for (int i = 0; i < page_cant; i++)
+			for (int j = 0; j < list_size(pt2->entries); j++)
 			{
-				t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, i);
+				t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, j);
 
 				// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
 				if (entry->present && entry->modified)
 				{
 					int frame = entry->frame;
 					void *pageContent = (void *)memory_getFrame(memory, frame);
-					savePage(pid, i, pageContent);
+					savePage(pid, j, pageContent);
 
 					/*pthread_mutex_lock(&metadataMut);
 					metadata->entries[frame].isFree =
@@ -192,13 +193,9 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 					entry->present = false;
 				}
-
 			}
 		}
-
-		list_iterate(pt1->entries, _swap);
 	}
-
 
 	return false;
 }
@@ -208,18 +205,18 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
 	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
-	uint32_t pt2_index; // = stream_take_UINT32(petition->payload);
 
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroying PID #%d Memory Structures", pid);
+		log_info(logger, "Destroying PID #%d memory structures", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
-		void _destroy_pt2(void *elem){
-			int pt2_index = *((int*) elem);
+		void _destroy_pt2(void *elem)
+		{
+			int pt2_index = *((int *)elem);
 			t_ptbr2 *pt2 = get_page_table2(pt2_index);
 			int page_cant = list_size(pt2->entries);
 
@@ -239,7 +236,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		list_iterate(pt1->entries, _destroy_pt2);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Structures Destroyed Successfully");
+		log_info(logger, "Memory structures destroyed successfully");
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response = create_packet(PROCESS_EXIT_READY, INITIAL_STREAM_SIZE);
@@ -256,30 +253,19 @@ bool process_exit(t_packet *petition, int kernel_socket)
 void *create_swap(uint32_t pid, int frame_index, size_t psize)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d - Creating Swap File - Size: %d", pid, psize);
+	log_info(logger, "PID #%d --> Creating swap file sized %d", pid, psize);
 	pthread_mutex_lock(&mutex_log);
 
 	char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);
 
-	uint32_t frame_start = frame_index * sizeof(uint32_t);
-	uint32_t frame_end = frame_start + config->pageSize;
+	// uint32_t frame_start = frame_index * sizeof(uint32_t);
+	// uint32_t frame_end = frame_start + config->pageSize;
+
+	usleep(config->swapDelay * 1000);
 
 	// Crear archivo
-	usleep(config->swapDelay*1000);
-
-	int swap_file = open(swap_file_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (swap_file == -1)
-	{
-		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Error al abrir el archivo swap: %s", strerror(errno));
-		pthread_mutex_unlock(&mutex_log);
-	}
-
-    if (ftruncate(swap_file, psize) == -1) {
-		pthread_mutex_lock(&mutex_log);
-        log_error(logger, "Error al truncar el archivo swap: %s", strerror(errno));
-		pthread_mutex_unlock(&mutex_log);
-    }
+	int swap_file = catch_syscall_err(open(swap_file_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
+	catch_syscall_err(ftruncate(swap_file, psize));
 
 	free(swap_file_path);
 }
@@ -287,7 +273,7 @@ void *create_swap(uint32_t pid, int frame_index, size_t psize)
 void *delete_swap(uint32_t pid, int psize)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d - Deleting Swap File", pid);
+	log_info(logger, "PID #%d --> Deleting swap file", pid);
 	pthread_mutex_unlock(&mutex_log);
 
 	char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);
@@ -300,7 +286,7 @@ void *delete_swap(uint32_t pid, int psize)
 	if (pages % config->entriesPerTable != 0)
 		nro_tablas_segundo_nivel++;
 
-	usleep(config->swapDelay*1000);
+	usleep(config->swapDelay * 1000);
 	remove(swap_file_path);
 }
 
@@ -317,10 +303,6 @@ bool access_lvl1_table(t_packet *petition, int cpu_socket)
 
 	if (pt1_index != -1)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Getting Level 2 Table Index");
-		pthread_mutex_unlock(&mutex_log);
-
 		uint32_t pt2_index = (uint32_t)get_page_table2_index(pt1_index, entry_index);
 		t_packet *response = create_packet(TABLE2_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(response->payload, pt2_index);
@@ -335,50 +317,32 @@ bool access_lvl1_table(t_packet *petition, int cpu_socket)
 // Recibe index de pt2 en lista global y entrada de la tabla 2 a la que acceder
 bool access_lvl2_table(t_packet *petition, int cpu_socket)
 {
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t pt2_index = stream_take_UINT32(petition->payload);
+
 	// CPU debe calcular:
 	// page_number = floor(instruction_param_address / config->pageSize)
 	// entry_index =  page_number % config->entriesPerTable
 
-	uint32_t pt2_index = stream_take_UINT32(petition->payload);
 	uint32_t entry_index = stream_take_UINT32(petition->payload);
-	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t framesIndex = stream_take_UINT32(petition->payload);
-	uint32_t pageNumber; //= stream_take_UINT32(petition->payload);
+
+	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
 
 	if (pt2_index != -1)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Getting Frame Number");
-		pthread_mutex_unlock(&mutex_log);
+		int frame = get_frame_number(pt2_index, entry_index, pid, process_frames_index);
 
-		uint32_t victim_frame = (uint32_t) get_frame_number(pt2_index, entry_index, pid,framesIndex);
-
+		// Lo tendria que hacer adentro de get_frame_number cuando se *confirma* que hay que reemplazar
+		/*
 		// Traer contenido de pagina pedida de swap.
 		void *pageFromSwap = read_swap_page(pid, pageNumber);
 
 		// Chequear que se haya podido traer
 		if (pageFromSwap == NULL)
 		{
-			log_error(logger, "Cannot Load Page #%u ; Process #%u", pageNumber, pid);
+			log_error(logger, "Cannot load page #%u", pageNumber, pid);
 
 			return -1;
-		}
-
-		// Si el frame no esta libre se envia a swap la pagina que lo ocupa.
-		// Esto es para que assign_page_to_frame() se pueda utilizar tanto para cargar paginas a frames libres como para reemplazar.
-		if (/*TODO !isFree(victim_frame)*/)
-		{
-			replace_page_in_frame(victim_frame, pid, pt2_index, pageNumber);
-
-			t_packet *response = create_packet(TLB_DROP, INITIAL_STREAM_SIZE);
-			//stream_add_UINT32(response->payload, *PID de la pagina a ser reemplazada*/);
-			//stream_add_UINT32(response->payload, page);
-			socket_send_packet(cpu_socket, response);
-			packet_destroy(response);
-		}
-		else
-		{
-			log_info(logger, "Assignment: Frame #%u: ; Page #%u ; Process #%u.", victim_frame, pageNumber, pid);
 		}
 
 		// Escribir pagina traida de swap a memoria.
@@ -398,12 +362,12 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		socket_send_packet(cpu_socket, add_tlb_entry);
 		packet_destroy(add_tlb_entry);
 
-		// Modificar frame metadata.
-		pthread_mutex_lock(&metadataMut); // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
+		// Modificar frame "metadata"
+		pthread_mutex_lock(&metadataMut);					 // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
 		(metadata->entries)[victim_frame].page = pageNumber; // process frames y page entry
 
 		(metadata->entries)[victim_frame].modified = false; // page entry
-		(metadata->entries)[victim_frame].u = true; // page entry
+		(metadata->entries)[victim_frame].u = true;			// page entry
 
 		(metadata->entries)[victim_frame].isFree = false; // bitmap
 		pthread_mutex_unlock(&metadataMut);
@@ -412,6 +376,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		stream_add_UINT32(drop_tlb_entry->payload, victim_frame);
 		socket_send_packet(cpu_socket, drop_tlb_entry);
 		packet_destroy(drop_tlb_entry);
+		*/
 	}
 
 	return false;
@@ -419,41 +384,19 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 
 bool memory_write(t_packet *petition, int cpu_socket)
 {
-	uint32_t dir = stream_take_UINT32(petition->payload);
-	uint32_t toWrite = stream_take_UINT32(petition->payload);
-	/*uint32_t pt2_index = stream_take_UINT32(petition->payload);
-	uint32_t entry_index = stream_take_UINT32(petition->payload);
-	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t framesIndex = stream_take_UINT32(petition->payload);
-	uint32_t pageNumber = stream_take_UINT32(petition->payload);*/
+	uint32_t address = stream_take_UINT32(petition->payload);
+	uint32_t value = stream_take_UINT32(petition->payload);
 
-	if (!!toWrite)
+	if (address != NULL)
 	{
 		memory_write_counter++;
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Write Request");
+		log_info(logger, "Memory write request");
 		pthread_mutex_unlock(&mutex_log);
 
-		// Cargar página
-		//uint32_t frameVictima = get_frame_number(pt2_index, entry_index, pid, framesIndex);
-		//writeFrame(PID, victim_frame, pageFromSwap);
-
-		/*t_packet *response;
-		if (frameVictima == -1)
-		{
-			//response = create_packet(NO OK, 0);
-		}
-		else
-		{
-			//response = create_packet(OK, INITIAL_STREAM_SIZE);
-		}
-
-		stream_add_UINT32(response->payload, frameVictima);
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);*/
-
+		// Write
 		sem_post(&writeRead);
 	}
 
@@ -462,21 +405,18 @@ bool memory_write(t_packet *petition, int cpu_socket)
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
-	uint32_t dir = stream_take_UINT32(petition->payload);
-	uint32_t pageNumber = stream_take_UINT32(petition->payload);
+	uint32_t address = stream_take_UINT32(petition->payload);
 
-	if(!!dir) {
+	if (!!address)
+	{
 		memory_read_counter++;
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Reading Memory");
+		log_info(logger, "Memory read request");
 		pthread_mutex_unlock(&mutex_log);
 
-		usleep(config->memoryDelay*1000);
-
-		void *pageFromSwap = read_swap_page(PID, pageNumber);
-
+		// Read
 		sem_post(&writeRead);
 	}
 

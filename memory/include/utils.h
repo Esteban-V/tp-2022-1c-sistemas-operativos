@@ -21,6 +21,14 @@
 #include <fcntl.h>
 #include "semaphore.h"
 
+enum e_replaceAlgorithm
+{
+    CLOCK = 0,
+    CLOCK_M = 1
+};
+
+enum e_replaceAlgorithm replaceAlgorithm = CLOCK;
+
 typedef struct t_memoryConfig
 {
     t_config *config;
@@ -45,24 +53,24 @@ typedef struct t_memoryConfig
     int framesInMemory;
 } t_memoryConfig;
 
-typedef struct t_frame_metadata
+typedef struct t_frame_entry
 {
-    bool isFree;
-    bool modified; // Clock-M
-    bool u;        // Clock / Clock-M
-    uint32_t PID;
-    uint32_t page;
-    uint32_t timeStamp;
-} t_frame_metadata;
+    // A que frame (index) de la memoria (de void*) corresponde
+    int frame;
+    // Lista de t_page_entry
+    t_page_entry *page_data;
+} t_frame_entry;
 
-typedef struct t_mem_metadata
+typedef struct t_process_frame
 {
-    uint32_t entryQty;
-    uint32_t *firstFrame; // Array de PIDS donde el indice es el numero de "bloque" asignado en asig fija.
-    uint32_t *clock_m_counter;
-    uint32_t clock_counter;
-    t_frame_metadata *entries;
-} t_mem_metadata;
+    // Lista de t_frame_entry
+    t_list *frames;
+    // A que index de frames apunta
+    int clock_hand;
+} t_process_frame;
+
+// Lista de t_process_frames
+t_list *process_frames;
 
 typedef struct mem
 {
@@ -94,6 +102,9 @@ pthread_mutex_t memoryMut, metadataMut;
 int ceil_div(int a, int b);
 
 int find_first_unassigned_frame(t_bitarray *frames_bitmap);
+
+bool has_free_frame(t_process_frame *process_frames);
+
 int frame_set_assigned(t_bitarray *frames_bitmap, int index);
 int frame_clear_assigned(t_bitarray *frames_bitmap, int index);
 void sync_bitmap(t_bitarray *bitmap);

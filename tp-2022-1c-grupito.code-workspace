@@ -18,7 +18,12 @@
 			"config.h": "c",
 			"netdb.h": "c",
 			"assert.h": "c",
-			"socket.h": "c"
+			"socket.h": "c",
+			"socket_headers.h": "c",
+			"page_table.h": "c",
+			"dictionary.h": "c",
+			"swap.h": "c",
+			"pthread.h": "c"
 		},
 		"files.autoSave": "afterDelay",
 		"editor.formatOnSave": true,
