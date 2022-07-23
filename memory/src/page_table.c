@@ -30,6 +30,7 @@ int page_table_init(uint32_t process_size)
 			page->present = false;
 			page->modified = false;
 			page->used = false;
+			page->page = j;
 
 			// Se agrega a la lista de entradas de su tabla nivel 2
 			list_add(level2_table->entries, page);
@@ -74,7 +75,7 @@ int process_assign_frames()
 	process_frame->clock_hand = 0;
 
 	// Se agrega a lista global de frames y se obtiene su posicion en la misma para retornar
-	int process_frames_index = list_add(process_frames, process_frame);
+	int process_frames_index = list_add(processes_frames, process_frame);
 	return process_frames_index;
 }
 
@@ -109,7 +110,7 @@ t_ptbr2 *get_page_table2(int pt2_index)
 }
 
 // Retorna el numero de frame en memoria (cargandola previamente si fuese necesario)
-int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uint32_t frames_index)
+int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 {
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = get_page_table2(pt2_index);
@@ -135,18 +136,18 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 		// Chequear si se puede asignar directo
 		if (has_free_frame(process_frames))
 		{
-			// todo
 			int first_free_frame_index = find_first_free_frame(process_frames);
 			if (first_free_frame_index != -1) // No deberia pasar porque ya entro
 			{
 				t_frame_entry *free_frame = (t_frame_entry *)list_get(process_frames->frames, first_free_frame_index);
 
+				// Actualiza pagina en tabla de paginas
 				entry->present = true;
 				entry->frame = free_frame->frame;
+
+				// Actualiza frame del proceso
 				free_frame->page_data = entry;
 				frame = free_frame->frame;
-
-				return frame;
 			}
 		}
 		else
@@ -155,44 +156,7 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 
 			while (1)
 			{
-				if (replaceAlgorithm == CLOCK_M)
-				{
-					for (int i = 0; i < config->framesPerProcess; i++)
-					{
-						t_frame_entry *currentFrame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand % config->framesPerProcess);
-						t_page_entry *pageInFrame = currentFrame->page_data;
-
-						if ((pageInFrame->used == 0) && (pageInFrame->modified == 0))
-						{
-							pageInFrame->present = 0;
-							// SWAP
-							// replace(currentFrame, PID, pt2_index, page);
-							currentFrame->page_data = entry;
-							frame = currentFrame->frame;
-
-							return frame;
-						}
-					}
-				}
-
-				for (int i = 0; i < config->framesPerProcess; i++)
-				{
-					t_frame_entry *currentFrame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand % config->framesPerProcess);
-					t_page_entry *pageInFrame = currentFrame->page_data;
-
-					if (pageInFrame->used == 0)
-					{
-						pageInFrame->present = 0;
-						// SWAP
-						// replace(currentFrame, PID, pt2_index, page);
-						currentFrame->page_data = entry;
-						frame = currentFrame->frame;
-
-						return frame;
-					}
-
-					pageInFrame->used = 0;
-				}
+				frame = replace_algorithm(process_frames, entry, pid);
 			}
 		}
 	}
@@ -200,44 +164,74 @@ int get_frame_number(uint32_t pt2_index, uint32_t entry_index, uint32_t pid, uin
 	return frame;
 }
 
-// Retorna un puntero al comienzo del frame en memoria
-void *get_frame(uint32_t frame_number)
+void save_swap(int frame_number, int page_number, int pid)
 {
-	void *mem_ptr = memory->memory;
-	int frame_index = frame_number * config->pageSize;
-	void *frame_ptr = mem_ptr + frame_index;
+	// Identifica que parte de memoria (frame) debe leer
+	void *frame_ptr = get_frame(frame_number);
+	// Obtiene lo leido del frame en memoria
+	void *memory_value = get_frame_value(frame_ptr);
+	// Lo escribe en la pagina correspondiente en swap
+	swap_write_page(pid, page_number, memory_value);
 
-	return frame_ptr;
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Removed PID #%d's page #%d from memory",
+			 pid, page_number);
+	pthread_mutex_unlock(&mutex_log);
 }
 
-// Retorna el valor ubicado en el frame (con comienzo en frame_ptr) + un desplazamiento
-uint32_t get_frame_value(void *frame_ptr, uint32_t offset)
+void get_swap(int frame_number, int page_number, int pid)
 {
-	// Todos los valores a leer/escribir en memoria serán numéricos enteros no signados de 4 bytes
-	uint32_t value;
-	memcpy(frame_ptr + offset, &value, sizeof(uint32_t));
+	// Obtiene lo leido de la pagina en swap
+	void *swap_value = swap_get_page(pid, page_number);
+	// Identifica que parte de memoria (frame) debe escribir
+	void *frame_ptr = get_frame(frame_number);
+	// Lo escribe en el frame correspondiente en memoria
+	write_frame_value(frame_ptr, swap_value);
 
-	return value;
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Loaded PID #%d's page #%d into memory",
+			 pid, page_number);
+	pthread_mutex_unlock(&mutex_log);
 }
 
-// TODO: Revisar si necesita mas free()
-void page_table_destroy(t_ptbr1 *table)
+int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid)
 {
-	free(table->entries);
-	free(table);
+	void _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
+	{
+		// Lleva a disco la pagina a reemplazar y la marca como no presente
+		if (old_page->modified)
+			save_swap(curr_frame->frame, old_page->page, pid);
+		old_page->present = false;
+
+		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
+		get_swap(curr_frame, entry->page, pid);
+
+		// Actualiza pagina en tabla de paginas
+		entry->present = true;
+		entry->frame = curr_frame->frame;
+
+		// Actualiza frame del proceso
+		curr_frame->page_data = entry;
+		return entry->frame;
+	};
+
+	for (int i = 0; i < config->framesPerProcess; i++)
+	{
+		t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
+		t_page_entry *old_page = curr_frame->page_data;
+
+		if (!old_page->used)
+		{
+			_replace(curr_frame, old_page);
+		}
+		else
+		{
+			old_page->used = false;
+		}
+	}
 }
 
 // De aca en adelante estas funciones no se revisaron
-uint32_t pageTableAddEntry(t_ptbr2 *table, uint32_t newFrame)
-{
-	t_page_entry *entry;
-	entry->frame = newFrame;
-	entry->present = false;
-
-	list_add(table->entries, entry);
-
-	return list_size(table->entries);
-}
 
 void *read_swap_page(uint32_t pid, uint32_t pageNumber)
 {
@@ -270,37 +264,19 @@ void *read_swap_page(uint32_t pid, uint32_t pageNumber)
 	return swapFile_readAtIndex(file, index); // Page data
 }
 
-bool savePage(uint32_t pid, uint32_t pageNumber, void *pageContent)
+t_frame_entry *process_get_frame_entry(int index, int frame)
 {
-	void *pageData = NULL;
-	bool rc = fija_swap(pid, pageNumber, pageContent);
-
-	free(pageData);
-
-	return rc;
+	t_process_frame *process_frames = (t_process_frame *)list_get(processes_frames, index);
+	t_frame_entry *frame_entry = (t_frame_entry *)list_get(process_frames->frames, frame);
+	return frame_entry;
 }
 
-void *memory_getFrame(uint32_t frame)
-{
-	void *ptr = memory->memory + frame * config->pageSize;
-
-	return ptr;
-}
-
-t_frame_entry *process_get_frame_entry(uint32_t pid, uint32_t frame)
-{
-	t_process_frame *process_frames = (t_process_frame *)list_get(process_frames, pid);
-
-	// TODO chequear que este bien el list_get
-	return (t_frame_entry *)list_get(process_frames->frames, frame % config->entriesPerTable);
-}
-
-void writeFrame(uint32_t pid, uint32_t frame, void *from)
+void writeFrame(int frames_index, uint32_t frame, void *from)
 {
 	void *frameAddress = memory_getFrame(frame);
 
 	// TODO chequear que este bien, o si falta actualizar algo
-	t_frame_entry *frame_entry = process_get_frame_entry(pid, frame);
+	t_frame_entry *frame_entry = process_get_frame_entry(frames_index, frame);
 
 	pthread_mutex_lock(&metadataMut);
 	frame_entry->page_data->modified = true;
@@ -310,34 +286,4 @@ void writeFrame(uint32_t pid, uint32_t frame, void *from)
 	pthread_mutex_lock(&memoryMut);
 	memcpy(frameAddress, from, config->pageSize);
 	pthread_mutex_unlock(&memoryMut);
-}
-
-void replace_page_in_frame(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page)
-{
-	usleep(config->swapDelay * 1000);
-
-	// Enviar pagina reemplazada a swap.
-	// t_frame_entry* frame_entry = process_get_frame_entry(/*PID de la pagina a ser reemplazada*/, victim_frame);
-	pthread_mutex_lock(&metadataMut); // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
-	uint32_t victimPID = (metadata->entries)[victim_frame].PID;
-	uint32_t victimPage = (metadata->entries)[victim_frame].page;
-	bool modified = (metadata->entries)[victim_frame].modified;
-	pthread_mutex_unlock(&metadataMut);
-
-	pthread_mutex_lock(&memoryMut);
-	if (modified)
-		savePage(victimPID, victimPage, memory_getFrame(victim_frame));
-	pthread_mutex_unlock(&memoryMut);
-
-	// Modificar tabla de paginas del proceso cuya pagina fue reemplazada.
-	t_ptbr2 *ptReemplazado = get_page_table2(pt2_index);
-	((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->present = false; // TODO cambiar victim page por sus entries
-	((t_page_entry *)list_get(ptReemplazado->entries, victimPage))->frame = -1;
-
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d --> Replaced frame #%d for page #%d",
-			 PID, victim_frame, page);
-	log_info(logger, "[Replaced] PID #%d --> Page #%u",
-			 victimPID, victimPage);
-	pthread_mutex_unlock(&mutex_log);
 }

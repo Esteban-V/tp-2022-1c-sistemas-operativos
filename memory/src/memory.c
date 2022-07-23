@@ -31,7 +31,7 @@ int main()
 	level2_tables = list_create();
 
 	swap_files = list_create();
-	process_frames = list_create();
+	processes_frames = list_create();
 
 	sem_init(&writeRead, 0, 2); // TODO Ver si estan bien los semaforos, o si van en otras funciones tmb
 
@@ -183,9 +183,8 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				if (entry->present && entry->modified)
 				{
 					int frame = entry->frame;
-					void *pageContent = (void *)memory_getFrame(memory, frame);
-					savePage(pid, j, pageContent);
-
+					void *pageContent = get_frame(frame);
+					// SWAP
 					/*pthread_mutex_lock(&metadataMut);
 					metadata->entries[frame].isFree =
 						true;
@@ -330,12 +329,12 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 
 	if (pt2_index != -1)
 	{
-		int frame = get_frame_number(pt2_index, entry_index, pid, process_frames_index);
+		int frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
 
 		// Lo tendria que hacer adentro de get_frame_number cuando se *confirma* que hay que reemplazar
 		/*
 		// Traer contenido de pagina pedida de swap.
-		void *pageFromSwap = read_swap_page(pid, pageNumber);
+		// void *pageFromSwap = read_swap_page(pid, pageNumber);
 
 		// Chequear que se haya podido traer
 		if (pageFromSwap == NULL)
@@ -346,7 +345,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		}
 
 		// Escribir pagina traida de swap a memoria.
-		writeFrame(pid, victim_frame, pageFromSwap);
+		writeFrame(process_frames_index, victim_frame, pageFromSwap);
 		free(pageFromSwap);
 
 		// Modificar tabla de paginas del proceso cuya pagina entra a memoria.
@@ -363,7 +362,7 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		packet_destroy(add_tlb_entry);
 
 		// Modificar frame "metadata"
-		pthread_mutex_lock(&metadataMut);					 // TODO cambiar en process_frames (o en las tablas globales, nidea), quitar metadata
+		pthread_mutex_lock(&metadataMut);					 // TODO cambiar en processes_frames (o en las tablas globales, nidea), quitar metadata
 		(metadata->entries)[victim_frame].page = pageNumber; // process frames y page entry
 
 		(metadata->entries)[victim_frame].modified = false; // page entry

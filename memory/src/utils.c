@@ -28,6 +28,39 @@ int ceil_div(int a, int b)
     return (a / b) + ((a % b) != 0);
 }
 
+// Retorna un puntero al comienzo del frame en memoria
+void *get_frame(uint32_t frame_number)
+{
+    void *mem_ptr = memory->memory;
+    int frame_index = frame_number * config->pageSize;
+    void *frame_ptr = mem_ptr + frame_index;
+
+    return frame_ptr;
+}
+
+// Retorna el valor de 32 bits/4 bytes ubicado en el frame (con comienzo en frame_ptr) + un desplazamiento
+uint32_t read_frame_value(void *frame_ptr, uint32_t offset)
+{
+    // Todos los valores a leer/escribir en memoria serán numéricos enteros no signados de 4 bytes
+    uint32_t value;
+    memcpy(frame_ptr + offset, &value, sizeof(uint32_t));
+    return value;
+}
+
+// Retorna toda la pagina de pageSize ubicada en el frame (con comienzo en frame_ptr)
+void *get_frame_value(void *frame_ptr)
+{
+    void *value;
+    memcpy(&value, frame_ptr, config->pageSize);
+    return value;
+}
+
+// Escribe en toda la pagina de pageSize ubicada en el frame (con comienzo en frame_ptr) el valor recibido
+void *write_frame_value(void *frame_ptr, void *value)
+{
+    memcpy(frame_ptr, &value, config->pageSize);
+}
+
 // Determina si de las framesPerProcess frames asignadas al proceso, hay libres para cargarles paginas
 bool has_free_frame(t_process_frame *process_frames)
 {

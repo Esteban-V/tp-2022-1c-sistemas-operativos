@@ -53,6 +53,32 @@ typedef struct t_memoryConfig
     int framesInMemory;
 } t_memoryConfig;
 
+typedef struct t_page_entry
+{
+    // A que frame (index) de la memoria (de void*) corresponde (y con presencia en false estaria desactualizado)
+    int frame;
+    // Bit de presencia
+    bool present;
+    // Bit de uso
+    bool used;
+    // Bit de modificado
+    bool modified;
+    // Que pagina (index) en su tabla de paginas nivel 2 es
+    int page;
+} t_page_entry;
+
+typedef struct t_ptbr2
+{
+    // Lista de t_page_entry
+    t_list *entries;
+} t_ptbr2;
+
+typedef struct t_ptbr1
+{
+    // Lista de int de level2_tables
+    t_list *entries;
+} t_ptbr1;
+
 typedef struct t_frame_entry
 {
     // A que frame (index) de la memoria (de void*) corresponde
@@ -70,7 +96,7 @@ typedef struct t_process_frame
 } t_process_frame;
 
 // Lista de t_process_frames
-t_list *process_frames;
+t_list *processes_frames;
 
 typedef struct mem
 {
@@ -79,27 +105,25 @@ typedef struct mem
 
 t_bitarray *frames_bitmap;
 
-typedef struct pageMetadata
-{
-    uint32_t pid;
-    uint32_t pageNumber;
-    bool used;
-} t_pageMetadata;
-
 t_memory *memory;
 t_memoryConfig *config;
 t_log *logger;
-t_mem_metadata *metadata;
-uint32_t clock_m_counter;
-uint32_t clock_counter;
 
-uint32_t getFreeFrame(uint32_t start, uint32_t end);
-t_memoryConfig *getMemoryConfig(char *path);
-void destroyMemoryConfig(t_memoryConfig *config);
 sem_t writeRead;
 pthread_mutex_t memoryMut, metadataMut;
 
+uint32_t clock_m_counter;
+uint32_t clock_counter;
+
+t_memoryConfig *getMemoryConfig(char *path);
+void destroyMemoryConfig(t_memoryConfig *config);
+
 int ceil_div(int a, int b);
+
+int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index);
+void *get_frame(uint32_t frame_number);
+uint32_t read_frame_value(void *frame_ptr, uint32_t offset);
+void *get_frame_value(void *frame_ptr);
 
 int find_first_unassigned_frame(t_bitarray *frames_bitmap);
 

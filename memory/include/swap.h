@@ -37,6 +37,4 @@ int getChunk(t_swap_file *sf, uint32_t pid);
 bool hasFreeChunk(t_swap_file *sf);
 int findFreeChunk(t_swap_file *sf);
 
-bool fija_swap(uint32_t pid, uint32_t page, void *pageContent);
-
 #endif /* SWAP_H_ */
