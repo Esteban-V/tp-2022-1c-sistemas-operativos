@@ -26,7 +26,7 @@ int replaceAlgorithm2;
 // 1 = CLOCK_M
 int page_table_init(uint32_t process_size, int algorithm);
 int assign_process_frames();
-
+void unassign_process_frames(int process_frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
 t_ptbr2 *get_page_table2(int pt2_index);

@@ -165,9 +165,9 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
-	uint32_t pt2_index = stream_take_UINT32(petition->payload);
+	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
 
-	if (pid != NULL)
+	if (!!pid)
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Process suspension requested for PID #%d", pid);
@@ -187,19 +187,20 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
 				if (entry->present && entry->modified)
 				{
-					int frame = entry->frame;
-					void *pageContent = get_frame(frame);
-					// TODO SWAP
-
-					/*pthread_mutex_lock(&metadataMut);
-					metadata->entries[frame].isFree =
-						true;
-					pthread_mutex_unlock(&metadataMut);*/
-
-					entry->present = false;
+					// Actualiza la pagina en el swap
+					save_swap(entry->frame, entry->page, pid);
+					entry->modified = false;
 				}
+
+				entry->present = false;
+				entry->frame = -1;
+
+				// Liberar los frames asignados en memoria
+				unassign_process_frames((int)process_frames_index);
 			}
 		}
+
+		socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
 	}
 
 	return false;
@@ -235,6 +236,9 @@ bool process_exit(t_packet *petition, int kernel_socket)
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 		// list_iterate(pt1->entries, _free_frames);
+
+		unassign_process_frames((int)process_frames_index);
+
 		delete_swap(pid);
 
 		pthread_mutex_lock(&mutex_log);

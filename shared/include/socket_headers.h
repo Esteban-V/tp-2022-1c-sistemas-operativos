@@ -17,7 +17,8 @@ typedef enum kernel_headers
 	INTERRUPT_DISPATCH = 3,
 	SUSPEND = 4,
 	PROCESS_MEMORY_READY = 5,
-	PROCESS_EXIT_READY = 6
+	PROCESS_EXIT_READY = 6,
+	PROCESS_SUSPENSION_READY = 7
 } kernel_headers;
 
 typedef enum cpu_headers

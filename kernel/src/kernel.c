@@ -23,6 +23,8 @@ int main(void)
 	sem_init(&ready_for_exec, 0, 0);
 	sem_init(&pcb_table_ready, 0, 0);
 
+	sem_init(&waiting_for_suspension, 0, 1);
+
 	if (config == NULL)
 	{
 		log_error(logger, "Config failed to load");
@@ -173,6 +175,7 @@ void *io_listener()
 				if (memory_socket != -1)
 				{
 					socket_send_packet(memory_socket, suspend_packet);
+					sem_wait(&waiting_for_suspension);
 				}
 
 				packet_destroy(suspend_packet);
@@ -442,6 +445,12 @@ bool table_index_success(t_packet *petition, int mem_socket)
 	return false;
 }
 
+bool suspension_success(t_packet *petition, int mem_socket)
+{
+	sem_post(&waiting_for_suspension);
+	return false;
+}
+
 bool exit_process_success(t_packet *petition, int mem_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
@@ -564,6 +573,8 @@ bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
 		table_index_success,
 		// PROCESS_EXIT_READY
 		exit_process_success,
+		// PROCESS_SUSPENSION_READY
+		suspension_success,
 };
 
 void *header_handler(void *_client_socket)

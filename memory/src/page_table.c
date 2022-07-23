@@ -81,6 +81,22 @@ int assign_process_frames()
 	return process_frames_index;
 }
 
+// Libera todos los frames de un proceso
+void unassign_process_frames(int process_frames_index)
+{
+	t_process_frame *process_frames = (t_process_frame *)list_get(processes_frames, process_frames_index);
+
+	void unassign_frames(void *elem)
+	{
+		t_frame_entry *entry = (t_frame_entry *)elem;
+		frame_clear_assigned(frames_bitmap, entry->frame);
+		entry->frame = -1;
+		entry->page_data = NULL;
+	};
+
+	list_iterate(process_frames->frames, unassign_frames);
+}
+
 // Retorna la tabla de nivel 1 segun su indice en su lista global
 t_ptbr1 *get_page_table1(int pt1_index)
 {
