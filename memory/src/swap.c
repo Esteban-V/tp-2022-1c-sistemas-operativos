@@ -42,7 +42,7 @@ void *swap_get_page(uint32_t pid, int page)
     catch_syscall_err(swap_file = fopen(swap_file_path, "ab+"));
     fseek(swap_file, page * config->pageSize, SEEK_SET);
 
-    void *read_page = malloc(sizeof(config->pageSize));
+    void *read_page = malloc(config->pageSize);
     fread(read_page, config->pageSize, 1, swap_file);
 
     fclose(swap_file);
