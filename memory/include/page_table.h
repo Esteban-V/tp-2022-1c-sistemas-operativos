@@ -79,7 +79,6 @@ void page_table_destroy(t_ptbr1 *table);
 uint32_t clock_m_alg(uint32_t start, uint32_t end);
 uint32_t clock_alg(uint32_t start, uint32_t end);
 bool fija_memoria(uint32_t *start, uint32_t *end, uint32_t pid);
-uint32_t replace(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page, int cpu_socket);
-
+void replace_page_in_frame(uint32_t victim_frame, uint32_t PID, uint32_t pt2_index, uint32_t page);
 
 #endif /* PAGETABLE_H_ */
