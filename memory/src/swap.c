@@ -1,22 +1,19 @@
 #include "swap.h"
 
-void create_swap(uint32_t pid, size_t process_size)
+void create_swap(uint32_t pid, uint32_t process_size)
 {
     pthread_mutex_lock(&mutex_log);
     log_info(logger, "PID #%d --> Creating swap file sized %d", pid, process_size);
-    pthread_mutex_lock(&mutex_log);
+    pthread_mutex_unlock(&mutex_log);
 
     char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);
-
-    // uint32_t frame_start = frame_index * sizeof(uint32_t);
-    // uint32_t frame_end = frame_start + config->pageSize;
 
     usleep(config->swapDelay * 1000);
 
     // Crear archivo
     FILE *swap_file;
     catch_syscall_err(swap_file = fopen(swap_file_path, "ab+"));
-    catch_syscall_err(ftruncate(swap_file, process_size));
+    catch_syscall_err(ftruncate(fileno(swap_file), process_size));
     catch_syscall_err(fclose(swap_file));
 
     free(swap_file_path);

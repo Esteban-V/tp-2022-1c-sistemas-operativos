@@ -42,6 +42,8 @@ int page_table_init(uint32_t process_size)
 		// para agregar a la lista de entradas de su tabla nivel 1
 		list_add(level1_table->entries, level2_index);
 	}
+
+	return level1_index;
 }
 
 // Asigna primeros framesPerProcess libres e inicializa estructura para recorrerlas con clock/clock-m, y retorna el indice de la misma

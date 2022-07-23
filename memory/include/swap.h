@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include "utils.h"
 
-void create_swap(uint32_t pid, size_t process_size);
+void create_swap(uint32_t pid, uint32_t process_size);
 void swap_write_page(uint32_t pid, int page, void *data);
 void *swap_get_page(uint32_t pid, int page);
 void delete_swap(uint32_t pid);

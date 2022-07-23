@@ -135,7 +135,7 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Initializing Memory Structures for PID #%d", pid);
+		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		int pt1_index = page_table_init(process_size);
@@ -228,8 +228,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
-
-		list_iterate(pt1->entries, _free_frames);
+		// list_iterate(pt1->entries, _free_frames);
 		delete_swap(pid);
 
 		pthread_mutex_lock(&mutex_log);
