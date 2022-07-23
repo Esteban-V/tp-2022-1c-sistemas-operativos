@@ -179,8 +179,6 @@ void save_swap(int frame_number, int page_number, int pid)
 
 	page_assignment_counter++;
 
-	// TODO add_tlb_entry(uint32_t pid, entry->page, entry->frame);
-
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Removed PID #%d's Page #%d from Memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);
@@ -223,9 +221,7 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 		// Actualiza frame del proceso
 		curr_frame->page_data = entry;
 
-		// add_tlb_entry(uint32_t pid, entry->page, entry->frame);
-
-
+		// TODO add_tlb_entry(pid, entry->page, entry->frame);
 
 		return entry->frame;
 	};
