@@ -39,7 +39,7 @@ t_pQueue *new_q, *ready_q, *memory_init_q, *memory_exit_q, *blocked_q, *suspende
 pthread_t any_to_ready_t, ready_to_exec_t,
 	cpu_dispatch_t, memory_t, io_t, exit_process_t;
 
-sem_t sem_multiprogram, interrupt_ready, any_for_ready, process_for_IO, ready_for_exec, cpu_free, pcb_table_ready;
+sem_t sem_multiprogram, interrupt_ready, any_for_ready, process_for_IO, ready_for_exec, cpu_free, pcb_table_ready, waiting_for_suspension;
 
 int server_socket;
 int cpu_interrupt_socket;
@@ -50,6 +50,7 @@ void *header_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
 bool table_index_success(t_packet *petition, int mem_socket);
 bool exit_process_success(t_packet *petition, int mem_socket);
+bool suspension_success(t_packet *petition, int mem_socket);
 
 bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);

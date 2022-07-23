@@ -80,6 +80,21 @@ int assign_process_frames()
 	return process_frames_index;
 }
 
+// Libera todos los frames de un proceso
+void unassign_process_frames(int process_frames_index)
+{
+	t_process_frame *process_frames = (t_process_frame *)list_get(processes_frames, process_frames_index);
+
+	void unassign_frames(void *elem)
+	{
+		t_frame_entry *entry = (t_frame_entry *)elem;
+
+		frame_clear_assigned(frames_bitmap, entry->frame);
+	};
+
+	list_iterate(process_frames->frames, unassign_frames);
+}
+
 // Retorna la tabla de nivel 1 segun su indice en su lista global
 t_ptbr1 *get_page_table1(int pt1_index)
 {
@@ -196,20 +211,30 @@ void get_swap(int frame_number, int page_number, int pid)
 	write_frame_value(frame_ptr, swap_value);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Loaded PID #%d's Page #%d into Memory",  pid, page_number);
+	log_info(logger, "Loaded PID #%d's Page #%d into Memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);
 }
 
+<<<<<<< Updated upstream
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid)
 {
 	int _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
 	{
 		// Lleva a disco la pagina a reemplazar y la marca como no presente
-		if (old_page->modified){
+		if (old_page->modified)
+		{
 			// TODO drop_tlb_entry(old_page->page, old_page->frame);
 			save_swap(curr_frame->frame, old_page->page, pid);
 		}
 		old_page->present = false;
+=======
+void *memory_getFrame(uint32_t frame)
+{
+	void *ptr = memory->memory + frame * config->pageSize;
+
+	return ptr;
+}
+>>>>>>> Stashed changes
 
 		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
 		get_swap(curr_frame, entry->page, pid);
