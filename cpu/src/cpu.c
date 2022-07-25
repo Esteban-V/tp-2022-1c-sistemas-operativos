@@ -14,6 +14,7 @@ int main()
 	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
 
+
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_kernel_socket, NULL);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
@@ -137,7 +138,9 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 
 bool receive_interruption(t_packet *petition, int kernel_socket)
 {
-	printf("Received interruption\n");
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Interruption received");
+		pthread_mutex_unlock(&mutex_log);
 	pthread_mutex_lock(&mutex_has_interruption);
 	new_interruption = true;
 	pthread_mutex_unlock(&mutex_has_interruption);
@@ -224,9 +227,9 @@ void execute_read(t_list *params)
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
 	// MMU debe calcular:
-	uint32_t page_number = floor(l_address / config->pageSize);
-	uint32_t entry_index = floor(page_number / config->entriesPerTable);
 
+		uint32_t page_number = floor(l_address / config->pageSize);
+			uint32_t entry_index = floor(page_number / config->entriesPerTable);
 	// Pedir LVL1_TABLE con pcb->page_table
 
 }

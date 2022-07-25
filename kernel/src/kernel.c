@@ -184,25 +184,17 @@ void *io_listener()
 				// Esperar suspension exitosa
 				// Se libera la memoria (sube multiprogramacion)
 				pthread_mutex_lock(&mutex_log);
-				log_info(logger, "%dms Left", pcb->pending_io_time);
+				log_info(logger, "Process suspended, %dms Left", pcb->pending_io_time);
 				pthread_mutex_unlock(&mutex_log);
 
 				pQueue_put(suspended_block_q, (void *)pcb);
 				sem_post(&sem_multiprogram);
 
 				sem_post(&process_for_IO);
-
-				pthread_mutex_lock(&mutex_log);
-				log_info(logger, "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended blocked queue", pcb->pid);
-				pthread_mutex_unlock(&mutex_log);
 			}
 		}
 		else
 		{
-			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Medium Term Scheduler: PID #%d [BLOCKED] --> Suspended blocked queue", pcb->pid);
-			pthread_mutex_unlock(&mutex_log);
-
 			pcb = pQueue_take(suspended_block_q);
 
 			usleep(pcb->pending_io_time * 1000);
@@ -376,10 +368,19 @@ void put_to_ready(t_pcb *pcb)
 		sem_getvalue(&cpu_free, &freeCpu);
 		if (!freeCpu)
 		{
+			pthread_mutex_lock(&mutex_log);
+				log_info(logger, "PCB %d interrupts", pcb->pid);
+				pthread_mutex_unlock(&mutex_log);
+
 			if (cpu_interrupt_socket != -1)
 			{
 				socket_send_header(cpu_interrupt_socket, INTERRUPT);
 			}
+
+						pthread_mutex_lock(&mutex_log);
+				log_info(logger, "PCB %d interruption sended", pcb->pid);
+				pthread_mutex_unlock(&mutex_log);
+
 
 			// Se espera a que vuelva de CPU
 			sem_wait(&interrupt_ready);
@@ -390,19 +391,23 @@ void put_to_ready(t_pcb *pcb)
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(ready_q, SJF_sort);
+
+		if(!freeCpu){
+			sem_post(&cpu_free);
+		}
 	}
 
-	sem_post(&ready_for_exec);
 	pthread_mutex_unlock(&execution_mutex);
+	sem_post(&ready_for_exec);
 }
 
 void *to_ready()
 {
 	while (1)
 	{
+
 		sem_wait(&any_for_ready);
 		sem_wait(&sem_multiprogram);
-
 		if (!pQueue_isEmpty(suspended_ready_q))
 		{
 			suspended_to_ready();
@@ -506,8 +511,8 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - (time_to_ms(toExec) - time_to_ms(fromExec));
 
 		pQueue_put(ready_q, received_pcb);
+		sem_post(&ready_for_exec);		
 	}
-	sem_post(&cpu_free);
 	sem_post(&interrupt_ready);
 
 	return true;

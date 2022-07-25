@@ -150,7 +150,6 @@ t_pcb *create_pcb()
 		free(pcb);
 		return NULL;
 	}
-
 	return pcb;
 }
 
