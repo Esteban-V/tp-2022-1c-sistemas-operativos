@@ -24,6 +24,9 @@ do
 	mkdir -p ./build-logs
 	LOG_PATH=./build-logs/$MODULE-$(basename $FOLDER_WITH_CONFIGS).log
 
+	#Crea la carpeta de swap si no existe
+	mkdir -p /home/utnso/swap
+
 	# Obtiene la config a utilizar y la copia en el directorio correspondiente de cada modulo
 	CONFIG_FILE=$FOLDER_WITH_CONFIGS/$CONFIG
 	cp $CONFIG_FILE ./$MODULE/cfg/$CONFIG
