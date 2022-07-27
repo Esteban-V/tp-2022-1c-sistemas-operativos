@@ -24,7 +24,7 @@ enum e_replaceAlgorithm
 enum e_replaceAlgorithm replaceAlgorithm = CLOCK;
 
 t_memory *memory_init();
-void terminate_memory(bool error);
+void terminate_memory(int x);
 void cpu_handshake_listener();
 
 #endif /* MEMORY_H_ */

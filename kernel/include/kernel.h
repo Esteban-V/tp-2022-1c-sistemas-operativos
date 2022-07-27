@@ -53,27 +53,20 @@ bool receive_process(t_packet *petition, int console_socket);
 bool table_index_success(t_packet *petition, int mem_socket);
 bool exit_process_success(t_packet *petition, int mem_socket);
 bool suspension_success(t_packet *petition, int mem_socket);
-
 bool exit_op(t_packet *petition, int console_socket);
 bool io_op(t_packet *petition, int console_socket);
-
 void *new_to_ready();
 void *suspended_to_ready();
 void blocked_to_ready(t_pQueue *origin, t_pQueue *destination);
 void put_to_ready(t_pcb *pcb);
-
 void *to_exec();
 void *to_ready();
-
 void *cpu_dispatch_listener(void *args);
 void *memory_listener(void *args);
 void *io_listener();
-
 bool handle_interruption(t_packet *petition, int cpu_socket);
-
 void *suspend_process(void *args);
 void *exit_process(void *args);
-
-void terminate_kernel(bool error);
+void terminate_kernel(int x);
 
 #endif /* KERNEL_H_ */

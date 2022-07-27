@@ -42,7 +42,7 @@ void *get_frame(uint32_t frame_number)
 uint32_t read_frame_value(void *frame_ptr, uint32_t offset)
 {
     // Todos los valores a leer/escribir en memoria serán numéricos enteros no signados de 4 bytes
-    uint32_t value;
+    uint32_t value=0;
     memcpy(frame_ptr + offset, &value, sizeof(uint32_t));
     return value;
 }
@@ -81,7 +81,7 @@ int find_first_free_frame(t_process_frame *process_frames)
         return ((t_frame_entry *)entry)->frame != -1;
     };
 
-    return list_find(process_frames->frames, _is_free);
+    return (int) list_find(process_frames->frames, _is_free);
 }
 
 int find_first_unassigned_frame(t_bitarray *bitmap)

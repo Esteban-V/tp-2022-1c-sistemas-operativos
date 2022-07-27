@@ -2,6 +2,8 @@
 
 int main(void)
 {
+	signal(SIGINT, terminate_kernel);
+
 	logger = log_create("./cfg/kernel-final.log", "KERNEL", 1, LOG_LEVEL_INFO);
 	config = getKernelConfig("./cfg/kernel.config");
 
@@ -95,7 +97,6 @@ int main(void)
 		server_listen(server_socket, header_handler);
 	}
 
-	terminate_kernel(false);
 }
 
 void *cpu_dispatch_listener(void *args)
@@ -325,6 +326,8 @@ void *new_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Long Term Scheduler: PID #%d [NEW] --> Ready queue", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
+
+	return 0;
 }
 
 void *suspended_to_ready()
@@ -417,6 +420,8 @@ void *to_ready()
 			new_to_ready();
 		}
 	}
+
+	return 0;
 }
 
 bool table_index_success(t_packet *petition, int mem_socket)
@@ -475,6 +480,7 @@ bool exit_process_success(t_packet *petition, int mem_socket)
 		if (pcb->pid == pid)
 		{
 			console_socket = pcb->client_socket;
+			pcb_destroy(pcb);
 		}
 	};
 
@@ -569,7 +575,7 @@ bool exit_op(t_packet *petition, int cpu_socket)
 	return false;
 }
 
-bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
+bool (*kernel_handlers[8])(t_packet *petition, int console_socket) =
 	{
 		// NEW_PROCESS
 		receive_process,
@@ -612,15 +618,42 @@ void *header_handler(void *_client_socket)
 	return 0;
 }
 
-void terminate_kernel(bool error)
+void terminate_kernel(int x)
 {
-	log_destroy(logger);
-	destroyKernelConfig(config);
-	if (cpu_interrupt_socket)
-		close(cpu_interrupt_socket);
-	if (cpu_dispatch_socket)
-		close(cpu_dispatch_socket);
-	if (memory_socket)
-		close(memory_socket);
-	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+	void _delete_element(void * elem){
+		free(elem);
+	}
+
+	switch(x)
+	{
+	case SIGINT:
+
+		queue_destroy_and_destroy_elements(new_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(ready_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(memory_init_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(memory_exit_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(blocked_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(suspended_block_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(suspended_ready_q->lib_queue, _delete_element);
+		queue_destroy_and_destroy_elements(exit_q->lib_queue, _delete_element);
+
+		free(new_q);
+		free(ready_q);
+		free(memory_init_q);
+		free(memory_exit_q);
+		free(blocked_q);
+		free(suspended_block_q);
+		free(suspended_ready_q);
+		free(exit_q);
+
+		log_destroy(logger);
+		destroyKernelConfig(config);
+		if (cpu_interrupt_socket)
+			close(cpu_interrupt_socket);
+		if (cpu_dispatch_socket)
+			close(cpu_dispatch_socket);
+		if (memory_socket)
+			close(memory_socket);
+		exit(EXIT_SUCCESS);
+	}
 }

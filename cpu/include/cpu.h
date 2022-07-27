@@ -70,7 +70,7 @@ int kernel_interrupt_socket;
 
 void stats();
 pthread_t interruptionThread, execThread;
-void terminate_cpu(bool error);
+void terminate_cpu(int x);
 void memory_handshake();
 
 // TLB

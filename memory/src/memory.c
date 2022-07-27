@@ -2,6 +2,7 @@
 
 int main()
 {
+	signal(SIGINT, terminate_memory);
 	// Initialize logger
 	logger = log_create("./cfg/memory-final.log", "MEMORY", 1, LOG_LEVEL_TRACE);
 	config = getMemoryConfig("./cfg/memory.config");
@@ -53,7 +54,7 @@ int main()
 		server_listen(server_socket, header_handler);
 	}
 
-	terminate_memory(false);
+
 }
 
 bool (*memory_handlers[8])(t_packet *petition, int socket) =
@@ -245,6 +246,8 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		log_info(logger, "Memory Structures Destroyed Successfully");
 		pthread_mutex_unlock(&mutex_log);
 
+
+
 		t_packet *response = create_packet(PROCESS_EXIT_READY, INITIAL_STREAM_SIZE);
 
 		stream_add_UINT32(response->payload, pid);
@@ -415,21 +418,28 @@ t_memory *memory_init()
 	return mem;
 }
 
-void terminate_memory(bool error)
+void terminate_memory(int x)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Memory Accesses: %d", memory_access_counter);
-	log_info(logger, "Memory Reads: %d", memory_read_counter);
-	log_info(logger, "Memory Writes: %d", memory_write_counter);
-	log_info(logger, "Page Assignments: %d", page_assignment_counter);
-	log_info(logger, "Page Replacements: %d", page_replacement_counter);
-	log_info(logger, "Page Faults: %d", page_fault_counter);
-	pthread_mutex_unlock(&mutex_log);
+	switch(x)
+	{
+	case SIGINT:
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory Accesses: %d", memory_access_counter);
+		log_info(logger, "Memory Reads: %d", memory_read_counter);
+		log_info(logger, "Memory Writes: %d", memory_write_counter);
+		log_info(logger, "Page Assignments: %d", page_assignment_counter);
+		log_info(logger, "Page Replacements: %d", page_replacement_counter);
+		log_info(logger, "Page Faults: %d", page_fault_counter);
+		pthread_mutex_unlock(&mutex_log);
 
-	log_destroy(logger);
-	destroyMemoryConfig(config);
+		log_destroy(logger);
+		destroyMemoryConfig(config);
+		list_destroy(level1_tables);
+		list_destroy(level2_tables);
+		list_destroy(processes_frames);
 
-	if (server_socket)
-		close(server_socket);
-	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+		if (server_socket)
+			close(server_socket);
+		exit(EXIT_SUCCESS);
+	}
 }

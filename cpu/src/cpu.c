@@ -2,6 +2,9 @@
 
 int main()
 {
+
+	signal(SIGINT, terminate_cpu);
+
 	// Initialize logger
 	logger = log_create("./cfg/cpu-final.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("./cfg/cpu.config");
@@ -46,9 +49,6 @@ int main()
 		server_listen(kernel_dispatch_socket, dispatch_header_handler);
 	}
 
-	stats();
-	destroy_tlb();
-	terminate_cpu(false);
 }
 
 void *listen_interruption()
@@ -287,11 +287,17 @@ void stats()
 	pthread_mutex_unlock(&mutex_log);
 }
 
-void terminate_cpu(bool error)
+void terminate_cpu(int x)
 {
-	log_destroy(logger);
-	destroy_cpu_config(config);
-	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+	switch(x)
+	{
+	case SIGINT:
+		stats();
+		destroy_tlb();
+		log_destroy(logger);
+		destroy_cpu_config(config);
+		exit(EXIT_SUCCESS);
+	}
 }
 
 t_tlb *create_tlb()

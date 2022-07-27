@@ -7,7 +7,7 @@
 #include<pthread.h>
 #include<commons/log.h>
 #include<errno.h>
-
+#include <signal.h>
 #include"serialization.h"
 
 typedef struct t_packet {
