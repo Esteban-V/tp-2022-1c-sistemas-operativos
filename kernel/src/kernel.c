@@ -289,6 +289,9 @@ void *to_exec()
 		{
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
+
+		pcb_destroy(pcb);
+
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
 
 		packet_destroy(pcb_packet);
