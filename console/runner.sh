@@ -45,6 +45,6 @@ do
 		./console $CODE_PATH $PROCESS_SIZE  >$LOG_PATH &
 
 		# Espera el intervalo especificado (en segundos) para ejecutar la proxima consola
-		sleep 0.5
+		sleep 1
 	done
 done 

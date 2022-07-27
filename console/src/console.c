@@ -134,7 +134,9 @@ t_instruction *parse_instruction(char *string)
 
 void error_opening_file()
 {
+	pthread_mutex_lock(&mutex_log);
 	log_error(logger, "Provided file path does not exist");
+	pthread_mutex_lock(&mutex_log);
 	terminate_console(true);
 }
 

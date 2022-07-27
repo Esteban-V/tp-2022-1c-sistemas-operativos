@@ -23,9 +23,9 @@ t_cpu_config *get_cpu_config(char *path)
 
 void destroy_cpu_config(t_cpu_config *cpu_config)
 {
-	free(cpu_config->tlbEntryQty);
+	free((void*)cpu_config->tlbEntryQty);
 	free(cpu_config->tlb_alg);
-	free(cpu_config->delayNoOp);
+	free((void*)cpu_config->delayNoOp);
 	free(cpu_config->memoryIP);
 	free(cpu_config->memoryPort);
 	free(cpu_config->dispatchListenPort);

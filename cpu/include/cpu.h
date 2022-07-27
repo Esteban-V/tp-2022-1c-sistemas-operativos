@@ -21,6 +21,7 @@
 #include "socket_headers.h"
 #include "process_utils.h"
 #include "semaphore.h"
+#include<math.h>
 
 #define CPU_MEMORY_SECRET = "CMSMC"
 

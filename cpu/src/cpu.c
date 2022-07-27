@@ -290,7 +290,7 @@ void stats()
 void terminate_cpu(bool error)
 {
 	log_destroy(logger);
-	config_destroy(config);
+	destroy_cpu_config(config);
 	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
@@ -426,8 +426,7 @@ void drop_tlb_entry(uint32_t page, uint32_t frame)
 
 void destroy_tlb()
 {
-	list_destroy(tlb->entries);
-	free(tlb->entryQty);
+	free(tlb->entries);
 	list_destroy(tlb->victimQueue);
 	free(tlb);
 }
