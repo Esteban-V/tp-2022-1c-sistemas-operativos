@@ -146,7 +146,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 	else
 	{
 		// Page fault ++, no estaba presente
-		t_process_frame *process_frames = list_get(process_frames, frames_index);
+		t_process_frame *process_frames = (t_process_frame *) list_get(process_frames, frames_index);
 		page_fault_counter++;
 
 		// Chequear si se puede asignar directo
@@ -269,7 +269,7 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 					// Si no esta en uso ni modificado (0, 0): Reemplaza
 					replace(curr_frame, curr_page);
 					// Deja el puntero incrementado para proxima vez
-					increment_clock_hand(&process_frames->clock_hand);
+					increment_clock_hand(&(process_frames->clock_hand));
 					return curr_frame->frame;
 				}
 
@@ -281,7 +281,7 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 						// Si no esta en uso y pero si modificado (0, 1): Reemplaza
 						replace(curr_frame, curr_page);
 						// Deja el puntero incrementado para proxima vez
-						increment_clock_hand(process_frames->clock_hand);
+						increment_clock_hand(&(process_frames->clock_hand));
 						return curr_frame->frame;
 					}
 					else
@@ -293,7 +293,7 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 					}
 				}
 				// Si no reemplaza, pasa de frame
-				increment_clock_hand(process_frames->clock_hand);
+				increment_clock_hand(&(process_frames->clock_hand));
 			}
 			else
 			{
@@ -303,14 +303,14 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 					// Si no esta en uso: Reemplaza
 					replace(curr_frame, curr_page);
 					// Deja el puntero incrementado para proxima vez
-					increment_clock_hand(process_frames->clock_hand);
+					increment_clock_hand(&(process_frames->clock_hand));
 					return curr_frame->frame;
 				}
 				else
 				{
 					// Si esta en uso: Marca uso en 0 para proxima vuelta y pasa de frame
 					curr_page->used = false;
-					increment_clock_hand(process_frames->clock_hand);
+					increment_clock_hand(&(process_frames->clock_hand));
 				}
 			}
 		}

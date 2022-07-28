@@ -79,18 +79,9 @@ t_process *create_process()
 		return NULL;
 	}
 
-	// Try to allocate process size and instructions, free structure if fail.
-	process->size = malloc(sizeof(uint32_t));
-	if (process->size == NULL)
-	{
-		free(process);
-		return NULL;
-	}
-
 	process->instructions = list_create();
 	if (process->instructions == NULL)
 	{
-		free(process->size);
 		free(process);
 		return NULL;
 	}

@@ -282,6 +282,7 @@ void memory_handshake()
 void stats()
 {
 	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "\n- - - Stats - - -\n");
 	log_info(logger, "TLB Hits: %d", tlb_hit_counter);
 	log_info(logger, "TLB Misses: %d", tlb_miss_counter);
 	pthread_mutex_unlock(&mutex_log);

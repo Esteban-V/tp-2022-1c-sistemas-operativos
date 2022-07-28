@@ -42,7 +42,7 @@ void stream_add_UINT32(t_stream_buffer *stream, uint32_t value) {
 }
 
 void stream_add_STRINGP(t_stream_buffer *stream, void *source) {
-	uint32_t size = string_length((char*) source) + 1;
+	uint32_t size = (uint32_t) string_length((char*) source) + 1;
 	stream_add_UINT32(stream, size);
 	stream_add(stream, source, size);
 }
@@ -58,7 +58,7 @@ void stream_add_LIST(t_stream_buffer *stream, t_list *source,
 		stream_add_ELEMP(stream, elem);
 	}
 
-	uint32_t size = list_size(source);
+	uint32_t size = (uint32_t) list_size(source);
 	stream_add_UINT32(stream, size);
 	list_iterate(source, _stream_add_ELEMP);
 }

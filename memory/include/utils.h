@@ -120,7 +120,7 @@ void *get_frame_value(void *frame_ptr);
 int find_first_unassigned_frame(t_bitarray *frames_bitmap);
 
 bool has_free_frame(t_process_frame *process_frames);
-int find_first_free_frame(t_process_frame *process_frames);
+t_frame_entry * find_first_free_frame(t_process_frame *process_frames);
 
 void frame_set_assigned(t_bitarray *frames_bitmap, int index);
 void frame_clear_assigned(t_bitarray *frames_bitmap, int index);

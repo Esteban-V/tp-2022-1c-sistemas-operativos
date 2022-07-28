@@ -73,7 +73,7 @@ bool has_free_frame(t_process_frame *process_frames)
     return cant_present < config->framesPerProcess;
 }
 
-int find_first_free_frame(t_process_frame *process_frames)
+t_frame_entry * find_first_free_frame(t_process_frame *process_frames)
 {
 
     bool _is_free(void *entry)
@@ -81,7 +81,7 @@ int find_first_free_frame(t_process_frame *process_frames)
         return ((t_frame_entry *)entry)->frame != -1;
     };
 
-    return (int) list_find(process_frames->frames, _is_free);
+    return (t_frame_entry *) list_find(process_frames->frames, _is_free);
 }
 
 int find_first_unassigned_frame(t_bitarray *bitmap)

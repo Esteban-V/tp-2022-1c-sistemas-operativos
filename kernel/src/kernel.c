@@ -70,26 +70,26 @@ int main(void)
 	log_info(logger, "Kernel server ready for console");
 
 	// Planificador de mediano plazo
-	pthread_create(&any_to_ready_t, 0, to_ready, NULL);
+	pthread_create(&any_to_ready_t, NULL, to_ready, NULL);
 	pthread_detach(any_to_ready_t);
 
 	// Planificador de corto plazo
-	pthread_create(&ready_to_exec_t, 0, to_exec, NULL);
+	pthread_create(&ready_to_exec_t, NULL, to_exec, NULL);
 	pthread_detach(ready_to_exec_t);
 
 	// Planificador de largo plazo
-	pthread_create(&exit_process_t, 0, exit_process, NULL);
+	pthread_create(&exit_process_t, NULL, exit_process, NULL);
 	pthread_detach(exit_process_t);
 
 	// CPU dispatch listener
-	pthread_create(&cpu_dispatch_t, 0, cpu_dispatch_listener, NULL);
+	pthread_create(&cpu_dispatch_t, NULL, cpu_dispatch_listener, NULL);
 	pthread_detach(cpu_dispatch_t);
 
 	// Memory listener
-	pthread_create(&memory_t, 0, memory_listener, NULL);
+	pthread_create(&memory_t, NULL, memory_listener, NULL);
 	pthread_detach(memory_t);
 
-	pthread_create(&io_t, 0, io_listener, NULL);
+	pthread_create(&io_t, NULL, io_listener, NULL);
 	pthread_detach(io_t);
 
 	while (1)
@@ -103,7 +103,7 @@ void *cpu_dispatch_listener(void *args)
 {
 	while (1)
 	{
-		header_handler(cpu_dispatch_socket);
+		header_handler((void *)cpu_dispatch_socket);
 	}
 }
 
@@ -111,11 +111,11 @@ void *memory_listener(void *args)
 {
 	while (1)
 	{
-		header_handler(memory_socket);
+		header_handler((void *)memory_socket);
 	}
 }
 
-void *io_listener()
+void *io_listener(void *args)
 {
 	t_pcb *pcb;
 	int time_blocked;
@@ -190,7 +190,6 @@ void *io_listener()
 
 				pQueue_put(suspended_block_q, (void *)pcb);
 				sem_post(&sem_multiprogram);
-
 				sem_post(&process_for_IO);
 			}
 		}
@@ -246,6 +245,8 @@ bool receive_process(t_packet *petition, int console_socket)
 		sem_post(&any_for_ready);
 	}
 
+	process_destroy(received_process);
+
 	return true;
 }
 
@@ -290,7 +291,6 @@ void *to_exec()
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
 
-		pcb_destroy(pcb);
 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
 
@@ -300,6 +300,7 @@ void *to_exec()
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		pthread_mutex_unlock(&execution_mutex);
+		pcb_destroy(pcb);
 	}
 }
 
@@ -375,15 +376,15 @@ void put_to_ready(t_pcb *pcb)
 		if (!freeCpu)
 		{
 			pthread_mutex_lock(&mutex_log);
-				log_info(logger, "PCB %d interrupts", pcb->pid);
-				pthread_mutex_unlock(&mutex_log);
+			log_info(logger, "PCB %d interrupts", pcb->pid);
+			pthread_mutex_unlock(&mutex_log);
 
 			if (cpu_interrupt_socket != -1)
 			{
 				socket_send_header(cpu_interrupt_socket, INTERRUPT);
 			}
 
-						pthread_mutex_lock(&mutex_log);
+				pthread_mutex_lock(&mutex_log);
 				log_info(logger, "PCB %d interruption sended", pcb->pid);
 				pthread_mutex_unlock(&mutex_log);
 
@@ -475,7 +476,7 @@ bool exit_process_success(t_packet *petition, int mem_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 
-	int console_socket = NULL;
+	int console_socket = 0;
 	void _page_table_to_pid(void *elem)
 	{
 		t_pcb *pcb = (t_pcb *)elem;
@@ -488,7 +489,7 @@ bool exit_process_success(t_packet *petition, int mem_socket)
 	};
 
 	pQueue_iterate(memory_exit_q, _page_table_to_pid);
-	if (console_socket != NULL)
+	if (console_socket != 0)
 	{
 		socket_send_header(console_socket, PROCESS_OK);
 	}
@@ -623,22 +624,18 @@ void *header_handler(void *_client_socket)
 
 void terminate_kernel(int x)
 {
-	void _delete_element(void * elem){
-		free(elem);
-	}
-
 	switch(x)
 	{
 	case SIGINT:
 
-		queue_destroy_and_destroy_elements(new_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(ready_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(memory_init_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(memory_exit_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(blocked_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(suspended_block_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(suspended_ready_q->lib_queue, _delete_element);
-		queue_destroy_and_destroy_elements(exit_q->lib_queue, _delete_element);
+		queue_destroy(new_q->lib_queue);
+		queue_destroy(ready_q->lib_queue);
+		queue_destroy(memory_init_q->lib_queue);
+		queue_destroy(memory_exit_q->lib_queue);
+		queue_destroy(blocked_q->lib_queue);
+		queue_destroy(suspended_block_q->lib_queue);
+		queue_destroy(suspended_ready_q->lib_queue);
+		queue_destroy(exit_q->lib_queue);
 
 		free(new_q);
 		free(ready_q);
@@ -648,6 +645,9 @@ void terminate_kernel(int x)
 		free(suspended_block_q);
 		free(suspended_ready_q);
 		free(exit_q);
+
+		pthread_mutex_destroy(&execution_mutex);
+
 
 		log_destroy(logger);
 		destroyKernelConfig(config);

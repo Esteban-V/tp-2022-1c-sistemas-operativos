@@ -19,7 +19,6 @@ int memory_write_counter;
 int page_fault_counter;
 int page_assignment_counter;
 int page_replacement_counter;
-
 int replaceAlgorithm2;
 
 // 0 = CLOCK
@@ -30,7 +29,7 @@ void unassign_process_frames(int process_frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);
 int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index);
 t_ptbr2 *get_page_table2(int pt2_index);
-
+void save_swap(int frame_number, int page_number, int pid);
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid);
 int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *(*replace)(t_frame_entry *, t_page_entry *));
 

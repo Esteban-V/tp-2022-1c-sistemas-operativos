@@ -247,7 +247,6 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 
-
 		t_packet *response = create_packet(PROCESS_EXIT_READY, INITIAL_STREAM_SIZE);
 
 		stream_add_UINT32(response->payload, pid);
@@ -424,6 +423,7 @@ void terminate_memory(int x)
 	{
 	case SIGINT:
 		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "\n- - - Stats - - -\n");
 		log_info(logger, "Memory Accesses: %d", memory_access_counter);
 		log_info(logger, "Memory Reads: %d", memory_read_counter);
 		log_info(logger, "Memory Writes: %d", memory_write_counter);
@@ -431,6 +431,9 @@ void terminate_memory(int x)
 		log_info(logger, "Page Replacements: %d", page_replacement_counter);
 		log_info(logger, "Page Faults: %d", page_fault_counter);
 		pthread_mutex_unlock(&mutex_log);
+
+		free(memory);
+		bitarray_destroy(frames_bitmap);
 
 		log_destroy(logger);
 		destroyMemoryConfig(config);
