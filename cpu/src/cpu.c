@@ -17,6 +17,7 @@ int main()
 	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
 
+	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
 
 	new_interruption = false;
@@ -44,7 +45,7 @@ int main()
 
 	while (1)
 	{
-		server_listen(kernel_interrupt_socket, header_handler);
+		server_listen(kernel_dispatch_socket, dispatch_header_handler);
 	}
 
 }
@@ -53,7 +54,7 @@ void *listen_interruption()
 {
 	while (1)
 	{
-		server_listen(kernel_dispatch_socket, dispatch_header_handler);
+		server_listen(kernel_interrupt_socket, header_handler);
 	}
 }
 
