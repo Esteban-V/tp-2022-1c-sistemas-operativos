@@ -223,7 +223,7 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 		old_page->present = false;
 
 		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
-		get_swap(curr_frame, entry->page, pid);
+		get_swap((int)curr_frame, entry->page, pid);
 
 		// Actualiza pagina en tabla de paginas
 		entry->present = true;

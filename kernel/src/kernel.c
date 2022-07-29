@@ -189,6 +189,7 @@ void *io_listener(void *args)
 				pthread_mutex_unlock(&mutex_log);
 
 				pQueue_put(suspended_block_q, (void *)pcb);
+				
 				sem_post(&sem_multiprogram);
 				sem_post(&process_for_IO);
 			}
@@ -280,7 +281,12 @@ void *to_exec()
 		sem_wait(&ready_for_exec);
 		sem_wait(&cpu_free);
 		pthread_mutex_lock(&execution_mutex);
+
 		pcb = pQueue_take(ready_q);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "TO EXEC");
+		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_pcb(pcb_packet, pcb);
@@ -297,8 +303,9 @@ void *to_exec()
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
-		pthread_mutex_unlock(&execution_mutex);
 		pcb_destroy(pcb);
+
+		pthread_mutex_unlock(&execution_mutex);
 	}
 }
 
@@ -380,10 +387,7 @@ void put_to_ready(t_pcb *pcb)
 			log_info(logger, "PID #%d Interruption", pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
 
-			if (cpu_interrupt_socket != -1)
-			{
-				socket_send_header(cpu_interrupt_socket, INTERRUPT);
-			}
+			socket_send_header(cpu_interrupt_socket, INTERRUPT);
 
 			// Se espera a que vuelva de CPU
 			sem_wait(&interrupt_ready);
@@ -399,7 +403,6 @@ void put_to_ready(t_pcb *pcb)
 			sem_post(&cpu_free);
 		}
 	}
-
 	pthread_mutex_unlock(&execution_mutex);
 	sem_post(&ready_for_exec);
 }

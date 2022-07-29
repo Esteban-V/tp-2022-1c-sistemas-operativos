@@ -17,9 +17,6 @@ int main()
 	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
 
-
-	sem_init(&pcb_loaded, 0, 0);
-	pthread_mutex_init(&mutex_kernel_socket, NULL);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
 
 	new_interruption = false;
@@ -33,6 +30,7 @@ int main()
 	sem_init(&interruption_counter, 0, 0);
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
+
 	if (memory_server_socket == -1)
 	{
 		terminate_cpu(true);
@@ -46,7 +44,7 @@ int main()
 
 	while (1)
 	{
-		server_listen(kernel_dispatch_socket, dispatch_header_handler);
+		server_listen(kernel_interrupt_socket, header_handler);
 	}
 
 }
@@ -55,7 +53,7 @@ void *listen_interruption()
 {
 	while (1)
 	{
-		server_listen(kernel_interrupt_socket, header_handler);
+		server_listen(kernel_dispatch_socket, dispatch_header_handler);
 	}
 }
 
@@ -64,20 +62,11 @@ void pcb_to_kernel(kernel_headers header)
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
 	stream_add_pcb(pcb_packet, pcb);
 
-	pthread_mutex_lock(&mutex_kernel_socket);
-	if (kernel_client_socket != -1)
-	{
-		socket_send_packet(kernel_client_socket, pcb_packet);
-		pthread_mutex_unlock(&mutex_kernel_socket);
+	socket_send_packet(kernel_client_socket, pcb_packet);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
-	}
-	else
-	{
-		pthread_mutex_unlock(&mutex_kernel_socket);
-	}
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+	pthread_mutex_unlock(&mutex_log);
 
 	packet_destroy(pcb_packet);
 	pcb_destroy(pcb);
@@ -93,19 +82,18 @@ bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
 
 void *dispatch_header_handler(void *_client_socket)
 {
-	pthread_mutex_lock(&mutex_kernel_socket);
 	kernel_client_socket = (int)_client_socket;
-	pthread_mutex_unlock(&mutex_kernel_socket);
 
-	return header_handler(_client_socket);
-}
 
-void *header_handler(void *_client_socket)
-{
 	bool serve = true;
 	while (serve)
 	{
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "HEADER AAA");
+		pthread_mutex_unlock(&mutex_log);
+
 		t_packet *packet = socket_receive_packet((int)_client_socket);
+
 		if (packet == NULL)
 		{
 			if (!socket_retry_packet((int)_client_socket, &packet))
@@ -114,7 +102,34 @@ void *header_handler(void *_client_socket)
 				break;
 			}
 		}
-		serve = cpu_handlers[packet->header](packet, (int)_client_socket);
+
+		serve = receive_pcb(packet, (int)_client_socket);
+		packet_destroy(packet);
+	}
+	return 0;
+}
+
+void *header_handler(void *_client_socket)
+{
+	bool serve = true;
+	while (serve)
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "HEADER BBB");
+		pthread_mutex_unlock(&mutex_log);
+
+		t_packet *packet = socket_receive_packet((int)_client_socket);
+
+		if (packet == NULL)
+		{
+			if (!socket_retry_packet((int)_client_socket, &packet))
+			{
+				close((int)_client_socket);
+				break;
+			}
+		}
+
+		serve = receive_interruption(packet, (int)_client_socket);
 		packet_destroy(packet);
 	}
 	return 0;
@@ -140,7 +155,8 @@ bool receive_interruption(t_packet *petition, int kernel_socket)
 {
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Interruption received");
-		pthread_mutex_unlock(&mutex_log);
+	pthread_mutex_unlock(&mutex_log);
+
 	pthread_mutex_lock(&mutex_has_interruption);
 	new_interruption = true;
 	pthread_mutex_unlock(&mutex_has_interruption);
@@ -190,6 +206,7 @@ void *cpu_cycle()
 		// Mandar el proceso al kernel en caso de que no haya un EXIT?
 		// pcb_to_kernel(EXIT_CALL);
 	}
+	return 0;
 }
 
 enum operation fetch_and_decode(t_instruction **instruction)
@@ -211,12 +228,21 @@ enum operation fetch_and_decode(t_instruction **instruction)
 
 void execute_no_op(t_list *params)
 {
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Executing NO OP");
+	pthread_mutex_unlock(&mutex_log);
+
 	uint32_t times = *((uint32_t *)list_get(params, 0));
 	usleep(config->delayNoOp * 1000 * times);
 }
 
 void execute_io(t_list *params)
 {
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Executing IO");
+	pthread_mutex_unlock(&mutex_log);
+
 	uint32_t time = *((uint32_t *)list_get(params, 0));
 	pcb->pending_io_time = time;
 	pcb_to_kernel(IO_CALL);
@@ -224,6 +250,10 @@ void execute_io(t_list *params)
 
 void execute_read(t_list *params)
 {
+	pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Executing Read");
+			pthread_mutex_unlock(&mutex_log);
+
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
 	// MMU debe calcular:
@@ -236,6 +266,10 @@ void execute_read(t_list *params)
 
 void execute_copy(t_list *params)
 {
+	pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Executing Copy");
+			pthread_mutex_unlock(&mutex_log);
+
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
 	// uint32_t value = fetch_operand(l_value_address);
@@ -244,6 +278,10 @@ void execute_copy(t_list *params)
 
 void execute_write(t_list *params)
 {
+	pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Executing Write");
+			pthread_mutex_unlock(&mutex_log);
+
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t value = *((uint32_t *)list_get(params, 1));
 	// write(l_address, value);
@@ -251,6 +289,10 @@ void execute_write(t_list *params)
 
 void execute_exit()
 {
+	pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Executing Exit");
+			pthread_mutex_unlock(&mutex_log);
+
 	clean_tlb(tlb);
 	pcb_to_kernel(EXIT_CALL);
 }
