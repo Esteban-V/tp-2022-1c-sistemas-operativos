@@ -23,6 +23,15 @@ void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void *))
 	free(queue);
 }
 
+int pQueue_size(t_pQueue *queue)
+{
+	pthread_mutex_lock(&queue->mutex);
+	int size = queue_size(queue->lib_queue);
+	pthread_mutex_unlock(&queue->mutex);
+
+	return size;
+}
+
 void pQueue_put(t_pQueue *queue, void *elem)
 {
 	pthread_mutex_lock(&queue->mutex);

@@ -21,6 +21,12 @@ typedef enum kernel_headers
 	PROCESS_SUSPENSION_READY = 7
 } kernel_headers;
 
+static const char * const headers_strings[] = {
+	[IO_CALL] = "(IO CALL)",
+	[EXIT_CALL] = "(EXIT_CALL)",
+	[INTERRUPT_DISPATCH] = "(INTERRUPT_DISPATCH)",
+};
+
 typedef enum cpu_headers
 {
 	PCB_TO_CPU = 0,

@@ -18,7 +18,7 @@ t_pQueue *pQueue_create();
 void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void *));
 
 void pQueue_put(t_pQueue *queue, void *elem);
-
+int pQueue_size(t_pQueue *queue);
 void *pQueue_take(t_pQueue *queue);
 
 bool pQueue_isEmpty(t_pQueue *queue);
