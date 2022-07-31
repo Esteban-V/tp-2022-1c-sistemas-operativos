@@ -53,7 +53,7 @@ void pcb_to_kernel(kernel_headers header);
 pthread_t interruptionThread, execThread;
 pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;
 
-sem_t pcb_loaded, interruption_counter;
+sem_t pcb_loaded;
 bool new_interruption;
 
 int kernel_client_socket;

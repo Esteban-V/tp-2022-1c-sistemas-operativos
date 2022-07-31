@@ -30,8 +30,6 @@ int main()
 	pthread_create(&execThread, 0, cpu_cycle, NULL);
 	pthread_detach(execThread);
 
-	sem_init(&interruption_counter, 0, 0);
-
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 
 	if (memory_server_socket == -1)
