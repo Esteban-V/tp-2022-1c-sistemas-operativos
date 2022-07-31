@@ -94,7 +94,7 @@ int main(void)
 
 	while (1)
 	{
-		server_listen(server_socket, header_handler);
+		server_listen(server_socket, packet_handler);
 	}
 }
 
@@ -102,7 +102,7 @@ void *cpu_dispatch_listener(void *args)
 {
 	while (1)
 	{
-		header_handler((void *)cpu_dispatch_socket);
+		packet_handler((void *)cpu_dispatch_socket);
 	}
 }
 
@@ -110,7 +110,7 @@ void *memory_listener(void *args)
 {
 	while (1)
 	{
-		header_handler((void *)memory_socket);
+		packet_handler((void *)memory_socket);
 	}
 }
 
@@ -270,7 +270,6 @@ void *exit_process(void *args)
 		packet_destroy(exit_request);
 
 		pQueue_put(memory_exit_q, (void *)pcb);
-		sem_post(&sem_multiprogram);
 	}
 }
 
@@ -281,6 +280,7 @@ void *to_exec()
 	{
 		sem_wait(&ready_for_exec);
 		sem_wait(&cpu_free);
+
 		pthread_mutex_lock(&execution_mutex);
 
 		pcb = pQueue_take(ready_q);
@@ -368,7 +368,14 @@ void put_to_ready(t_pcb *pcb)
 		// Si se manda otra por "encima" de la anterior, la CPU siempre usa la mas nueva
 		int freeCpu;
 		sem_getvalue(&cpu_free, &freeCpu);
-		if (!freeCpu)
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
+		pthread_mutex_unlock(&mutex_log);
+
+		pQueue_sort(ready_q, SJF_sort);
+
+		if (freeCpu == 0)
 		{
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "PID #%d Interruption", pcb->pid);
@@ -378,17 +385,6 @@ void put_to_ready(t_pcb *pcb)
 
 			// Se espera a que vuelva de CPU
 			sem_wait(&interrupt_ready);
-		}
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
-		pthread_mutex_unlock(&mutex_log);
-
-		pQueue_sort(ready_q, SJF_sort);
-
-		if (!freeCpu)
-		{
-			sem_post(&cpu_free);
 		}
 	}
 
@@ -492,6 +488,8 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 		terminate_kernel(true);
 	}
 
+	sem_post(&sem_multiprogram);
+
 	// sem_post(&cpu_free); POSIBLE ADICION
 	// sem_post(&ready_for_exec); POSIBLE ADICION
 
@@ -508,6 +506,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d --> Desalojado de CPU", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
+
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
 		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - (time_to_ms(toExec) - time_to_ms(fromExec));
@@ -520,6 +519,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 	log_info(logger, "POST INTERRUPT READY");
 	pthread_mutex_unlock(&mutex_log);
 
+	sem_post(&cpu_free);
 	sem_post(&interrupt_ready);
 
 	return true;
@@ -598,7 +598,7 @@ bool (*kernel_handlers[8])(t_packet *petition, int console_socket) =
 		suspension_success,
 };
 
-void *header_handler(void *_client_socket)
+void *packet_handler(void *_client_socket)
 {
 	int client_socket = (int)_client_socket;
 	bool serve = true;

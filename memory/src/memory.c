@@ -52,7 +52,7 @@ int main()
 
 	while (1)
 	{
-		server_listen(server_socket, header_handler);
+		server_listen(server_socket, packet_handler);
 	}
 }
 
@@ -74,7 +74,7 @@ bool (*memory_handlers[8])(t_packet *petition, int socket) =
 		// PROCESS_EXIT
 		process_exit};
 
-void *header_handler(void *_client_socket)
+void *packet_handler(void *_client_socket)
 {
 	int client_socket = (int)_client_socket;
 	bool serve = true;

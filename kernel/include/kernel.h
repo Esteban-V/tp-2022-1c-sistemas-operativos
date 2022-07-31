@@ -48,7 +48,7 @@ int cpu_interrupt_socket;
 int cpu_dispatch_socket;
 int memory_socket;
 
-void *header_handler(void *_client_socket);
+void *packet_handler(void *_client_socket);
 bool receive_process(t_packet *petition, int console_socket);
 bool table_index_success(t_packet *petition, int mem_socket);
 bool exit_process_success(t_packet *petition, int mem_socket);

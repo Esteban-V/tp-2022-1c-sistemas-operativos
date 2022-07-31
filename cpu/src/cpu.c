@@ -93,10 +93,23 @@ void *dispatch_header_handler(void *_client_socket)
 	kernel_client_socket = (int)_client_socket;
 	pthread_mutex_unlock(&mutex_kernel_socket);
 
-	return header_handler(_client_socket);
+	return packet_handler(_client_socket);
 }
 
 void *header_handler(void *_client_socket)
+{
+	bool serve = true;
+	while (serve)
+	{
+		uint8_t header = socket_receive_header(_client_socket);
+		if (header == MEM_HANDSHAKE)
+		{
+			serve = cpu_handlers[header](NULL, (int)_client_socket);
+		}
+	}
+}
+
+void *packet_handler(void *_client_socket)
 {
 	bool serve = true;
 	while (serve)
