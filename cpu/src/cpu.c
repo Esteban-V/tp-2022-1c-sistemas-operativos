@@ -13,6 +13,8 @@ int main()
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
 	kernel_interrupt_socket = create_server(config->interruptListenPort);
 
+	pthread_mutex_init(&mutex_kernel_socket, NULL);
+
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
@@ -64,11 +66,16 @@ void pcb_to_kernel(kernel_headers header)
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
 	stream_add_pcb(pcb_packet, pcb);
 
-	socket_send_packet(kernel_client_socket, pcb_packet);
+	pthread_mutex_lock(&mutex_kernel_socket);
+	if (kernel_client_socket != -1)
+	{
+		socket_send_packet(kernel_client_socket, pcb_packet);
 
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
-	pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+	}
+	pthread_mutex_unlock(&mutex_kernel_socket);
 
 	packet_destroy(pcb_packet);
 	pcb_destroy(pcb);
@@ -84,26 +91,11 @@ bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
 
 void *dispatch_header_handler(void *_client_socket)
 {
+	pthread_mutex_lock(&mutex_kernel_socket);
 	kernel_client_socket = (int)_client_socket;
+	pthread_mutex_unlock(&mutex_kernel_socket);
 
-	bool serve = true;
-	while (serve)
-	{
-		t_packet *packet = socket_receive_packet((int)_client_socket);
-
-		if (packet == NULL)
-		{
-			if (!socket_retry_packet((int)_client_socket, &packet))
-			{
-				close((int)_client_socket);
-				break;
-			}
-		}
-
-		serve = receive_pcb(packet, (int)_client_socket);
-		packet_destroy(packet);
-	}
-	return 0;
+	return header_handler(_client_socket);
 }
 
 void *header_handler(void *_client_socket)
@@ -122,7 +114,7 @@ void *header_handler(void *_client_socket)
 			}
 		}
 
-		serve = receive_interruption(packet, (int)_client_socket);
+		serve = cpu_handlers[packet->header](packet, (int)_client_socket);
 		packet_destroy(packet);
 	}
 	return 0;
@@ -329,7 +321,7 @@ void stats()
 
 void terminate_cpu(int x)
 {
-	destroy_tlb();
+	tlb_destroy();
 	log_destroy(logger);
 	destroy_cpu_config(config);
 

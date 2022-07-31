@@ -124,7 +124,7 @@ void *io_listener(void *args)
 	while (1)
 	{
 		sem_wait(&process_for_IO);
-		if (!pQueue_isEmpty(blocked_q))
+		if (!pQueue_is_empty(blocked_q))
 		{
 			pcb = pQueue_take(blocked_q);
 
@@ -403,11 +403,11 @@ void *to_ready()
 
 		sem_wait(&any_for_ready);
 		sem_wait(&sem_multiprogram);
-		if (!pQueue_isEmpty(suspended_ready_q))
+		if (!pQueue_is_empty(suspended_ready_q))
 		{
 			suspended_to_ready();
 		}
-		else if (!pQueue_isEmpty(new_q))
+		else if (!pQueue_is_empty(new_q))
 		{
 			new_to_ready();
 		}

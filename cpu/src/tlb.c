@@ -8,7 +8,7 @@ t_tlb *create_tlb()
     // Inicializa estructura de TLB
     tlb = malloc(sizeof(t_tlb));
     tlb->entries = (t_tlb_entry *)calloc(config->tlbEntryQty, sizeof(t_tlb_entry));
-    tlb->victimQueue = list_create();
+    tlb->victims = pQueue_create();
 
     if (!strcmp(config->tlb_alg, "FIFO"))
     {
@@ -30,8 +30,8 @@ t_tlb *create_tlb()
     // Setea todas las entradas como libres
     for (int i = 0; i < config->tlbEntryQty; i++)
     {
-        t_tlb_entry entry = tlb->entries[i];
-        entry.isFree = true;
+        t_tlb_entry *entry = &tlb->entries[i];
+        entry->isFree = true;
     }
 
     return tlb;
@@ -43,13 +43,14 @@ uint32_t get_tlb_frame(uint32_t page)
     for (int i = 0; i < config->tlbEntryQty; i++)
     {
         pthread_mutex_lock(&tlb_mutex);
-        if (tlb->entries[i].page == page && tlb->entries[i].isFree == false)
+        t_tlb_entry *entry = &tlb->entries[i];
+        if (entry->page == page && entry->isFree == false)
         {
             if (replaceAlgorithm == LRU)
             {
-                lru_tlb(&(tlb->entries[i]));
+                lru_tlb(entry);
             }
-            frame = tlb->entries[i].frame;
+            frame = entry->frame;
             pthread_mutex_unlock(&tlb_mutex);
 
             tlb_hit_counter++;
@@ -72,13 +73,14 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
     for (int i = 0; (i < config->tlbEntryQty) && !any_free_entry; i++)
     {
         pthread_mutex_lock(&tlb_mutex);
-        if (tlb->entries[i].isFree)
+        t_tlb_entry *entry = &tlb->entries[i];
+        if (entry->isFree)
         {
-            tlb->entries[i].page = page;
-            tlb->entries[i].frame = frame;
-            tlb->entries[i].isFree = false;
+            entry->page = page;
+            entry->frame = frame;
+            entry->isFree = false;
 
-            list_add(tlb->victimQueue, &(tlb->entries[i]));
+            pQueue_put(tlb->victims, entry);
             pthread_mutex_unlock(&tlb_mutex);
 
             pthread_mutex_lock(&mutex_log);
@@ -94,9 +96,9 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
     if (!any_free_entry)
     {
         pthread_mutex_lock(&tlb_mutex);
-        if (!list_is_empty(tlb->victimQueue))
+        if (!pQueue_is_empty(tlb->victims))
         {
-            t_tlb_entry *victim = list_remove(tlb->victimQueue, 0);
+            t_tlb_entry *victim = pQueue_take(tlb->victims);
 
             pthread_mutex_lock(&mutex_log);
             log_info(logger, "TLB replacement for page %d --> %d / frame %d --> %d",
@@ -106,7 +108,7 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
             victim->page = page;
             victim->frame = frame;
             victim->isFree = false;
-            list_add(tlb->victimQueue, victim);
+            pQueue_put(tlb->victims, victim);
 
             pthread_mutex_unlock(&tlb_mutex);
         }
@@ -120,33 +122,41 @@ void lru_tlb(t_tlb_entry *entry)
         return victim->page == entry->page && victim->frame == entry->frame;
     };
 
-    t_tlb_entry *entryToBeMoved = list_remove_by_condition(tlb->victimQueue, (void *)isVictim);
+    t_tlb_entry *entryToBeMoved = list_remove_by_condition(tlb->victims, (void *)isVictim);
 
-    list_add(tlb->victimQueue, entryToBeMoved);
+    pQueue_put(tlb->victims, entryToBeMoved);
 }
 
 // TODO ejecutar en memoria cuando se va a reemplazar pag
 void drop_tlb_entry(uint32_t page, uint32_t frame)
 {
-    pthread_mutex_lock(&tlb_mutex);
-
     for (int i = 0; i < config->tlbEntryQty; i++)
     {
-        if (tlb->entries[i].page == page && tlb->entries[i].frame == frame)
+        pthread_mutex_lock(&tlb_mutex);
+        t_tlb_entry *entry = &tlb->entries[i];
+        if (entry->page == page && entry->frame == frame)
         {
-            tlb->entries[i].isFree = true;
+            entry->page == -1;
+            entry->frame == -1;
+            entry->isFree = true;
             pthread_mutex_unlock(&tlb_mutex);
             return;
         }
     }
-
-    pthread_mutex_unlock(&tlb_mutex);
 }
 
-void destroy_tlb()
+void tlb_destroy()
 {
+    void _destroy_tlb_entry(void *elem)
+    {
+        t_tlb_entry *entry = (t_tlb_entry *)elem;
+        free(entry->page);
+        free(entry->frame);
+        free(entry);
+    };
+
     free(tlb->entries);
-    list_destroy(tlb->victimQueue);
+    pQueue_destroy(tlb->victims, _destroy_tlb_entry);
     free(tlb);
 
     pthread_mutex_lock(&mutex_log);
@@ -159,7 +169,8 @@ void clean_tlb()
     pthread_mutex_lock(&tlb_mutex);
     for (int i = 0; i < config->tlbEntryQty; i++)
     {
-        tlb->entries[i].isFree = true;
+        t_tlb_entry *entry = &tlb->entries[i];
+        entry->isFree = true;
     }
     pthread_mutex_unlock(&tlb_mutex);
 

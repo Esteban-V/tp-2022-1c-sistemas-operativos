@@ -9,6 +9,7 @@
 
 #include <pthread.h>
 
+#include "queue.h"
 #include "utils.h"
 
 enum e_replaceAlgorithm
@@ -30,7 +31,7 @@ typedef struct tlb
 {
     t_tlb_entry *entries;
     // t_tlb_entry
-    t_list *victimQueue;
+    t_pQueue *victims;
 } t_tlb;
 
 pthread_mutex_t tlb_mutex;
@@ -48,6 +49,6 @@ void lru_tlb(t_tlb_entry *entry);
 
 void clean_tlb();
 void drop_tlb_entry(uint32_t page, uint32_t frame);
-void destroy_tlb();
+void tlb_destroy();
 
 #endif /* INCLUDE_TLB_H_ */
