@@ -96,7 +96,6 @@ int main(void)
 	{
 		server_listen(server_socket, header_handler);
 	}
-
 }
 
 void *cpu_dispatch_listener(void *args)
@@ -189,7 +188,7 @@ void *io_listener(void *args)
 				pthread_mutex_unlock(&mutex_log);
 
 				pQueue_put(suspended_block_q, (void *)pcb);
-				
+
 				sem_post(&sem_multiprogram);
 				sem_post(&process_for_IO);
 			}
@@ -245,7 +244,9 @@ bool receive_process(t_packet *petition, int console_socket)
 		sem_post(&any_for_ready);
 	}
 
-	process_destroy(received_process);
+	// NO HACER este destroy, porque siguen atados el proceso recibido y el pcb creado (de alguna forma)
+	// Ya mande un issue al foro en su momento preguntando y me respondieron "Por que querrias destruir el recibido?"
+	// process_destroy(received_process);
 
 	return true;
 }
@@ -283,11 +284,6 @@ void *to_exec()
 		pthread_mutex_lock(&execution_mutex);
 
 		pcb = pQueue_take(ready_q);
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "TO EXEC");
-		pthread_mutex_unlock(&mutex_log);
-
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_pcb(pcb_packet, pcb);
 
@@ -297,7 +293,6 @@ void *to_exec()
 		}
 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
-
 		packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
@@ -357,15 +352,7 @@ void *suspended_to_ready()
 
 void put_to_ready(t_pcb *pcb)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "PUT TO READY");
-	pthread_mutex_unlock(&mutex_log);
-
 	pthread_mutex_lock(&execution_mutex);
-
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "EXEC MUTEX");
-	pthread_mutex_unlock(&mutex_log);
 
 	pQueue_put(ready_q, (void *)pcb);
 
@@ -399,10 +386,12 @@ void put_to_ready(t_pcb *pcb)
 
 		pQueue_sort(ready_q, SJF_sort);
 
-		if(!freeCpu){
+		if (!freeCpu)
+		{
 			sem_post(&cpu_free);
 		}
 	}
+
 	pthread_mutex_unlock(&execution_mutex);
 	sem_post(&ready_for_exec);
 }
@@ -444,9 +433,6 @@ bool table_index_success(t_packet *petition, int mem_socket)
 			pcb->page_table = level1_table_index;
 			pcb->process_frames_index = process_frame_index;
 			found = true;
-			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d ; Page Table Number Received", pid);
-			pthread_mutex_unlock(&mutex_log);
 			pQueue_take(memory_init_q);
 		}
 	};
@@ -506,8 +492,8 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 		terminate_kernel(true);
 	}
 
-	//sem_post(&cpu_free); POSIBLE ADICION
-	//sem_post(&ready_for_exec); POSIBLE ADICION
+	// sem_post(&cpu_free); POSIBLE ADICION
+	// sem_post(&ready_for_exec); POSIBLE ADICION
 
 	return false;
 }
@@ -527,7 +513,7 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - (time_to_ms(toExec) - time_to_ms(fromExec));
 
 		pQueue_put(ready_q, received_pcb);
-		sem_post(&ready_for_exec);		
+		sem_post(&ready_for_exec);
 	}
 
 	pthread_mutex_lock(&mutex_log);
@@ -639,7 +625,7 @@ void terminate_kernel(int x)
 {
 	int a, b, c, d, e, f, g, h;
 
-	switch(x)
+	switch (x)
 	{
 	case SIGINT:
 
@@ -649,12 +635,12 @@ void terminate_kernel(int x)
 		sem_getvalue(&process_for_IO, &d);
 		sem_getvalue(&ready_for_exec, &e);
 		sem_getvalue(&cpu_free, &f);
-		sem_getvalue(&pcb_table_ready ,&g);
+		sem_getvalue(&pcb_table_ready, &g);
 		sem_getvalue(&waiting_for_suspension, &h);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "\nsem_multiprogram: %d\ninterrupt_ready: %d\nany_for_ready: %d\nprocess_for_IO: %d\nready_for_exec: %d\ncpu_free: %d\npcb_table_ready: %d\nwaiting_for_suspension: %d", a, b, c, d, e, f, g, h);
-		log_info(logger, "\nnewQ: %d\nReadyQ: %d\nMemInitQ: %d\nMemExitQ: %d\nBlockedQ: %d\nSBlockedQ: %d\nSReadyQ: %d\nExitQ: %d", pQueue_size(new_q), pQueue_size(ready_q), pQueue_size(memory_init_q), pQueue_size(memory_exit_q), pQueue_size(blocked_q), pQueue_size(suspended_block_q), pQueue_size(suspended_ready_q), pQueue_size(exit_q));
+		log_info(logger, "\nnewQ: %d\nReadyQ: %d\nBlockedQ: %d\nSBlockedQ: %d\nSReadyQ: %d\nExitQ: %d", pQueue_size(new_q), pQueue_size(ready_q), pQueue_size(blocked_q), pQueue_size(suspended_block_q), pQueue_size(suspended_ready_q), pQueue_size(exit_q));
 		pthread_mutex_unlock(&mutex_log);
 
 		queue_destroy(new_q->lib_queue);

@@ -146,7 +146,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 	else
 	{
 		// Page fault ++, no estaba presente
-		t_process_frame *process_frames = (t_process_frame *) list_get(process_frames, frames_index);
+		t_process_frame *process_frames = (t_process_frame *)list_get(process_frames, frames_index);
 		page_fault_counter++;
 
 		// Chequear si se puede asignar directo

@@ -93,11 +93,7 @@ void process_destroy(t_process *process)
 {
 	if (process != NULL)
 	{
-		// Tira Warning
-		// TODO free(process->size);
-		list_iterate(process->instructions,
-					 (t_instruction *)instruction_destroy);
-		list_destroy(process->instructions);
+		list_destroy_and_destroy_elements(process->instructions, instruction_destroy);
 	}
 }
 

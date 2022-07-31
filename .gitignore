@@ -67,7 +67,7 @@ dkms.conf
 .cproject
 **/.cproject
 
-memory
-kernel
-cpu
-console
+/memory/memory
+/kernel/kernel
+/cpu/cpu
+/console/console

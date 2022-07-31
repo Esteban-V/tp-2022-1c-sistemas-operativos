@@ -47,7 +47,6 @@ int main()
 	{
 		server_listen(kernel_dispatch_socket, dispatch_header_handler);
 	}
-
 }
 
 void *listen_interruption()
@@ -85,14 +84,9 @@ void *dispatch_header_handler(void *_client_socket)
 {
 	kernel_client_socket = (int)_client_socket;
 
-
 	bool serve = true;
 	while (serve)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "HEADER AAA");
-		pthread_mutex_unlock(&mutex_log);
-
 		t_packet *packet = socket_receive_packet((int)_client_socket);
 
 		if (packet == NULL)
@@ -115,10 +109,6 @@ void *header_handler(void *_client_socket)
 	bool serve = true;
 	while (serve)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "HEADER BBB");
-		pthread_mutex_unlock(&mutex_log);
-
 		t_packet *packet = socket_receive_packet((int)_client_socket);
 
 		if (packet == NULL)
@@ -252,24 +242,23 @@ void execute_io(t_list *params)
 void execute_read(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Executing Read");
-			pthread_mutex_unlock(&mutex_log);
+	log_info(logger, "Executing Read");
+	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
 	// MMU debe calcular:
 
-		uint32_t page_number = floor(l_address / config->pageSize);
-			uint32_t entry_index = floor(page_number / config->entriesPerTable);
+	uint32_t page_number = floor(l_address / config->pageSize);
+	uint32_t entry_index = floor(page_number / config->entriesPerTable);
 	// Pedir LVL1_TABLE con pcb->page_table
-
 }
 
 void execute_copy(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Executing Copy");
-			pthread_mutex_unlock(&mutex_log);
+	log_info(logger, "Executing Copy");
+	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
@@ -280,8 +269,8 @@ void execute_copy(t_list *params)
 void execute_write(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Executing Write");
-			pthread_mutex_unlock(&mutex_log);
+	log_info(logger, "Executing Write");
+	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t value = *((uint32_t *)list_get(params, 1));
@@ -291,8 +280,8 @@ void execute_write(t_list *params)
 void execute_exit()
 {
 	pthread_mutex_lock(&mutex_log);
-			log_info(logger, "Executing Exit");
-			pthread_mutex_unlock(&mutex_log);
+	log_info(logger, "Executing Exit");
+	pthread_mutex_unlock(&mutex_log);
 
 	clean_tlb(tlb);
 	pcb_to_kernel(EXIT_CALL);
@@ -333,13 +322,16 @@ void stats()
 
 void terminate_cpu(int x)
 {
-	switch(x)
+	destroy_tlb();
+	log_destroy(logger);
+	destroy_cpu_config(config);
+
+	switch (x)
 	{
+	case 1:
+		exit(EXIT_FAILURE);
 	case SIGINT:
 		stats();
-		destroy_tlb();
-		log_destroy(logger);
-		destroy_cpu_config(config);
 		exit(EXIT_SUCCESS);
 	}
 }
@@ -444,7 +436,7 @@ void lru_tlb(t_tlbEntry *entry)
 	bool isVictim(t_tlbEntry * victim)
 	{
 		return victim == entry;
-	}
+	};
 
 	t_tlbEntry *entryToBeMoved = list_remove_by_condition(tlb->victimQueue, (void *)isVictim);
 

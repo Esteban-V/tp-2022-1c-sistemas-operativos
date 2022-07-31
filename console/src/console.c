@@ -142,12 +142,6 @@ void error_opening_file()
 
 void terminate_console(bool error)
 {
-
-	void _delete_instrucion(void * elem){
-		instruction_destroy((t_instruction*)elem);
-	}
-
-	list_destroy_and_destroy_elements(instruction_list, _delete_instrucion);
 	log_destroy(logger);
 	config_destroy(config);
 	process_destroy(process);

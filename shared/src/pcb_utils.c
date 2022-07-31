@@ -2,7 +2,8 @@
 
 void pcb_destroy(t_pcb *pcb)
 {
-	void _delete_instrucion(void * elem){
+	void _delete_instrucion(void *elem)
+	{
 		instruction_destroy(elem);
 	}
 
@@ -53,14 +54,14 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb)
 	uint32_t *burst_estimation = &(pcb->burst_estimation);
 	stream_take_UINT32P(packet->payload, &burst_estimation);
 
+	uint32_t *left_burst_estimation = &(pcb->left_burst_estimation);
+	stream_take_UINT32P(packet->payload, &left_burst_estimation);
+
 	uint32_t *blocked_time = &(pcb->blocked_time);
 	stream_take_UINT32P(packet->payload, &blocked_time);
 
 	uint32_t *pending_io_time = &(pcb->pending_io_time);
 	stream_take_UINT32P(packet->payload, &pending_io_time);
-
-	uint32_t *left_burst_estimation = &(pcb->left_burst_estimation);
-	stream_take_UINT32P(packet->payload, &left_burst_estimation);
 }
 
 void stream_add_pcb(t_packet *packet, t_pcb *pcb)
@@ -73,7 +74,7 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb)
 	stream_add_UINT32(packet->payload, pcb->page_table);
 	stream_add_UINT32(packet->payload, pcb->process_frames_index);
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
+	stream_add_UINT32(packet->payload, pcb->left_burst_estimation);
 	stream_add_UINT32(packet->payload, pcb->blocked_time);
 	stream_add_UINT32(packet->payload, pcb->pending_io_time);
-	stream_add_UINT32(packet->payload, pcb->left_burst_estimation);
 }
