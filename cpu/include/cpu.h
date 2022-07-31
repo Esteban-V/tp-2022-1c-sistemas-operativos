@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <commons/log.h>
 #include <pthread.h>
 #include <commons/collections/list.h>
@@ -15,33 +16,17 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <assert.h>
-#include "utils.h"
 #include "networking.h"
 #include "serialization.h"
 #include "socket_headers.h"
-#include "process_utils.h"
 #include "semaphore.h"
-#include<math.h>
+#include <math.h>
 
-#define CPU_MEMORY_SECRET = "CMSMC"
-
-typedef struct tlbEntry {
-    uint32_t page;
-    int32_t frame;
-    bool isFree;
-} t_tlbEntry;
-
-typedef struct tlb {
-    t_tlbEntry* entries;
-    uint32_t entryQty;
-    t_list* victimQueue;
-} t_tlb;
+#include "tlb.h"
 
 sem_t interruption_counter;
 
 t_pcb *pcb;
-t_cpu_config *config;
-t_tlb * tlb;
 
 bool receive_pcb(t_packet *petition, int console_socket);
 bool receive_interruption(t_packet *petition, int console_socket);
@@ -59,7 +44,7 @@ void execute_write(t_list *params);
 void execute_exit();
 void pcb_to_kernel(kernel_headers header);
 
-pthread_mutex_t mutex_kernel_socket, mutex_has_interruption, tlb_mutex;
+pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;
 bool new_interruption;
 int kernel_client_socket;
 int memory_server_socket;
@@ -72,17 +57,5 @@ void stats();
 pthread_t interruptionThread, execThread;
 void terminate_cpu(int x);
 void memory_handshake();
-
-// TLB
-
-int tlb_hit_counter = 0;
-int tlb_miss_counter = 0;
-t_tlb* create_tlb();
-void lru_tlb(t_tlbEntry* entry);
-void fifo_tlb(t_tlbEntry* entry);
-void (*update_victim_queue)(t_tlbEntry*);
-void destroy_tlb();
-void clean_tlb();
-void drop_tlb_entry(uint32_t page, uint32_t frame);
 
 #endif /* INCLUDE_CPU_H_ */

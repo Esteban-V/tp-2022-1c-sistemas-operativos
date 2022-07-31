@@ -24,7 +24,10 @@
 			"dictionary.h": "c",
 			"swap.h": "c",
 			"pthread.h": "c",
-			"imemory.h": "c"
+			"imemory.h": "c",
+			"networking.h": "c",
+			"tlb.h": "c",
+			"pcb_utils.h": "c"
 		},
 		"files.autoSave": "afterDelay",
 		"editor.formatOnSave": true,
