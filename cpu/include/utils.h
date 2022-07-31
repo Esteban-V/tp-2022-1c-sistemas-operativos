@@ -17,7 +17,7 @@ enum operation
 
 enum operation get_op(char *);
 
-typedef struct cpu_config
+typedef struct t_cpu_config
 {
     t_config *config;
     int tlbEntryQty;

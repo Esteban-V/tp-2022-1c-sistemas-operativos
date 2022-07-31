@@ -17,6 +17,7 @@ int main()
 	}
 	else
 	{
+		replaceAlgorithm = CLOCK;
 		log_warning(logger, "Wrong replace algorithm set in config --> Using CLOCK");
 	}
 
@@ -142,7 +143,7 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		log_info(logger, "Initializing memory structures for PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		int pt1_index = page_table_init(process_size, replaceAlgorithm);
+		int pt1_index = page_table_init(process_size);
 		int process_frames_index = assign_process_frames();
 
 		create_swap(pid, process_size);

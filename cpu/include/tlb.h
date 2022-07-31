@@ -11,17 +11,25 @@
 
 #include "utils.h"
 
+enum e_replaceAlgorithm
+{
+    FIFO = 0,
+    LRU = 1
+};
+
+enum e_replaceAlgorithm replaceAlgorithm;
+
 typedef struct tlb_entry
 {
     uint32_t page;
-    int32_t frame;
+    uint32_t frame;
     bool isFree;
 } t_tlb_entry;
 
 typedef struct tlb
 {
     t_tlb_entry *entries;
-    uint32_t entryQty;
+    // t_tlb_entry
     t_list *victimQueue;
 } t_tlb;
 
@@ -29,15 +37,14 @@ pthread_mutex_t tlb_mutex;
 
 t_tlb *tlb;
 
-int tlb_hit_counter = 0;
-int tlb_miss_counter = 0;
-
-void (*update_victim_queue)(t_tlb_entry *);
+int tlb_hit_counter;
+int tlb_miss_counter;
 
 t_tlb *create_tlb();
+void add_tlb_entry(uint32_t page, uint32_t frame);
 
+uint32_t get_tlb_frame(uint32_t page);
 void lru_tlb(t_tlb_entry *entry);
-void fifo_tlb(t_tlb_entry *entry);
 
 void clean_tlb();
 void drop_tlb_entry(uint32_t page, uint32_t frame);

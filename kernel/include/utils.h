@@ -22,7 +22,7 @@
 
 #define BILLION 1E9
 
-typedef struct kernelConfig
+typedef struct t_kernel_config
 {
 	t_config *config;
 	char *memoryIP;
@@ -36,13 +36,13 @@ typedef struct kernelConfig
 	double alpha;
 	int multiprogrammingLevel;
 	int maxBlockedTime;
-} t_kernelConfig;
+} t_kernel_config;
 
-t_kernelConfig *config;
+t_kernel_config *config;
 t_process *process;
 
-t_kernelConfig *getKernelConfig(char *path);
-void destroyKernelConfig(t_kernelConfig *kernelConfig);
+t_kernel_config *getKernelConfig(char *path);
+void destroyKernelConfig(t_kernel_config *kernelConfig);
 
 float time_to_ms(struct timespec time);
 bool SJF_sort(void *elem1, void *elem2);

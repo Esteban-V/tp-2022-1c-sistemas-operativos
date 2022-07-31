@@ -1,9 +1,8 @@
 #include "page_table.h"
 
 // Crea tabla de nivel 1 y tablas de nivel 2 correspondientes, y retorna el indice de la 1era
-int page_table_init(uint32_t process_size, int algorithm)
+int page_table_init(uint32_t process_size)
 {
-	replaceAlgorithm2 = algorithm;
 	// Creacion tabla nivel 1
 	t_ptbr1 *level1_table = malloc(sizeof(t_ptbr1));
 	level1_table->entries = list_create();
@@ -237,9 +236,9 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 	};
 
 	int frame = -1;
-	for (int i = 0; i < (replaceAlgorithm2 == 1 ? 2 : 1); i++)
+	for (int i = 0; i < (replaceAlgorithm == 1 ? 2 : 1); i++)
 	{
-		frame = two_clock_turns(process_frames, replaceAlgorithm2 == 1, _replace);
+		frame = two_clock_turns(process_frames, replaceAlgorithm == 1, _replace);
 		if (frame != -1)
 		{
 			return frame;

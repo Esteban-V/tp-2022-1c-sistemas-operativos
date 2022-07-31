@@ -19,11 +19,8 @@ int memory_write_counter;
 int page_fault_counter;
 int page_assignment_counter;
 int page_replacement_counter;
-int replaceAlgorithm2;
 
-// 0 = CLOCK
-// 1 = CLOCK_M
-int page_table_init(uint32_t process_size, int algorithm);
+int page_table_init(uint32_t process_size);
 int assign_process_frames();
 void unassign_process_frames(int process_frames_index);
 t_ptbr1 *get_page_table1(int pt1_index);

@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include "semaphore.h"
 
-typedef struct t_memoryConfig
+typedef struct t_memory_config
 {
     t_config *config;
     char *listenPort;
@@ -43,7 +43,7 @@ typedef struct t_memoryConfig
     char *swapPath;
     // Cantidad de frames en memoria, memorySize/pageSize
     int framesInMemory;
-} t_memoryConfig;
+} t_memory_config;
 
 typedef struct t_page_entry
 {
@@ -97,8 +97,16 @@ typedef struct mem
 
 t_bitarray *frames_bitmap;
 
+enum e_replaceAlgorithm
+{
+    CLOCK = 0,
+    CLOCK_M = 1
+};
+
+enum e_replaceAlgorithm replaceAlgorithm;
+
 t_memory *memory;
-t_memoryConfig *config;
+t_memory_config *config;
 t_log *logger;
 
 sem_t writeRead;
@@ -107,8 +115,8 @@ pthread_mutex_t memoryMut, metadataMut;
 uint32_t clock_m_counter;
 uint32_t clock_counter;
 
-t_memoryConfig *getMemoryConfig(char *path);
-void destroyMemoryConfig(t_memoryConfig *config);
+t_memory_config *getMemoryConfig(char *path);
+void destroyMemoryConfig(t_memory_config *config);
 
 int ceil_div(int a, int b);
 
@@ -120,7 +128,7 @@ void *get_frame_value(void *frame_ptr);
 int find_first_unassigned_frame(t_bitarray *frames_bitmap);
 
 bool has_free_frame(t_process_frame *process_frames);
-t_frame_entry * find_first_free_frame(t_process_frame *process_frames);
+t_frame_entry *find_first_free_frame(t_process_frame *process_frames);
 
 void frame_set_assigned(t_bitarray *frames_bitmap, int index);
 void frame_clear_assigned(t_bitarray *frames_bitmap, int index);

@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "../include/utils.h"
 
 t_cpu_config *get_cpu_config(char *path)
 {
@@ -60,4 +60,9 @@ enum operation get_op(char *op)
 	}
 	else
 		return DEAD;
+}
+
+
+uint32_t get_frame(uint32_t page_number){
+	
 }

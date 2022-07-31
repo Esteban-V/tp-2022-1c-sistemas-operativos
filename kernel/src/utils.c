@@ -1,8 +1,8 @@
-#include "utils.h"
+#include "../include/utils.h"
 
-t_kernelConfig *getKernelConfig(char *path)
+t_kernel_config *getKernelConfig(char *path)
 {
-	t_kernelConfig *kernelConfig = malloc(sizeof(t_kernelConfig));
+	t_kernel_config *kernelConfig = malloc(sizeof(t_kernel_config));
 	kernelConfig->config = config_create(path);
 	kernelConfig->memoryIP = config_get_string_value(kernelConfig->config, "IP_MEMORIA");
 	kernelConfig->memoryPort = config_get_string_value(kernelConfig->config, "PUERTO_MEMORIA");
@@ -18,7 +18,7 @@ t_kernelConfig *getKernelConfig(char *path)
 	return kernelConfig;
 }
 
-void destroyKernelConfig(t_kernelConfig *kernelConfig)
+void destroyKernelConfig(t_kernel_config *kernelConfig)
 {
 	config_destroy(kernelConfig->config);
 	free(kernelConfig);

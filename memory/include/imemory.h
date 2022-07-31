@@ -15,14 +15,6 @@ void *header_handler(void *_client_socket);
 
 int server_socket;
 
-enum e_replaceAlgorithm
-{
-    CLOCK = 0,
-    CLOCK_M = 1
-};
-
-enum e_replaceAlgorithm replaceAlgorithm = CLOCK;
-
 t_memory *memory_init();
 void terminate_memory(int x);
 void cpu_handshake_listener();
