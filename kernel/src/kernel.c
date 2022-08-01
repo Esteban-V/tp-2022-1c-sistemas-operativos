@@ -324,10 +324,6 @@ void *to_exec()
    		gettimeofday(&toExecTime, NULL);
     	int milliseconds = toExecTime.tv_sec*1000LL + toExecTime.tv_usec/1000;
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "TIME %d", milliseconds);
-		pthread_mutex_unlock(&mutex_log);
-
 /*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
  */
@@ -550,22 +546,17 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
     	int fromMs = fromExecTime.tv_sec*1000LL + fromExecTime.tv_usec/1000;
 		int toMs = toExecTime.tv_sec*1000LL + toExecTime.tv_usec/1000;
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID ejecuto %d milisegundos y fue interrumpido", (fromMs-toMs));
-		pthread_mutex_unlock(&mutex_log);
 /* 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 */
 		received_pcb->left_burst_estimation = (uint32_t) ((int) received_pcb->left_burst_estimation - (fromMs-toMs));
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID executed %d milisegundos and was interrupted, new left burst %d", (fromMs-toMs),(int)received_pcb->left_burst_estimation);
+		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(ready_q, received_pcb);
 		sem_post(&ready_for_exec);
 	}
-
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "POST INTERRUPT READY");
-	pthread_mutex_unlock(&mutex_log);
-
 	sem_post(&cpu_free);
 	sem_post(&interrupt_ready);
 
@@ -600,7 +591,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 		received_pcb->left_burst_estimation = estimation;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d nueva rafaga %d", received_pcb->pid, estimation);
+		log_info(logger, "PID #%d executed %d ms more, %d ms in total", received_pcb->pid, fromMs-toMs,real);
+		log_info(logger, "PID #%d new estimated burst %d", received_pcb->pid, estimation);
 		pthread_mutex_unlock(&mutex_log);
 
 		received_pcb->blocked_time = fromMs;
