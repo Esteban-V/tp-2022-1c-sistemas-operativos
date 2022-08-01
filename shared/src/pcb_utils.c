@@ -48,7 +48,7 @@ void stream_take_pcb(t_packet *packet, t_pcb *pcb)
 	uint32_t *page_table = &(pcb->page_table);
 	stream_take_UINT32P(packet->payload, &page_table);
 
-	uint32_t *assigned_frames = &(pcb->process_frames_index);
+	uint32_t *assigned_frames = &(pcb->frames_index);
 	stream_take_UINT32P(packet->payload, &assigned_frames);
 
 	uint32_t *burst_estimation = &(pcb->burst_estimation);
@@ -72,7 +72,7 @@ void stream_add_pcb(t_packet *packet, t_pcb *pcb)
 	stream_add_LIST(packet->payload, pcb->instructions, stream_add_instruction);
 	stream_add_UINT32(packet->payload, pcb->program_counter);
 	stream_add_UINT32(packet->payload, pcb->page_table);
-	stream_add_UINT32(packet->payload, pcb->process_frames_index);
+	stream_add_UINT32(packet->payload, pcb->frames_index);
 	stream_add_UINT32(packet->payload, pcb->burst_estimation);
 	stream_add_UINT32(packet->payload, pcb->left_burst_estimation);
 	stream_add_UINT32(packet->payload, pcb->blocked_time);

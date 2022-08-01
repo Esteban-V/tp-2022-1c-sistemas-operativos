@@ -35,7 +35,7 @@ typedef struct pcb
 	t_list *instructions;
 	uint32_t program_counter;
 	uint32_t page_table;
-	uint32_t process_frames_index;
+	uint32_t frames_index;
 	uint32_t burst_estimation;
 	uint32_t blocked_time;
 	uint32_t pending_io_time;

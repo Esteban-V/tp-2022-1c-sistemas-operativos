@@ -5,6 +5,8 @@ tlb_miss_counter = 0;
 
 t_tlb *create_tlb()
 {
+    pthread_mutex_init(&tlb_mutex, NULL);
+
     // Inicializa estructura de TLB
     tlb = malloc(sizeof(t_tlb));
     tlb->entries = (t_tlb_entry *)calloc(config->tlbEntryQty, sizeof(t_tlb_entry));
@@ -147,16 +149,8 @@ void drop_tlb_entry(uint32_t page, uint32_t frame)
 
 void tlb_destroy()
 {
-    void _destroy_tlb_entry(void *elem)
-    {
-        t_tlb_entry *entry = (t_tlb_entry *)elem;
-        free(entry->page);
-        free(entry->frame);
-        free(entry);
-    };
-
     free(tlb->entries);
-    pQueue_destroy(tlb->victims, _destroy_tlb_entry);
+    pQueue_destroy(tlb->victims);
     free(tlb);
 
     pthread_mutex_lock(&mutex_log);

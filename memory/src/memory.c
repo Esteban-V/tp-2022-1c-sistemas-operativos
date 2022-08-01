@@ -25,7 +25,7 @@ int main()
 	server_socket = create_server(config->listenPort);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Memory Server Ready");
+	log_info(logger, "Memory server ready");
 	pthread_mutex_unlock(&mutex_log);
 
 	level1_tables = list_create();
@@ -177,7 +177,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 		for (int i = 0; i < list_size(pt1->entries); i++)
 		{
-			int pt2_index = *((int *)list_get(pt1->entries, i));
+			int pt2_index = (int *)list_get(pt1->entries, i);
 			t_ptbr2 *pt2 = get_page_table2(pt2_index);
 
 			for (int j = 0; j < list_size(pt2->entries); j++)
@@ -200,10 +200,16 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 			}
 		}
 
-		socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
+		t_packet *suspend_response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(suspend_response->payload, pid);
+		if (kernel_socket != -1)
+		{
+			socket_send_packet(kernel_socket, suspend_response);
+		}
+		packet_destroy(suspend_response);
 	}
 
-	return false;
+	return true;
 }
 
 bool process_exit(t_packet *petition, int kernel_socket)
@@ -216,10 +222,11 @@ bool process_exit(t_packet *petition, int kernel_socket)
 
 		for (int i = 0; i < page_cant; i++)
 		{
+			t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, i);
 			// Cambiar valores
-			if (((t_page_entry *)list_get(pt2->entries, i))->present == true)
+			if (entry->present == true)
 			{
-				uint32_t frame = ((t_page_entry *)list_get(pt2->entries, i))->frame;
+				uint32_t frame = entry->frame;
 			}
 		}
 	};
@@ -231,7 +238,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	if (pid != NULL)
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Destroying PID #%d Memory Structures", pid);
+		log_warning(logger, "Destroying process #%d memory structures", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
@@ -242,7 +249,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		delete_swap(pid);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Structures Destroyed Successfully");
+		log_info(logger, "Memory structures destroyed successfully");
 		pthread_mutex_unlock(&mutex_log);
 
 		t_packet *response = create_packet(PROCESS_EXIT_READY, INITIAL_STREAM_SIZE);
@@ -370,32 +377,39 @@ t_memory *memory_init()
 	return mem;
 }
 
+void stats()
+{
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "- - - Stats - - -");
+	log_info(logger, "Memory accesses: %d", memory_access_counter);
+	log_info(logger, "Memory reads: %d", memory_read_counter);
+	log_info(logger, "Memory writes: %d", memory_write_counter);
+	log_info(logger, "Page assignments: %d", page_assignment_counter);
+	log_info(logger, "Page replacements: %d", page_replacement_counter);
+	log_info(logger, "Page faults: %d", page_fault_counter);
+	pthread_mutex_unlock(&mutex_log);
+}
+
 void terminate_memory(int x)
 {
+	free(memory);
+	bitarray_destroy(frames_bitmap);
+	list_destroy(level1_tables);
+	list_destroy(level2_tables);
+	list_destroy(processes_frames);
+	destroyMemoryConfig(config);
+
+	if (server_socket)
+		close(server_socket);
+
 	switch (x)
 	{
-	case SIGINT:
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "\n- - - Stats - - -\n");
-		log_info(logger, "Memory Accesses: %d", memory_access_counter);
-		log_info(logger, "Memory Reads: %d", memory_read_counter);
-		log_info(logger, "Memory Writes: %d", memory_write_counter);
-		log_info(logger, "Page Assignments: %d", page_assignment_counter);
-		log_info(logger, "Page Replacements: %d", page_replacement_counter);
-		log_info(logger, "Page Faults: %d", page_fault_counter);
-		pthread_mutex_unlock(&mutex_log);
-
-		free(memory);
-		bitarray_destroy(frames_bitmap);
-
+	case 1:
 		log_destroy(logger);
-		destroyMemoryConfig(config);
-		list_destroy(level1_tables);
-		list_destroy(level2_tables);
-		list_destroy(processes_frames);
-
-		if (server_socket)
-			close(server_socket);
+		exit(EXIT_FAILURE);
+	case SIGINT:
+		stats();
+		log_destroy(logger);
 		exit(EXIT_SUCCESS);
 	}
 }

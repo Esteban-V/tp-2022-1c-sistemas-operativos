@@ -51,7 +51,7 @@ void *swap_get_page(uint32_t pid, int page)
 void delete_swap(uint32_t pid)
 {
     pthread_mutex_lock(&mutex_log);
-    log_info(logger, "PID #%d --> Deleting swap file", pid);
+    log_warning(logger, "Deleting process #%d swap file", pid);
     pthread_mutex_unlock(&mutex_log);
 
     char *swap_file_path = string_from_format("%s/%d.swap", config->swapPath, pid);

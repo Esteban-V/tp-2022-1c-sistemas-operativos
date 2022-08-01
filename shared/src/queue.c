@@ -13,10 +13,10 @@ t_pQueue *pQueue_create()
 	return queue;
 }
 
-void pQueue_destroy(t_pQueue *queue, void (*destroyer)(void *))
+void pQueue_destroy(t_pQueue *queue)
 {
 	pthread_mutex_lock(&queue->mutex);
-	queue_destroy_and_destroy_elements(queue->lib_queue, destroyer);
+	queue_destroy(queue->lib_queue);
 	pthread_mutex_unlock(&queue->mutex);
 	pthread_mutex_destroy(&queue->mutex);
 	sem_destroy(&queue->sem);

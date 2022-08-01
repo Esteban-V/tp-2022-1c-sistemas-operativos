@@ -11,7 +11,7 @@ int page_table_init(uint32_t process_size)
 	int level1_index = list_add(level1_tables, level1_table);
 
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
-	int pages_required = process_size / (config->pageSize);
+	int pages_required = ceil_div(process_size, config->pageSize);
 	int level2_pages_required = ceil_div(pages_required, config->entriesPerTable);
 
 	// Creacion tablas nivel 2

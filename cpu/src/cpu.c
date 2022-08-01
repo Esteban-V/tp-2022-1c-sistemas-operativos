@@ -16,7 +16,7 @@ int main()
 	pthread_mutex_init(&mutex_kernel_socket, NULL);
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "CPU server ready for Kernel");
+	log_info(logger, "CPU server ready for kernel");
 	pthread_mutex_unlock(&mutex_log);
 
 	sem_init(&pcb_loaded, 0, 0);
@@ -40,7 +40,6 @@ int main()
 	// Handshake con memoria
 	memory_handshake();
 
-	pthread_mutex_init(&tlb_mutex, NULL);
 	tlb = create_tlb();
 
 	while (1)
@@ -59,8 +58,6 @@ void *listen_interruption()
 
 void pcb_to_kernel(kernel_headers header)
 {
-	clean_tlb(tlb);
-
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
 	stream_add_pcb(pcb_packet, pcb);
 
@@ -76,6 +73,7 @@ void pcb_to_kernel(kernel_headers header)
 	pthread_mutex_unlock(&mutex_kernel_socket);
 
 	packet_destroy(pcb_packet);
+	clean_tlb(tlb);
 	pcb_destroy(pcb);
 }
 
@@ -147,15 +145,15 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 	return false;
 }
 
-bool receive_interruption(t_packet *petition, int kernel_socket)
+bool receive_interruption(t_packet *_petition, int kernel_socket)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Interruption received");
-	pthread_mutex_unlock(&mutex_log);
-
 	pthread_mutex_lock(&mutex_has_interruption);
 	new_interruption = true;
 	pthread_mutex_unlock(&mutex_has_interruption);
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Interruption received");
+	pthread_mutex_unlock(&mutex_log);
 
 	return true;
 }
@@ -183,15 +181,18 @@ void *cpu_cycle()
 
 			// Checkea interrupcion
 			pthread_mutex_lock(&mutex_has_interruption);
-			if (new_interruption)
+			if (new_interruption && !!pcb)
 			{
-				log_info(logger, "Encountered interruption, sending to kernel");
-				// Desalojar proceso actual
-				pcb_to_kernel(INTERRUPT_DISPATCH);
-
 				// Resetea la interrupcion
 				new_interruption = false;
 				pthread_mutex_unlock(&mutex_has_interruption);
+
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger, "Encountered interruption, sending to kernel");
+				pthread_mutex_unlock(&mutex_log);
+
+				// Desalojar proceso actual
+				pcb_to_kernel(INTERRUPT_DISPATCH);
 			}
 			else
 			{
@@ -224,22 +225,23 @@ enum operation fetch_and_decode(t_instruction **instruction)
 
 void execute_no_op(t_list *params)
 {
+	uint32_t times = *((uint32_t *)list_get(params, 0));
+
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Executing NO OP");
+	log_info(logger, "Executing NO OP for %dms %d times", config->delayNoOp, times);
 	pthread_mutex_unlock(&mutex_log);
 
-	uint32_t times = *((uint32_t *)list_get(params, 0));
 	usleep(config->delayNoOp * 1000 * times);
 }
 
 void execute_io(t_list *params)
 {
+	uint32_t time = *((uint32_t *)list_get(params, 0));
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Executing IO");
+	log_info(logger, "Executing I/O for %dms", time);
 	pthread_mutex_unlock(&mutex_log);
 
-	uint32_t time = *((uint32_t *)list_get(params, 0));
 	pcb->pending_io_time = time;
 	pcb_to_kernel(IO_CALL);
 }
@@ -247,7 +249,7 @@ void execute_io(t_list *params)
 void execute_read(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Execute read");
+	log_info(logger, "Executing read");
 	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
@@ -267,7 +269,7 @@ void execute_read(t_list *params)
 void execute_copy(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Execute copy");
+	log_info(logger, "Executing copy");
 
 	pthread_mutex_unlock(&mutex_log);
 
@@ -280,7 +282,7 @@ void execute_copy(t_list *params)
 void execute_write(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Execute write");
+	log_info(logger, "Executing write");
 	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
@@ -291,7 +293,7 @@ void execute_write(t_list *params)
 void execute_exit()
 {
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Execute exit");
+	log_info(logger, "Executing exit");
 	pthread_mutex_unlock(&mutex_log);
 
 	pcb_to_kernel(EXIT_CALL);
@@ -325,23 +327,24 @@ void stats()
 {
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "- - - Stats - - -");
-	log_info(logger, "TLB Hits: %d", tlb_hit_counter);
-	log_info(logger, "TLB Misses: %d", tlb_miss_counter);
+	log_info(logger, "TLB hits: %d", tlb_hit_counter);
+	log_info(logger, "TLB misses: %d", tlb_miss_counter);
 	pthread_mutex_unlock(&mutex_log);
 }
 
 void terminate_cpu(int x)
 {
 	tlb_destroy();
-	log_destroy(logger);
 	destroy_cpu_config(config);
 
 	switch (x)
 	{
 	case 1:
+		log_destroy(logger);
 		exit(EXIT_FAILURE);
 	case SIGINT:
 		stats();
+		log_destroy(logger);
 		exit(EXIT_SUCCESS);
 	}
 }
