@@ -13,6 +13,8 @@ int main()
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
 	kernel_interrupt_socket = create_server(config->interruptListenPort);
 
+	pcb = create_pcb();
+
 	pthread_mutex_init(&mutex_kernel_socket, NULL);
 
 	pthread_mutex_lock(&mutex_log);
@@ -21,6 +23,7 @@ int main()
 
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
+	sem_init(&cpu_bussy, 0,0);
 
 	new_interruption = false;
 
@@ -73,10 +76,10 @@ void pcb_to_kernel(kernel_headers header)
 		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 	}
+	sem_wait(&cpu_bussy);
 	pthread_mutex_unlock(&mutex_kernel_socket);
 
 	packet_destroy(pcb_packet);
-	pcb_destroy(pcb);
 }
 
 bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
@@ -133,7 +136,6 @@ void *packet_handler(void *_client_socket)
 
 bool receive_pcb(t_packet *petition, int kernel_socket)
 {
-	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
 	if (!!pcb)
 	{
@@ -141,6 +143,11 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 		log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
 				 list_size(pcb->instructions));
 		pthread_mutex_unlock(&mutex_log);
+		if(bussyCpu()){
+			pthread_mutex_lock(&mutex_log);
+			log_warning(logger, "CPU was used");
+			pthread_mutex_unlock(&mutex_log);
+		}
 		sem_post(&pcb_loaded);
 		return true;
 	}
@@ -175,7 +182,8 @@ void *cpu_cycle()
 	while (1)
 	{
 		sem_wait(&pcb_loaded);
-		while (!!pcb && pcb->program_counter < list_size(pcb->instructions))
+		sem_post(&cpu_bussy);
+		while (bussyCpu() && pcb->program_counter < list_size(pcb->instructions))
 		{
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
@@ -335,6 +343,7 @@ void terminate_cpu(int x)
 	tlb_destroy();
 	log_destroy(logger);
 	destroy_cpu_config(config);
+	pcb_destroy(pcb);
 
 	switch (x)
 	{
@@ -344,4 +353,9 @@ void terminate_cpu(int x)
 		stats();
 		exit(EXIT_SUCCESS);
 	}
+}
+bool bussyCpu(){
+	int isBussy;
+	sem_getvalue(&cpu_bussy,&isBussy);
+	return isBussy;
 }

@@ -30,7 +30,7 @@ t_pcb *pcb;
 t_log *logger;
 
 void memory_handshake();
-
+void *packet_handler(void *_client_socket);
 void *listen_interruption();
 void *dispatch_header_handler(void *_kernel_client_socket);
 void *header_handler(void *_kernel_client_socket);
@@ -53,13 +53,15 @@ void pcb_to_kernel(kernel_headers header);
 pthread_t interruptionThread, execThread;
 pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;
 
-sem_t pcb_loaded;
+sem_t pcb_loaded,cpu_bussy;
 bool new_interruption;
 
 int kernel_client_socket;
 int memory_server_socket;
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
+
+bool bussyCpu();
 
 void stats();
 void terminate_cpu(int x);

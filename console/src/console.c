@@ -63,16 +63,21 @@ int main(int argc, char **argv)
 	process->size = process_size;
 
 	pthread_mutex_lock(&mutex_log);
+	
 	log_info(logger, "Process found with %d instructions",
 			 list_size(process->instructions));
+	
 	pthread_mutex_unlock(&mutex_log);
-
+	log_info(logger, "AAAAAAAAA");	
 	t_packet *process_packet = create_packet(NEW_PROCESS, INITIAL_STREAM_SIZE);
+	log_info(logger, "BBB");	
 	stream_add_process(process_packet, process);
-
+	log_info(logger, "CCCC");	
 	if (kernel_socket != -1)
 	{
+		log_info(logger, "DDDD");	
 		socket_send_packet(kernel_socket, process_packet);
+		log_info(logger, "EEE");	
 	}
 
 	packet_destroy(process_packet);

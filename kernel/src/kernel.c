@@ -24,6 +24,7 @@ int main(void)
 	sem_init(&any_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
 	sem_init(&pcb_table_ready, 0, 0);
+	sem_init(&to_exit, 0, 0);
 
 	sem_init(&waiting_for_suspension, 0, 1);
 
@@ -256,7 +257,14 @@ void *exit_process(void *args)
 	t_pcb *pcb = NULL;
 	while (1)
 	{
+
+		sem_wait(&to_exit);
 		pcb = (t_pcb *)pQueue_take(exit_q);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d CPU --> [EXIT]", pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+
 
 		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(exit_request->payload, pcb->pid);
@@ -565,12 +573,8 @@ bool exit_op(t_packet *petition, int cpu_socket)
 
 	if (!!received_pcb)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> [EXIT]", received_pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
-
 		pQueue_put(exit_q, (void *)received_pcb);
-
+		sem_post(&to_exit);
 		sem_post(&cpu_free);
 
 		return true;
