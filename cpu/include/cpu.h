@@ -34,6 +34,7 @@ void memory_handshake();
 void *listen_interruption();
 void *dispatch_header_handler(void *_kernel_client_socket);
 void *header_handler(void *_kernel_client_socket);
+void *packet_handler(void *_kernel_client_socket);
 
 bool receive_pcb(t_packet *petition, int console_socket);
 bool receive_interruption(t_packet *petition, int console_socket);
