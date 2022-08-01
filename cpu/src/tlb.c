@@ -39,7 +39,7 @@ t_tlb *create_tlb()
     return tlb;
 }
 
-uint32_t get_tlb_frame(uint32_t page)
+uint32_t find_tlb_entry(uint32_t page)
 {
     uint32_t frame = -1;
     for (int i = 0; i < config->tlbEntryQty; i++)
@@ -129,8 +129,7 @@ void lru_tlb(t_tlb_entry *entry)
     pQueue_put(tlb->victims, entryToBeMoved);
 }
 
-// TODO ejecutar en memoria cuando se va a reemplazar pag
-void drop_tlb_entry(uint32_t page, uint32_t frame)
+/* void drop_tlb_entry(uint32_t page, uint32_t frame)
 {
     for (int i = 0; i < config->tlbEntryQty; i++)
     {
@@ -145,7 +144,7 @@ void drop_tlb_entry(uint32_t page, uint32_t frame)
             return;
         }
     }
-}
+} */
 
 void tlb_destroy()
 {

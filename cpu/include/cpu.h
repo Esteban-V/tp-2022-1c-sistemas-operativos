@@ -23,7 +23,6 @@
 
 #include "networking.h"
 #include "serialization.h"
-#include "socket_headers.h"
 #include "tlb.h"
 
 t_pcb *pcb;
@@ -50,6 +49,9 @@ void execute_write(t_list *params);
 void execute_exit();
 
 void pcb_to_kernel(kernel_headers header);
+
+uint32_t get_frame(uint32_t pt1_index, uint32_t page_number);
+void memory_op(enum memory_headers header, uint32_t frame, uint32_t offset, uint32_t value);
 
 pthread_t interruptionThread, execThread;
 pthread_mutex_t mutex_kernel_socket, mutex_has_interruption;

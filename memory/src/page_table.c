@@ -215,7 +215,6 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 		// Lleva a disco la pagina a reemplazar y la marca como no presente
 		if (old_page->present && old_page->modified)
 		{
-			// TODO drop_tlb_entry(old_page->page, old_page->frame);
 			save_swap(curr_frame->frame, old_page->page, pid);
 			old_page->modified = false;
 		}

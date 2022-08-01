@@ -21,24 +21,14 @@ typedef enum kernel_headers
 	PROCESS_SUSPENSION_READY = 7
 } kernel_headers;
 
-static const char * const headers_strings[] = {
-	[IO_CALL] = "(IO CALL)",
-	[EXIT_CALL] = "(EXIT_CALL)",
-	[INTERRUPT_DISPATCH] = "(INTERRUPT_DISPATCH)",
-};
-
 typedef enum cpu_headers
 {
 	PCB_TO_CPU = 0,
 	INTERRUPT = 1,
-	FRAME_TO_CPU = 2,
+	// handshake
+	TABLE_INFO_TO_CPU = 2,
 	TABLE2_TO_CPU = 3,
-	TABLE_INFO_TO_CPU = 4,
-	// Memory response headers
-	SWAP_OK = 5,
-	SWAP_ERROR = 6,
-	TLB_ADD = 7,
-	TLB_DROP = 8
+	FRAME_TO_CPU = 2,
 } cpu_headers;
 
 typedef enum memory_headers

@@ -5,9 +5,9 @@ t_cpu_config *get_cpu_config(char *path)
 	t_cpu_config *cpu_config = malloc(sizeof(t_cpu_config));
 	cpu_config->config = config_create(path);
 	cpu_config->tlbEntryQty = config_get_int_value(cpu_config->config,
-												  "ENTRADAS_TLB");
+												   "ENTRADAS_TLB");
 	cpu_config->tlb_alg = config_get_string_value(cpu_config->config,
-													 "REEMPLAZO_TLB");
+												  "REEMPLAZO_TLB");
 	cpu_config->delayNoOp = config_get_int_value(cpu_config->config,
 												 "RETARDO_NOOP");
 	cpu_config->memoryIP = config_get_string_value(cpu_config->config,
@@ -60,9 +60,4 @@ enum operation get_op(char *op)
 	}
 	else
 		return DEAD;
-}
-
-
-uint32_t get_frame(uint32_t page_number){
-	
 }

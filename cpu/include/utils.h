@@ -2,7 +2,10 @@
 #define UTILS_H_
 
 #include <commons/config.h>
+
 #include "pcb_utils.h"
+#include "tlb.h"
+#include "socket_headers.h"
 
 enum operation
 {

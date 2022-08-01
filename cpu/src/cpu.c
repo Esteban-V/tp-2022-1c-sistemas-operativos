@@ -254,29 +254,24 @@ void execute_read(t_list *params)
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
-	// MMU debe calcular:
 	uint32_t page_number = floor(l_address / config->pageSize);
+	uint32_t frame = get_frame(pcb->page_table, page_number);
 	uint32_t offset = l_address - (page_number * config->pageSize);
 
-	uint32_t frame = get_frame(page_number);
-	// uint32_t lvl1_entry_index = floor(page_number / config->entriesPerTable);
-	// uint32_t lvl2_entry_index = page_number % config->entriesPerTable;
-	// read(frame, offset);
-
-	// Pedir LVL1_TABLE con pcb->page_table
+	memory_op(READ_CALL, frame, offset, NULL);
 }
 
 void execute_copy(t_list *params)
 {
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Executing copy");
-
 	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
+
 	// uint32_t value = fetch_operand(l_value_address);
-	//  write(l_address, value);
+	// write_op(l_address, value);
 }
 
 void execute_write(t_list *params)
@@ -286,8 +281,14 @@ void execute_write(t_list *params)
 	pthread_mutex_unlock(&mutex_log);
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
+
+	uint32_t page_number = floor(l_address / config->pageSize);
+	uint32_t frame = get_frame(pcb->page_table, page_number);
+	uint32_t offset = l_address - (page_number * config->pageSize);
+
 	uint32_t value = *((uint32_t *)list_get(params, 1));
-	// write(l_address, value);
+
+	memory_op(WRITE_CALL, frame, offset, value);
 }
 
 void execute_exit()
@@ -321,6 +322,62 @@ void memory_handshake()
 		pthread_mutex_unlock(&mutex_log);
 	}
 	packet_destroy(mem_data);
+}
+
+uint32_t get_frame(uint32_t pt1_index, uint32_t page_number)
+{
+	uint32_t frame = find_tlb_entry(page_number);
+	if (frame != -1)
+	{
+		return frame;
+	}
+
+	uint32_t lvl1_entry_index = floor(page_number / config->entriesPerTable);
+
+	t_packet *lvl1_table_request = create_packet(LVL1_TABLE, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(lvl1_table_request->payload, pt1_index);
+	stream_add_UINT32(lvl1_table_request->payload, lvl1_entry_index);
+	socket_send_packet(memory_server_socket, lvl1_table_request);
+
+	packet_destroy(lvl1_table_request);
+
+	t_packet *lvl2_data = socket_receive_packet(memory_server_socket);
+	if (lvl2_data->header == TABLE2_TO_CPU)
+	{
+		uint32_t pt2_index = stream_take_UINT32(lvl2_data->payload);
+		packet_destroy(lvl2_data);
+
+		uint32_t lvl2_entry_index = page_number % config->entriesPerTable;
+
+		t_packet *lvl2_table_request = create_packet(LVL2_TABLE, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(lvl2_table_request->payload, pt2_index);
+		stream_add_UINT32(lvl2_table_request->payload, lvl2_entry_index);
+		socket_send_packet(memory_server_socket, lvl2_table_request);
+
+		packet_destroy(lvl2_table_request);
+
+		t_packet *frame_data = socket_receive_packet(memory_server_socket);
+		if (frame_data->header == FRAME_TO_CPU)
+		{
+			uint32_t frame = stream_take_UINT32(frame_data->payload);
+			packet_destroy(frame_data);
+
+			add_tlb_entry(page_number, frame);
+			return frame;
+		}
+	}
+}
+
+void memory_op(enum memory_headers header, uint32_t frame, uint32_t offset, uint32_t value)
+{
+	t_packet *read_request = create_packet(header, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(read_request->payload, frame);
+	stream_add_UINT32(read_request->payload, offset);
+	if (value != NULL)
+		stream_add_UINT32(read_request->payload, value);
+	socket_send_packet(memory_server_socket, read_request);
+
+	packet_destroy(read_request);
 }
 
 void stats()

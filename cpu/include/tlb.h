@@ -44,7 +44,7 @@ int tlb_miss_counter;
 t_tlb *create_tlb();
 void add_tlb_entry(uint32_t page, uint32_t frame);
 
-uint32_t get_tlb_frame(uint32_t page);
+uint32_t find_tlb_entry(uint32_t page);
 void lru_tlb(t_tlb_entry *entry);
 
 void clean_tlb();

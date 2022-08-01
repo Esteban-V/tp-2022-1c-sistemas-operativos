@@ -279,7 +279,7 @@ bool access_lvl1_table(t_packet *petition, int cpu_socket)
 		packet_destroy(response);
 	}
 
-	return false;
+	return true;
 }
 
 // Recibe index de pt2 en lista global y entrada de la tabla 2 a la que acceder
@@ -295,33 +295,29 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 	{
 		int frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
 
-		/*
-		// add_tlb_entry(PID, page, victim); TODO pasar a CPU
-		t_packet *add_tlb_entry = create_packet(TLB_ADD, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(add_tlb_entry->payload, pid);
-		stream_add_UINT32(add_tlb_entry->payload, pageNumber);
-		stream_add_UINT32(add_tlb_entry->payload, victim_frame);
-		socket_send_packet(cpu_socket, add_tlb_entry);
-		packet_destroy(add_tlb_entry);
+		t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, frame);
 
-		*/
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);
 	}
 
-	return false;
+	return true;
 }
 
 bool memory_write(t_packet *petition, int cpu_socket)
 {
-	uint32_t address = stream_take_UINT32(petition->payload);
+	uint32_t frame = stream_take_UINT32(petition->payload);
+	uint32_t offset = stream_take_UINT32(petition->payload);
 	uint32_t value = stream_take_UINT32(petition->payload);
 
-	if (address != NULL)
+	if (frame != NULL)
 	{
 		memory_write_counter++;
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Write Request");
+		log_info(logger, "Memory write request");
 		pthread_mutex_unlock(&mutex_log);
 
 		// Write
@@ -330,29 +326,34 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		sem_post(&writeRead);
 	}
 
-	return false;
+	return true;
 }
 
 bool memory_read(t_packet *petition, int cpu_socket)
 {
-	uint32_t address = stream_take_UINT32(petition->payload);
+	uint32_t frame = stream_take_UINT32(petition->payload);
+	uint32_t offset = stream_take_UINT32(petition->payload);
 
-	if (!!address)
+	if (frame != NULL)
 	{
 		memory_read_counter++;
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory Read Request");
+		log_info(logger, "Memory read request");
 		pthread_mutex_unlock(&mutex_log);
 
-		// Read
-		// TODO
+		void *frame_ptr = get_frame(frame);
+		uint32_t value = read_frame_value(frame, offset);
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory read %d at address %d - %d", value, frame, offset);
+		pthread_mutex_unlock(&mutex_log);
 
 		sem_post(&writeRead);
 	}
 
-	return false;
+	return true;
 }
 
 t_memory *memory_init()
