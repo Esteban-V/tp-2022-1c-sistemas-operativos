@@ -127,6 +127,9 @@ void *io_listener(void *args)
 		sem_wait(&process_for_IO);
 		if (!pQueue_is_empty(blocked_q))
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Bloqued I/O");
+			pthread_mutex_unlock(&mutex_log);
 			pcb = pQueue_take(blocked_q);
 
 			// Tiempo que ya estuvo bloqueado
@@ -173,11 +176,19 @@ void *io_listener(void *args)
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
 				stream_add_UINT32(suspend_packet->payload, pcb->pid);
 				stream_add_UINT32(suspend_packet->payload, pcb->page_table);
+				stream_add_UINT32(suspend_packet->payload, pcb->process_frames_index);
+
 
 				if (memory_socket != -1)
 				{
 					socket_send_packet(memory_socket, suspend_packet);
+					pthread_mutex_lock(&mutex_log);
+			log_info(logger, "ESPERAMOS RSP");
+			pthread_mutex_unlock(&mutex_log);
 					sem_wait(&waiting_for_suspension);
+					pthread_mutex_lock(&mutex_log);
+			log_info(logger, "RECIBIMOS RSP");
+			pthread_mutex_unlock(&mutex_log);
 				}
 
 				packet_destroy(suspend_packet);
@@ -196,6 +207,9 @@ void *io_listener(void *args)
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "SB I/O");
+			pthread_mutex_unlock(&mutex_log);
 			pcb = pQueue_take(suspended_block_q);
 
 			usleep(pcb->pending_io_time * 1000);

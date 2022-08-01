@@ -175,6 +175,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
+
 		for (int i = 0; i < list_size(pt1->entries); i++)
 		{
 			int pt2_index = *((int *)list_get(pt1->entries, i));
@@ -199,8 +200,21 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				unassign_process_frames((int)process_frames_index);
 			}
 		}
+		
+		t_packet *response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
 
-		socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
+		stream_add_UINT32(response->payload, 1);
+		socket_send_packet(kernel_socket, response);
+
+		packet_destroy(response);
+		
+		//socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
+		/*
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Suspension succed");
+		pthread_mutex_unlock(&mutex_log);
+		return true;
+		 */
 	}
 
 	return false;
