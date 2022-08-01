@@ -34,6 +34,8 @@ t_log *logger;
 
 struct timespec now, toExec, fromExec;
 
+struct timeval toExecTime,fromExecTime,nowTime;
+
 t_pQueue *new_q, *ready_q, *memory_init_q, *memory_exit_q, *blocked_q, *suspended_ready_q, *suspended_block_q, *exit_q;
 
 pthread_t any_to_ready_t, ready_to_exec_t,

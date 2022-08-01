@@ -133,9 +133,14 @@ void *io_listener(void *args)
 			pcb = pQueue_take(blocked_q);
 
 			// Tiempo que ya estuvo bloqueado
+			/*
 			struct timespec curr_time;
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &curr_time);
-			time_blocked = time_to_ms(curr_time) - pcb->blocked_time;
+ */
+			gettimeofday(&nowTime, NULL);
+    		int currTime = nowTime.tv_sec*1000LL + nowTime.tv_usec/1000;
+
+			time_blocked = currTime - pcb->blocked_time;
 
 			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
 			sleep_ms = config->maxBlockedTime - time_blocked;
@@ -314,7 +319,18 @@ void *to_exec()
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
 
+
+		
+   		gettimeofday(&toExecTime, NULL);
+    	int milliseconds = toExecTime.tv_sec*1000LL + toExecTime.tv_usec/1000;
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "TIME %d", milliseconds);
+		pthread_mutex_unlock(&mutex_log);
+
+/*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
+ */
 		packet_destroy(pcb_packet);
 
 		pthread_mutex_lock(&mutex_log);
@@ -395,7 +411,7 @@ void put_to_ready(t_pcb *pcb)
 		log_info(logger, "Short Term Scheduler: SJF --> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
-		pQueue_sort(ready_q, SJF_sort);
+		
 
 		if (freeCpu == 0)
 		{
@@ -408,6 +424,7 @@ void put_to_ready(t_pcb *pcb)
 			// Se espera a que vuelva de CPU
 			sem_wait(&interrupt_ready);
 		}
+		pQueue_sort(ready_q, SJF_sort);
 	}
 
 	pthread_mutex_unlock(&execution_mutex);
@@ -529,9 +546,17 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 		log_info(logger, "PID #%d --> Desalojado de CPU", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+		gettimeofday(&fromExecTime, NULL);
+    	int fromMs = fromExecTime.tv_sec*1000LL + fromExecTime.tv_usec/1000;
+		int toMs = toExecTime.tv_sec*1000LL + toExecTime.tv_usec/1000;
 
-		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - (time_to_ms(toExec) - time_to_ms(fromExec));
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID ejecuto %d milisegundos y fue interrumpido", (fromMs-toMs));
+		pthread_mutex_unlock(&mutex_log);
+/* 
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+*/
+		received_pcb->left_burst_estimation = (uint32_t) ((int) received_pcb->left_burst_estimation - (fromMs-toMs));
 
 		pQueue_put(ready_q, received_pcb);
 		sem_post(&ready_for_exec);
@@ -562,15 +587,23 @@ bool io_op(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d --> [BLOCKED]", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
-
+/*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+		 */
+		gettimeofday(&fromExecTime, NULL);
+    	int fromMs = fromExecTime.tv_sec*1000LL + fromExecTime.tv_usec/1000;
+		int toMs = toExecTime.tv_sec*1000LL + toExecTime.tv_usec/1000;
+		int real = (received_pcb->burst_estimation - ((int)received_pcb->left_burst_estimation)) +fromMs-toMs;
+		uint32_t estimation = (config->alpha * (real)) + ((1 - config->alpha) * received_pcb->burst_estimation);
 
-		received_pcb->burst_estimation = (config->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - config->alpha) * received_pcb->burst_estimation);
-		received_pcb->left_burst_estimation = (config->alpha * (time_to_ms(toExec) - time_to_ms(fromExec))) + ((1 - config->alpha) * received_pcb->burst_estimation);
+		received_pcb->burst_estimation = estimation;
+		received_pcb->left_burst_estimation = estimation;
 
-		struct timespec blocked_time;
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
-		received_pcb->blocked_time = time_to_ms(blocked_time);
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d nueva rafaga %d", received_pcb->pid, estimation);
+		pthread_mutex_unlock(&mutex_log);
+
+		received_pcb->blocked_time = fromMs;
 
 		pQueue_put(blocked_q, (void *)received_pcb);
 
