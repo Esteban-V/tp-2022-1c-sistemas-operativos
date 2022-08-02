@@ -10,6 +10,7 @@ bool memory_write(t_packet *petition, int cpu_socket);
 bool memory_read(t_packet *petition, int cpu_socket);
 bool process_exit(t_packet *petition, int cpu_socket);
 bool process_suspend(t_packet *petition, int cpu_socket);
+bool process_unsuspend(t_packet *petition, int cpu_socket);
 bool cpu_handshake(int cpu_socket);
 void *packet_handler(void *_client_socket);
 

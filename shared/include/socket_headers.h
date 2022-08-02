@@ -21,6 +21,7 @@ typedef enum kernel_headers
 	PROCESS_MEMORY_READY = 4,
 	PROCESS_EXIT_READY = 5,
 	PROCESS_SUSPENSION_READY = 6,
+	PROCESS_UNSUSPENSION_READY = 7,
 } kernel_headers;
 
 typedef enum cpu_headers
@@ -40,13 +41,14 @@ typedef enum memory_headers
 	// From kernel
 	PROCESS_NEW = 0,
 	PROCESS_SUSPEND = 6,
-	PROCESS_EXIT = 7,
+	PROCESS_UNSUSPEND = 7,
+	PROCESS_EXIT = 8,
 	// From CPU
 	MEM_HANDSHAKE = 1,
 	LVL1_TABLE = 2,
 	LVL2_TABLE = 3,
 	READ_CALL = 4,
-	WRITE_CALL = 5,
+	WRITE_CALL = 5
 } memory_headers;
 
 #endif /* SOCKET_HEADERS_H_ */

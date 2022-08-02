@@ -194,7 +194,7 @@ void *io_listener(void *args)
 				pQueue_put(suspended_block_q, (void *)pcb);
 
 				pthread_mutex_lock(&mutex_log);
-				log_info(logger, "Process suspended, %dms left", pcb->pending_io_time);
+				log_warning(logger, "Process #%d suspended, %dms left", pcb->pid, pcb->pending_io_time);
 				pthread_mutex_unlock(&mutex_log);
 
 				sem_post(&process_for_IO);
@@ -347,7 +347,7 @@ void *suspended_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "TODO: PID #%d [SUSPENDED READY] --> [READY]", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
-
+	
 	// Manejar memoria, sacar de suspendido y traer a "ram"
 	put_to_ready(pcb);
 }
@@ -636,6 +636,8 @@ bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
 		exit_process_success,
 		// PROCESS_SUSPENSION_READY
 		suspension_success,
+		// PROCESS_UNSUSPENSION_READY
+		NULL,
 };
 
 void *packet_handler(void *_client_socket)

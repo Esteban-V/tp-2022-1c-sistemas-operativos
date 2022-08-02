@@ -72,6 +72,8 @@ bool (*memory_handlers[8])(t_packet *petition, int socket) =
 		memory_write,
 		// PROCESS_SUSPEND
 		process_suspend,
+		// PROCESS_UNSUSPEND
+		process_unsuspend,
 		// PROCESS_EXIT
 		process_exit};
 
@@ -158,6 +160,28 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		socket_send_packet(kernel_socket, response);
 
 		packet_destroy(response);
+	}
+
+	return true;
+}
+
+bool process_unsuspend(t_packet *petition, int kernel_socket)
+{
+	uint32_t pid = stream_take_UINT32(petition->payload);
+
+	if (!!pid)
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Resuming process with PID #%d", pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		t_packet *suspend_response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(suspend_response->payload, pid);
+		if (kernel_socket != -1)
+		{
+			socket_send_packet(kernel_socket, suspend_response);
+		}
+		packet_destroy(suspend_response);
 	}
 
 	return true;
@@ -382,7 +406,8 @@ t_memory *memory_init()
 
 	// Crea espacio de memoria contiguo
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(cant_frames, config->pageSize);
+	mem->memory = malloc(config->memorySize);
+	memset(mem->memory, 0, config->memorySize);
 
 	// Crea bitmap de frames libres/ocupados
 	void *ptr = malloc(cant_frames);
