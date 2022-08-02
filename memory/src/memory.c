@@ -300,8 +300,8 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 
 	if (pt2_index != -1)
 	{
-		int frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
-
+		uint32_t frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
+		//=frame*config->pageSize;
 		/*
 		// add_tlb_entry(PID, page, victim); TODO pasar a CPU
 		t_packet *add_tlb_entry = create_packet(TLB_ADD, INITIAL_STREAM_SIZE);
@@ -312,6 +312,10 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		packet_destroy(add_tlb_entry);
 
 		*/
+		t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, frame);
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);
 	}
 
 	return false;
@@ -331,8 +335,15 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		log_info(logger, "Memory Write Request");
 		pthread_mutex_unlock(&mutex_log);
 
+		//escribe
+		memcpy((void *)(memory->memory+address),(void*)&value,sizeof(value));
+
 		// Write
-		// TODO
+		// TODO actualizar pags
+
+		t_packet *answer = create_packet(WRITE_SUCCESS, INITIAL_STREAM_SIZE);
+		socket_send_packet(cpu_socket, answer);
+		packet_destroy(answer);
 
 		sem_post(&writeRead);
 	}
@@ -352,9 +363,16 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Memory Read Request");
 		pthread_mutex_unlock(&mutex_log);
+		uint32_t read;
 
 		// Read
-		// TODO
+		memcpy((void*)&read,(void *)(memory->memory+address),sizeof(read));
+		// TODO actualizar pags
+
+		t_packet *answer = create_packet(READ_ANSWER, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(answer->payload,read);
+		socket_send_packet(cpu_socket, answer);
+		packet_destroy(answer);
 
 		sem_post(&writeRead);
 	}
@@ -367,8 +385,10 @@ t_memory *memory_init()
 	int cant_frames = config->framesInMemory;
 
 	// Crea espacio de memoria contiguo
-	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(cant_frames, sizeof(uint32_t));
+	//t_memory *mem = malloc(sizeof(t_memory));
+	t_memory *mem = malloc(config->memorySize);
+	//mem->memory = calloc(cant_frames, sizeof(uint32_t));
+	memset(mem->memory,0,config->memorySize);
 
 	// Crea bitmap de frames libres/ocupados
 	void *ptr = malloc(cant_frames);

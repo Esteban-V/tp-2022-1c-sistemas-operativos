@@ -9,7 +9,7 @@ int main()
 	logger = log_create("./cfg/cpu-final.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("./cfg/cpu.config");
 
-	lastPCB=0;
+	i=0;
 
 	// Creacion de server
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
@@ -22,7 +22,12 @@ int main()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "CPU server ready for Kernel");
 	pthread_mutex_unlock(&mutex_log);
-
+	sem_init(&waiting_frame, 0, 0);
+	sem_init(&waiting_second_table_number, 0, 0);
+	sem_init(&waiting_write_answer, 0, 0);
+	sem_init(&waiting_read_answer, 0, 0);
+	
+	
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
 	sem_init(&cpu_bussy, 0,0);
@@ -84,20 +89,40 @@ void pcb_to_kernel(kernel_headers header)
 	packet_destroy(pcb_packet);
 }
 
-bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
+bool (*cpu_handlers[11])(t_packet *petition, int console_socket) =
 	{
 		// PCB_TO_CPU
 		receive_pcb,
 		// INTERRUPT
 		receive_interruption,
+		//FRAME_TO_CPU = 2,
+		receive_frame,
+		//TABLE2_TO_CPU = 3,
+		receive_ptTwoIndex,
+	//TABLE_INFO_TO_CPU = 4,
+		NULL,
+	//SWAP_OK = 5,
+	NULL,
+	//SWAP_ERROR = 6,
+	NULL,
+	//TLB_ADD = 7,
+	NULL,
+	//TLB_DROP = 8,
+	NULL,
+	//WRITE_SUCCESS = 9,
+	write_answer,
+	//READ_ANSWER = 10,
+	read_answer,
 };
 
 void *dispatch_header_handler(void *_client_socket)
 {
+	if(i==0){
 	pthread_mutex_lock(&mutex_kernel_socket);
 	kernel_client_socket = (int)_client_socket;
 	pthread_mutex_unlock(&mutex_kernel_socket);
-
+	}
+	i++;
 	return packet_handler(_client_socket);
 }
 
@@ -263,13 +288,8 @@ void execute_read(t_list *params)
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
 	// MMU debe calcular:
-	uint32_t page_number = floor(l_address / config->pageSize);
-	uint32_t offset = l_address - (page_number * config->pageSize);
-
-	uint32_t frame = get_frame(page_number);
-	// uint32_t lvl1_entry_index = floor(page_number / config->entriesPerTable);
-	// uint32_t lvl2_entry_index = page_number % config->entriesPerTable;
-	// read(frame, offset);
+	uint32_t fisicDir = mmu(l_address);
+	readMem(fisicDir);
 
 	// Pedir LVL1_TABLE con pcb->page_table
 }
@@ -283,8 +303,60 @@ void execute_copy(t_list *params)
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
-	// uint32_t value = fetch_operand(l_value_address);
-	//  write(l_address, value);
+	uint32_t fisicDirWrite = mmu(l_address);
+	uint32_t fisicDirRead = mmu(l_value_address);
+	uint32_t value = readMem(fisicDirRead);
+	writeMem(fisicDirWrite, value);
+}
+
+uint32_t readMem(uint32_t fisicDir){
+	t_packet *readPack = create_packet(READ_CALL, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(readPack->payload, fisicDir);
+
+	if (memory_server_socket != -1)
+	{
+				socket_send_packet(memory_server_socket, readPack);
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger, "Read request");
+				pthread_mutex_unlock(&mutex_log);
+				sem_wait(&waiting_read_answer);
+	}
+	return memRead;
+}
+
+void writeMem(uint32_t fisicDir,uint32_t value){
+	t_packet *write = create_packet(WRITE_CALL, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(write->payload, fisicDir);
+	stream_add_UINT32(write->payload, value);
+
+	if (memory_server_socket != -1)
+	{
+				socket_send_packet(memory_server_socket, write);
+				pthread_mutex_lock(&mutex_log);
+				log_info(logger, "Write request");
+				pthread_mutex_unlock(&mutex_log);
+				sem_wait(&waiting_write_answer);
+	}
+	return true;
+}
+
+bool write_answer(t_packet *petition, int kernel_socket)
+{//WRITE_SUCCESS
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Write succed");
+	pthread_mutex_unlock(&mutex_log);
+	sem_post(&waiting_write_answer);
+	return true;
+}
+
+bool read_answer(t_packet *petition, int kernel_socket)
+{//READ_ANSWER
+	memRead = stream_take_UINT32(petition->payload);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Read %d succed",memRead);
+	pthread_mutex_unlock(&mutex_log);
+	sem_post(&waiting_read_answer);
+	return true;
 }
 
 void execute_write(t_list *params)
@@ -295,7 +367,9 @@ void execute_write(t_list *params)
 
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t value = *((uint32_t *)list_get(params, 1));
-	// write(l_address, value);
+	uint32_t fisicDir = mmu(l_address);
+
+	writeMem(fisicDir, value);
 }
 
 void execute_exit()
@@ -360,4 +434,60 @@ bool bussyCpu(){
 	int isBussy;
 	sem_getvalue(&cpu_bussy,&isBussy);
 	return isBussy;
+}
+
+uint32_t mmu(int logicDir){
+	int page_number = floor(logicDir/config->pageSize);
+	int fstLevelEntry = floor(page_number/config->entriesPerTable);
+	int scdLevelEntry = page_number%config->entriesPerTable;
+	int offset = logicDir - page_number*config->pageSize;
+	int framesIndex = pcb->process_frames_index;
+	int pid = pcb->pid;
+	int ptIndex = pcb->page_table;
+
+	t_packet *fsPageTable = create_packet(LVL1_TABLE, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(fsPageTable->payload, ptIndex);
+	stream_add_UINT32(fsPageTable->payload, fstLevelEntry);
+
+
+	if (memory_server_socket != -1)
+	{
+				socket_send_packet(memory_server_socket, fsPageTable);
+				sem_wait(&waiting_second_table_number);
+	}
+	t_packet *sdPageTable = create_packet(LVL2_TABLE, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(fsPageTable->payload, pid);
+	stream_add_UINT32(fsPageTable->payload, tableTwoIndex);
+	stream_add_UINT32(fsPageTable->payload, scdLevelEntry);
+	stream_add_UINT32(fsPageTable->payload, framesIndex);
+
+
+	if (memory_server_socket != -1)
+	{
+				socket_send_packet(memory_server_socket, sdPageTable);
+				sem_wait(&waiting_frame);
+	}
+	uint32_t fisicDir = received_frame+offset;
+	
+	return fisicDir;
+}
+
+bool receive_frame(t_packet *petition, int kernel_socket)
+{//FRAME_TO_CPU
+	received_frame = (int) stream_take_UINT32(petition->payload);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Frame received");
+	pthread_mutex_unlock(&mutex_log);
+	sem_post(&waiting_frame);
+	return true;
+}
+
+bool receive_ptTwoIndex(t_packet *petition, int kernel_socket)
+{//TABLE2_TO_CPU
+	tableTwoIndex = (int) stream_take_UINT32(petition->payload);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Page Table 2 index received");
+	pthread_mutex_unlock(&mutex_log);
+	sem_post(&waiting_second_table_number);
+	return true;
 }
