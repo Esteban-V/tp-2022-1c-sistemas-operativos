@@ -76,14 +76,14 @@ int assign_process_frames()
 	process_frame->clock_hand = 0;
 
 	// Se agrega a lista global de frames y se obtiene su posicion en la misma para retornar
-	int process_frames_index = list_add(processes_frames, process_frame);
+	int process_frames_index = list_add(global_frames, process_frame);
 	return process_frames_index;
 }
 
 // Libera todos los frames de un proceso
-void unassign_process_frames(int process_frames_index)
+void unassign_process_frames(int frames_index)
 {
-	t_process_frame *process_frames = (t_process_frame *)list_get(processes_frames, process_frames_index);
+	t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
 
 	void unassign_frames(void *elem)
 	{
@@ -112,7 +112,7 @@ int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index)
 	t_ptbr1 *level1_table = get_page_table1(pt1_index);
 
 	// Obtiene el index de pt2 en lista global
-	int pt2_index = *(int *)list_get(level1_table->entries, entry_index);
+	int pt2_index = (int *)list_get(level1_table->entries, entry_index);
 
 	return pt2_index;
 }
@@ -131,7 +131,6 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 {
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = get_page_table2(pt2_index);
-
 	// Obtiene la pagina con sus bits de estado
 	t_page_entry *entry = (t_page_entry *)list_get(level2_table->entries, entry_index);
 
@@ -139,13 +138,17 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 	if (entry->present)
 	{
 		// se settean los bits en read (used) o write (used y modified)
-		// entry->used = true;
 		frame = entry->frame;
 	}
 	else
 	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Page fault for page %d", entry->page);
+		pthread_mutex_unlock(&mutex_log);
+
 		// Page fault ++, no estaba presente
-		t_process_frame *process_frames = (t_process_frame *)list_get(process_frames, frames_index);
+		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
+
 		page_fault_counter++;
 
 		// Chequear si se puede asignar directo
@@ -165,6 +168,10 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_warning(logger, "No free frames for process #%d, replacing...", pid);
+			pthread_mutex_unlock(&mutex_log);
+
 			// Reemplazo ++, no hay mas libres y se debe reemplazar con una existente
 			page_replacement_counter++;
 			frame = replace_algorithm(process_frames, entry, pid);
@@ -180,7 +187,7 @@ void save_swap(int frame_number, int page_number, int pid)
 	void *frame_ptr = get_frame(frame_number);
 
 	// Obtiene lo leido del frame en memoria
-	void *memory_value = get_frame_value(frame_ptr);
+	void *memory_value = read_frame(frame_ptr);
 
 	// Lo escribe en la pagina correspondiente en swap
 	swap_write_page(pid, page_number, memory_value);
@@ -201,7 +208,7 @@ void get_swap(int frame_number, int page_number, int pid)
 	void *frame_ptr = get_frame(frame_number);
 
 	// Lo escribe en el frame correspondiente en memoria
-	write_frame_value(frame_ptr, swap_value);
+	write_frame(frame_ptr, swap_value);
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Loaded PID #%d's page #%d into memory", pid, page_number);
@@ -235,9 +242,10 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 	};
 
 	int frame = -1;
-	for (int i = 0; i < (replaceAlgorithm == 1 ? 2 : 1); i++)
+	for (int i = 0; i < (replaceAlgorithm == CLOCK_M ? 2 : 1); i++)
 	{
 		frame = two_clock_turns(process_frames, replaceAlgorithm == 1, _replace);
+		printf("after two clock turns found %d\n", frame);
 		if (frame != -1)
 		{
 			return frame;

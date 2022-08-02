@@ -48,6 +48,10 @@ uint32_t find_tlb_entry(uint32_t page)
         t_tlb_entry *entry = &tlb->entries[i];
         if (entry->page == page && entry->isFree == false)
         {
+            pthread_mutex_lock(&mutex_log);
+            log_info(logger, "TLB hit on page %d / frame %d", page, frame);
+            pthread_mutex_unlock(&mutex_log);
+
             if (replaceAlgorithm == LRU)
             {
                 lru_tlb(entry);
@@ -56,6 +60,10 @@ uint32_t find_tlb_entry(uint32_t page)
             pthread_mutex_unlock(&tlb_mutex);
 
             tlb_hit_counter++;
+        }
+        else
+        {
+            pthread_mutex_unlock(&tlb_mutex);
         }
     }
 
@@ -168,6 +176,6 @@ void clean_tlb()
     pthread_mutex_unlock(&tlb_mutex);
 
     pthread_mutex_lock(&mutex_log);
-    log_info(logger, "Cleared TLB on process switch");
+    log_warning(logger, "Cleared TLB on process switch");
     pthread_mutex_unlock(&mutex_log);
 }

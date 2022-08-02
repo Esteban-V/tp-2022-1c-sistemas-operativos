@@ -88,7 +88,7 @@ typedef struct t_process_frame
 } t_process_frame;
 
 // Lista de t_process_frames
-t_list *processes_frames;
+t_list *global_frames;
 
 typedef struct mem
 {
@@ -122,17 +122,22 @@ int ceil_div(int a, int b);
 
 int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index);
 void *get_frame(uint32_t frame_number);
+
 uint32_t read_frame_value(void *frame_ptr, uint32_t offset);
-void *get_frame_value(void *frame_ptr);
+void *read_frame(void *frame_ptr);
+void write_frame_value(void *frame_ptr, uint32_t offset, uint32_t value);
+void write_frame(void *frame_ptr, void *new_page);
+
+void set_page_bits(int frames_index, int frame, bool modified);
 
 int find_first_unassigned_frame(t_bitarray *frames_bitmap);
-
 bool has_free_frame(t_process_frame *process_frames);
 t_frame_entry *find_first_free_frame(t_process_frame *process_frames);
+t_frame_entry *find_frame(t_process_frame *process_frames, int frame);
 
 void frame_set_assigned(t_bitarray *frames_bitmap, int index);
 void frame_clear_assigned(t_bitarray *frames_bitmap, int index);
-void write_frame_value(void *frame_ptr, void *value);
+
 void increment_clock_hand(int *clock_hand);
 
 void sync_bitmap(t_bitarray *bitmap);

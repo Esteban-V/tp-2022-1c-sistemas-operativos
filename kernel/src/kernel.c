@@ -298,16 +298,15 @@ void *to_exec()
 		{
 			socket_send_packet(cpu_dispatch_socket, pcb_packet);
 		}
+		packet_destroy(pcb_packet);
 
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
-		packet_destroy(pcb_packet);
+		pthread_mutex_unlock(&execution_mutex);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		pcb_destroy(pcb);
-
-		pthread_mutex_unlock(&execution_mutex);
 	}
 }
 
@@ -369,30 +368,33 @@ void put_to_ready(t_pcb *pcb)
 	{
 		// Se envia la interrupcion
 		// Si se manda otra por "encima" de la anterior, la CPU siempre usa la mas nueva
-		int freeCpu;
-		sem_getvalue(&cpu_free, &freeCpu);
-
 		pthread_mutex_lock(&mutex_log);
 		log_warning(logger, "SJF --> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_sort(ready_q, SJF_sort);
 
-		if (freeCpu == 0)
+		int freeCpu;
+		sem_getvalue(&cpu_free, &freeCpu);
+		if (freeCpu <= 0)
 		{
 			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d Interruption", pcb->pid);
+			log_info(logger, "PID #%d requests interruption", pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
 
-			socket_send_header(cpu_interrupt_socket, INTERRUPT);
-
-			// Se espera a que vuelva de CPU
-			sem_wait(&interrupt_ready);
+			sem_getvalue(&cpu_free, &freeCpu);
+			if (freeCpu <= 0)
+			{
+				// Pide desalojo del proceso tomando la CPU actualmente
+				socket_send_header(cpu_interrupt_socket, INTERRUPT);
+				// Se espera a que vuelva de CPU
+				sem_wait(&interrupt_ready);
+			}
 		}
 	}
 
-	pthread_mutex_unlock(&execution_mutex);
 	sem_post(&ready_for_exec);
+	pthread_mutex_unlock(&execution_mutex);
 }
 
 void *to_ready()
@@ -529,29 +531,34 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 bool handle_interruption(t_packet *petition, int cpu_socket)
 {
 	t_pcb *received_pcb = create_pcb();
-	stream_take_pcb(petition, received_pcb);
+	uint32_t has_pcb = stream_take_UINT32(petition->payload);
 
-	if (!!received_pcb)
+	if (has_pcb)
 	{
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Successfully kicked out process #%d from CPU", received_pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
+		stream_take_pcb(petition, received_pcb);
 
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+		if (!!received_pcb)
+		{
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "Successfully kicked out process #%d from CPU", received_pcb->pid);
+			pthread_mutex_unlock(&mutex_log);
 
-		int ms_passed = time_to_ms(toExec) - time_to_ms(fromExec);
-		received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - ms_passed;
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
-		pthread_mutex_unlock(&mutex_log);
+			int ms_passed = time_to_ms(toExec) - time_to_ms(fromExec);
+			received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - ms_passed;
 
-		pQueue_put(ready_q, received_pcb);
+			pthread_mutex_lock(&mutex_log);
+			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
+			pthread_mutex_unlock(&mutex_log);
 
-		sem_post(&ready_for_exec);
+			pQueue_put(ready_q, received_pcb);
+
+			sem_post(&ready_for_exec);
+		}
+		sem_post(&cpu_free);
 	}
 
-	sem_post(&cpu_free);
 	sem_post(&interrupt_ready);
 
 	return true;
@@ -613,7 +620,7 @@ bool exit_op(t_packet *petition, int cpu_socket)
 	return false;
 }
 
-bool (*kernel_handlers[8])(t_packet *petition, int console_socket) =
+bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
 	{
 		// NEW_PROCESS
 		receive_process,
@@ -623,8 +630,6 @@ bool (*kernel_handlers[8])(t_packet *petition, int console_socket) =
 		exit_op,
 		// INTERRUPT_DISPATCH
 		handle_interruption,
-		// SUSPEND
-		NULL,
 		// PROCESS_MEMORY_READY
 		table_index_success,
 		// PROCESS_EXIT_READY

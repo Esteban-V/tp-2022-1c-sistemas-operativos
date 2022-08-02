@@ -61,3 +61,13 @@ enum operation get_op(char *op)
 	else
 		return DEAD;
 }
+
+uint32_t get_page_number(uint32_t address)
+{
+	return floor(address / config->pageSize);
+}
+
+uint32_t get_offset(uint32_t address)
+{
+	return address - (get_page_number(address) * config->pageSize);
+}

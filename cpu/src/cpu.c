@@ -21,14 +21,11 @@ int main()
 
 	sem_init(&pcb_loaded, 0, 0);
 	pthread_mutex_init(&mutex_has_interruption, NULL);
+	sem_init(&value_loaded, 0, 0);
+	pthread_mutex_init(&mutex_value, NULL);
 
 	new_interruption = false;
-
-	pthread_create(&interruptionThread, 0, listen_interruption, NULL);
-	pthread_detach(interruptionThread);
-
-	pthread_create(&execThread, 0, cpu_cycle, NULL);
-	pthread_detach(execThread);
+	read_value = NULL;
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 
@@ -37,14 +34,30 @@ int main()
 		terminate_cpu(true);
 	}
 
+	// pthread_create(&memoryThread, 0, get_read_value, NULL);
+	// pthread_detach(memoryThread);
+
 	// Handshake con memoria
 	memory_handshake();
-
 	tlb = create_tlb();
+
+	pthread_create(&interruptionThread, 0, listen_interruption, NULL);
+	pthread_detach(interruptionThread);
+
+	pthread_create(&execThread, 0, cpu_cycle, NULL);
+	pthread_detach(execThread);
 
 	while (1)
 	{
 		server_listen(kernel_dispatch_socket, dispatch_header_handler);
+	}
+}
+
+void *get_read_value()
+{
+	while (1)
+	{
+		server_listen(memory_server_socket, packet_handler);
 	}
 }
 
@@ -59,6 +72,7 @@ void *listen_interruption()
 void pcb_to_kernel(kernel_headers header)
 {
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(pcb_packet->payload, 1);
 	stream_add_pcb(pcb_packet, pcb);
 
 	pthread_mutex_lock(&mutex_kernel_socket);
@@ -75,14 +89,36 @@ void pcb_to_kernel(kernel_headers header)
 	packet_destroy(pcb_packet);
 	clean_tlb(tlb);
 	pcb_destroy(pcb);
+
+	// Resetea la interrupcion
+	pthread_mutex_lock(&mutex_has_interruption);
+	new_interruption = false;
+	pthread_mutex_unlock(&mutex_has_interruption);
 }
 
-bool (*cpu_handlers[2])(t_packet *petition, int console_socket) =
+void release_interruption()
+{
+	t_packet *no_pcb_packet = create_packet(INTERRUPT_DISPATCH, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(no_pcb_packet->payload, 0);
+
+	pthread_mutex_lock(&mutex_kernel_socket);
+	if (kernel_client_socket != -1)
+	{
+		socket_send_packet(kernel_client_socket, no_pcb_packet);
+	}
+	pthread_mutex_unlock(&mutex_kernel_socket);
+
+	packet_destroy(no_pcb_packet);
+}
+
+bool (*cpu_handlers[3])(t_packet *petition, int console_socket) =
 	{
 		// PCB_TO_CPU
 		receive_pcb,
 		// INTERRUPT
 		receive_interruption,
+		// VALUE_TO_CPU
+		// receive_value,
 };
 
 void *dispatch_header_handler(void *_client_socket)
@@ -100,7 +136,7 @@ void *header_handler(void *_client_socket)
 	while (serve)
 	{
 		uint8_t header = socket_receive_header(_client_socket);
-		if (header == MEM_HANDSHAKE)
+		if (header == INTERRUPT)
 		{
 			serve = cpu_handlers[header](NULL, (int)_client_socket);
 		}
@@ -123,7 +159,10 @@ void *packet_handler(void *_client_socket)
 			}
 		}
 
-		serve = cpu_handlers[packet->header](packet, (int)_client_socket);
+		if (packet->header != TABLE_INFO_TO_CPU)
+		{
+			serve = cpu_handlers[packet->header](packet, (int)_client_socket);
+		}
 		packet_destroy(packet);
 	}
 	return 0;
@@ -142,7 +181,7 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 		sem_post(&pcb_loaded);
 		return true;
 	}
-	return false;
+	return true;
 }
 
 bool receive_interruption(t_packet *_petition, int kernel_socket)
@@ -157,6 +196,25 @@ bool receive_interruption(t_packet *_petition, int kernel_socket)
 
 	return true;
 }
+
+/* bool receive_value(t_packet *petition, int mem_socket)
+{
+	uint32_t value = stream_take_UINT32(petition->payload);
+	if (value != NULL)
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Read %d from memory", value);
+		pthread_mutex_unlock(&mutex_log);
+
+		pthread_mutex_lock(&mutex_value);
+		read_value = value;
+		pthread_mutex_unlock(&mutex_value);
+
+		sem_post(&value_loaded);
+		return true;
+	}
+	return false;
+} */
 
 void (*execute[6])(t_list *params) =
 	{
@@ -181,18 +239,25 @@ void *cpu_cycle()
 
 			// Checkea interrupcion
 			pthread_mutex_lock(&mutex_has_interruption);
-			if (new_interruption && !!pcb)
+			if (new_interruption)
 			{
 				// Resetea la interrupcion
 				new_interruption = false;
 				pthread_mutex_unlock(&mutex_has_interruption);
 
-				pthread_mutex_lock(&mutex_log);
-				log_info(logger, "Encountered interruption, sending to kernel");
-				pthread_mutex_unlock(&mutex_log);
+				if (!!pcb)
+				{
+					pthread_mutex_lock(&mutex_log);
+					log_warning(logger, "Encountered interruption, kicking out process #%d", pcb->pid);
+					pthread_mutex_unlock(&mutex_log);
 
-				// Desalojar proceso actual
-				pcb_to_kernel(INTERRUPT_DISPATCH);
+					// Desalojar proceso actual
+					pcb_to_kernel(INTERRUPT_DISPATCH);
+				}
+				else
+				{
+					release_interruption();
+				}
 			}
 			else
 			{
@@ -248,45 +313,83 @@ void execute_io(t_list *params)
 
 void execute_read(t_list *params)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Executing read");
-	pthread_mutex_unlock(&mutex_log);
-
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 
-	uint32_t page_number = floor(l_address / config->pageSize);
-	uint32_t frame = get_frame(pcb->page_table, page_number);
-	uint32_t offset = l_address - (page_number * config->pageSize);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Executing read of value in %d", l_address);
+	pthread_mutex_unlock(&mutex_log);
+
+	uint32_t page_number = get_page_number(l_address);
+	uint32_t frame = get_frame(page_number);
+	uint32_t offset = get_offset(l_address);
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Request to read frame %d", frame);
+	pthread_mutex_unlock(&mutex_log);
 
 	memory_op(READ_CALL, frame, offset, NULL);
+	sem_wait(&value_loaded);
+
+	pthread_mutex_lock(&mutex_log);
+	pthread_mutex_lock(&mutex_value);
+	log_info(logger, "Read %d in memory", read_value);
+	pthread_mutex_unlock(&mutex_value);
+	pthread_mutex_unlock(&mutex_log);
 }
 
 void execute_copy(t_list *params)
 {
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Executing copy");
-	pthread_mutex_unlock(&mutex_log);
-
 	uint32_t l_address = *((uint32_t *)list_get(params, 0));
 	uint32_t l_value_address = *((uint32_t *)list_get(params, 1));
 
-	// uint32_t value = fetch_operand(l_value_address);
-	// write_op(l_address, value);
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Executing copy from %d to %d", l_value_address, l_address);
+	pthread_mutex_unlock(&mutex_log);
+
+	uint32_t val_page_number = get_page_number(l_value_address);
+	uint32_t val_frame = get_frame(val_page_number);
+	uint32_t val_offset = get_offset(l_value_address);
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Request to read frame %d", val_frame);
+	pthread_mutex_unlock(&mutex_log);
+
+	memory_op(READ_CALL, val_frame, val_offset, NULL);
+	sem_wait(&value_loaded);
+
+	pthread_mutex_lock(&mutex_value);
+	log_info(logger, "Read %d in memory", read_value);
+	pthread_mutex_unlock(&mutex_value);
+
+	uint32_t page_number = get_page_number(l_address);
+	uint32_t frame = get_frame(page_number);
+	uint32_t offset = get_offset(l_address);
+
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Request to write at frame %d", frame);
+	pthread_mutex_unlock(&mutex_log);
+
+	pthread_mutex_lock(&mutex_value);
+	memory_op(WRITE_CALL, frame, offset, read_value);
+	pthread_mutex_unlock(&mutex_value);
 }
 
 void execute_write(t_list *params)
 {
+	uint32_t l_address = *((uint32_t *)list_get(params, 0));
+	uint32_t value = *((uint32_t *)list_get(params, 1));
+
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Executing write");
+	log_info(logger, "Executing write of %d in %d", value, l_address);
 	pthread_mutex_unlock(&mutex_log);
 
-	uint32_t l_address = *((uint32_t *)list_get(params, 0));
+	uint32_t page_number = get_page_number(l_address);
+	uint32_t frame = get_frame(page_number);
+	uint32_t offset = get_offset(l_address);
 
-	uint32_t page_number = floor(l_address / config->pageSize);
-	uint32_t frame = get_frame(pcb->page_table, page_number);
-	uint32_t offset = l_address - (page_number * config->pageSize);
-
-	uint32_t value = *((uint32_t *)list_get(params, 1));
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "Request to write at frame %d", frame);
+	pthread_mutex_unlock(&mutex_log);
 
 	memory_op(WRITE_CALL, frame, offset, value);
 }
@@ -324,18 +427,19 @@ void memory_handshake()
 	packet_destroy(mem_data);
 }
 
-uint32_t get_frame(uint32_t pt1_index, uint32_t page_number)
+uint32_t get_frame(uint32_t page_number)
 {
 	uint32_t frame = find_tlb_entry(page_number);
 	if (frame != -1)
 	{
+		printf("found in tlb\n");
 		return frame;
 	}
 
 	uint32_t lvl1_entry_index = floor(page_number / config->entriesPerTable);
 
 	t_packet *lvl1_table_request = create_packet(LVL1_TABLE, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(lvl1_table_request->payload, pt1_index);
+	stream_add_UINT32(lvl1_table_request->payload, pcb->page_table);
 	stream_add_UINT32(lvl1_table_request->payload, lvl1_entry_index);
 	socket_send_packet(memory_server_socket, lvl1_table_request);
 
@@ -345,13 +449,16 @@ uint32_t get_frame(uint32_t pt1_index, uint32_t page_number)
 	if (lvl2_data->header == TABLE2_TO_CPU)
 	{
 		uint32_t pt2_index = stream_take_UINT32(lvl2_data->payload);
+
 		packet_destroy(lvl2_data);
 
 		uint32_t lvl2_entry_index = page_number % config->entriesPerTable;
 
 		t_packet *lvl2_table_request = create_packet(LVL2_TABLE, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(lvl2_table_request->payload, pcb->pid);
 		stream_add_UINT32(lvl2_table_request->payload, pt2_index);
 		stream_add_UINT32(lvl2_table_request->payload, lvl2_entry_index);
+		stream_add_UINT32(lvl2_table_request->payload, pcb->frames_index);
 		socket_send_packet(memory_server_socket, lvl2_table_request);
 
 		packet_destroy(lvl2_table_request);
@@ -359,25 +466,42 @@ uint32_t get_frame(uint32_t pt1_index, uint32_t page_number)
 		t_packet *frame_data = socket_receive_packet(memory_server_socket);
 		if (frame_data->header == FRAME_TO_CPU)
 		{
-			uint32_t frame = stream_take_UINT32(frame_data->payload);
+			frame = stream_take_UINT32(frame_data->payload);
 			packet_destroy(frame_data);
 
 			add_tlb_entry(page_number, frame);
 			return frame;
 		}
 	}
+
+	return frame;
 }
 
 void memory_op(enum memory_headers header, uint32_t frame, uint32_t offset, uint32_t value)
 {
-	t_packet *read_request = create_packet(header, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(read_request->payload, frame);
-	stream_add_UINT32(read_request->payload, offset);
+	t_packet *request = create_packet(header, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(request->payload, frame);
+	stream_add_UINT32(request->payload, offset);
 	if (value != NULL)
-		stream_add_UINT32(read_request->payload, value);
-	socket_send_packet(memory_server_socket, read_request);
+		stream_add_UINT32(request->payload, value);
+	stream_add_UINT32(request->payload, pcb->frames_index);
 
-	packet_destroy(read_request);
+	socket_send_packet(memory_server_socket, request);
+
+	packet_destroy(request);
+
+	if (header == READ_CALL)
+	{
+		t_packet *value_response = socket_receive_packet(memory_server_socket);
+		if (value_response->header == VALUE_TO_CPU)
+		{
+			pthread_mutex_lock(&mutex_value);
+			read_value = stream_take_UINT32(value_response->payload);
+			pthread_mutex_unlock(&mutex_value);
+			sem_post(&value_loaded);
+		}
+		packet_destroy(value_response);
+	}
 }
 
 void stats()

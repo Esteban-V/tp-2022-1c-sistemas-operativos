@@ -31,7 +31,7 @@ int main()
 	level1_tables = list_create();
 	level2_tables = list_create();
 
-	processes_frames = list_create();
+	global_frames = list_create();
 
 	sem_init(&writeRead, 0, 1);
 
@@ -46,9 +46,10 @@ int main()
 	page_assignment_counter = 0;
 	page_replacement_counter = 0;
 
-	cpu_handshake_listener();
+	int cpu_client_socket = cpu_handshake_listener();
 
-	// TODO hilo de swap
+	pthread_create(&cpuThread, NULL, packet_handler, cpu_client_socket);
+	pthread_detach(cpuThread);
 
 	while (1)
 	{
@@ -60,8 +61,8 @@ bool (*memory_handlers[8])(t_packet *petition, int socket) =
 	{
 		// PROCESS_NEW
 		process_new,
-		NULL,
-		// LVL1_TABLE
+		NULL, // Handshake
+			  // LVL1_TABLE
 		access_lvl1_table,
 		// LVL2_TABLE
 		access_lvl2_table,
@@ -99,7 +100,7 @@ void *packet_handler(void *_client_socket)
 	return 0;
 }
 
-void cpu_handshake_listener()
+int cpu_handshake_listener()
 {
 	int client_socket = accept_client(server_socket);
 	bool serve = true;
@@ -111,6 +112,7 @@ void cpu_handshake_listener()
 			serve = cpu_handshake(client_socket);
 		}
 	}
+	return client_socket;
 }
 
 bool cpu_handshake(int cpu_socket)
@@ -214,7 +216,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 bool process_exit(t_packet *petition, int kernel_socket)
 {
-	void _free_frames(void *elem)
+	/* void _free_frames(void *elem)
 	{
 		int pt2_index = *((int *)elem);
 		t_ptbr2 *pt2 = get_page_table2(pt2_index);
@@ -229,7 +231,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 				uint32_t frame = entry->frame;
 			}
 		}
-	};
+	}; */
 
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
@@ -310,6 +312,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	uint32_t frame = stream_take_UINT32(petition->payload);
 	uint32_t offset = stream_take_UINT32(petition->payload);
 	uint32_t value = stream_take_UINT32(petition->payload);
+	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
 	if (frame != NULL)
 	{
@@ -320,8 +323,15 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		log_info(logger, "Memory write request");
 		pthread_mutex_unlock(&mutex_log);
 
-		// Write
-		// TODO
+		void *frame_ptr = get_frame(frame);
+		write_frame_value(frame_ptr, offset, value);
+
+		set_page_bits((int)frames_index, (int)frame, false);
+		// used = true / modified = true
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Memory wrote at frame %d + offset %d / value %d", frame, offset, value);
+		pthread_mutex_unlock(&mutex_log);
 
 		sem_post(&writeRead);
 	}
@@ -333,6 +343,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 {
 	uint32_t frame = stream_take_UINT32(petition->payload);
 	uint32_t offset = stream_take_UINT32(petition->payload);
+	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
 	if (frame != NULL)
 	{
@@ -344,11 +355,20 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		void *frame_ptr = get_frame(frame);
-		uint32_t value = read_frame_value(frame, offset);
+		uint32_t value = read_frame_value(frame_ptr, offset);
+
+		set_page_bits((int)frames_index, (int)frame, false);
+		// used = true
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Memory read %d at address %d - %d", value, frame, offset);
+		log_info(logger, "Memory read at frame %d + offset %d", frame, offset);
 		pthread_mutex_unlock(&mutex_log);
+
+		t_packet *response = create_packet(VALUE_TO_CPU, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, value);
+
+		socket_send_packet(cpu_socket, response);
+		packet_destroy(response);
 
 		sem_post(&writeRead);
 	}
@@ -362,7 +382,7 @@ t_memory *memory_init()
 
 	// Crea espacio de memoria contiguo
 	t_memory *mem = malloc(sizeof(t_memory));
-	mem->memory = calloc(cant_frames, sizeof(uint32_t));
+	mem->memory = calloc(cant_frames, config->pageSize);
 
 	// Crea bitmap de frames libres/ocupados
 	void *ptr = malloc(cant_frames);
@@ -397,7 +417,7 @@ void terminate_memory(int x)
 	bitarray_destroy(frames_bitmap);
 	list_destroy(level1_tables);
 	list_destroy(level2_tables);
-	list_destroy(processes_frames);
+	list_destroy(global_frames);
 	destroyMemoryConfig(config);
 
 	if (server_socket)

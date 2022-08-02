@@ -42,46 +42,77 @@ void *get_frame(uint32_t frame_number)
 uint32_t read_frame_value(void *frame_ptr, uint32_t offset)
 {
     // Todos los valores a leer/escribir en memoria serán numéricos enteros no signados de 4 bytes
-    uint32_t value=0;
-    memcpy(frame_ptr + offset, &value, sizeof(uint32_t));
+    uint32_t *value;
+    memcpy(&value, frame_ptr + offset, sizeof(uint32_t));
     return value;
 }
 
-// Retorna toda la pagina de pageSize ubicada en el frame (con comienzo en frame_ptr)
-void *get_frame_value(void *frame_ptr)
+// Retorna toda la pagina ubicada en el frame (con comienzo en frame_ptr)
+void *read_frame(void *frame_ptr)
 {
     void *value;
     memcpy(&value, frame_ptr, config->pageSize);
     return value;
 }
 
-// Escribe en toda la pagina de pageSize ubicada en el frame (con comienzo en frame_ptr) el valor recibido
-void write_frame_value(void *frame_ptr, void *value)
+// Escribe un valor de 32 bits/4 bytes ubicados en el frame (con comienzo en frame_ptr) + un desplazamiento
+void write_frame_value(void *frame_ptr, uint32_t offset, uint32_t value)
 {
-    memcpy(frame_ptr, &value, config->pageSize);
+    memcpy(frame_ptr + offset, &value, sizeof(uint32_t));
+}
+
+// Escribe/pisa toda la pagina ubicada en el frame (con comienzo en frame_ptr)
+void write_frame(void *frame_ptr, void *new_page)
+{
+    memcpy(frame_ptr, &new_page, config->pageSize);
+}
+
+// Settea los bits de uso y modificado de una pagina leida/escrita
+void set_page_bits(int frames_index, int frame, bool modified)
+{
+    t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
+    t_frame_entry *frame_entry = find_frame(process_frames, frame);
+
+    frame_entry->page_data->used = true;
+    frame_entry->page_data->modified = modified;
 }
 
 // Determina si de las framesPerProcess frames asignadas al proceso, hay libres para cargarles paginas
 bool has_free_frame(t_process_frame *process_frames)
 {
-    bool _has_frame(void *entry)
+    bool _is_in_use(void *_entry)
     {
-        return ((t_frame_entry *)entry)->frame != -1;
+        t_frame_entry *entry = (t_frame_entry *)_entry;
+        return entry->page_data != NULL;
     };
 
-    int cant_present = list_count_satisfying(process_frames->frames, _has_frame);
-    return cant_present < config->framesPerProcess;
+    int in_use = list_count_satisfying(process_frames->frames, _is_in_use);
+
+    return in_use < config->framesPerProcess;
 }
 
-t_frame_entry * find_first_free_frame(t_process_frame *process_frames)
+t_frame_entry *find_first_free_frame(t_process_frame *process_frames)
 {
 
-    bool _is_free(void *entry)
+    bool _is_free(void *_entry)
     {
-        return ((t_frame_entry *)entry)->frame != -1;
+        t_frame_entry *entry = (t_frame_entry *)_entry;
+        return entry->page_data == NULL;
     };
 
-    return (t_frame_entry *) list_find(process_frames->frames, _is_free);
+    return (t_frame_entry *)list_find(process_frames->frames, _is_free);
+}
+
+t_frame_entry *find_frame(t_process_frame *process_frames, int frame)
+{
+
+    bool _is_frame(void *_entry)
+    {
+        t_frame_entry *entry = (t_frame_entry *)_entry;
+        return entry->frame == frame && entry->page_data->present;
+    };
+
+    return (t_frame_entry *)list_find(process_frames->frames, _is_frame);
 }
 
 int find_first_unassigned_frame(t_bitarray *bitmap)

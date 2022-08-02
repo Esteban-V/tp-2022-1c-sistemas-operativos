@@ -2,6 +2,7 @@
 #define UTILS_H_
 
 #include <commons/config.h>
+#include <math.h>
 
 #include "pcb_utils.h"
 #include "tlb.h"
@@ -38,5 +39,8 @@ t_cpu_config *config;
 
 void destroy_cpu_config(t_cpu_config *cpu_config);
 t_cpu_config *get_cpu_config(char *path);
+
+uint32_t get_page_number(uint32_t address);
+uint32_t get_offset(uint32_t address);
 
 #endif /* UTILS_H_ */
