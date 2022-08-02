@@ -467,9 +467,11 @@ uint32_t mmu(int logicDir){
 				socket_send_packet(memory_server_socket, sdPageTable);
 				sem_wait(&waiting_frame);
 	}
-	uint32_t fisicDir = received_frame+offset;
-	
-	return fisicDir;
+	uint32_t physicDir = received_frame+offset;
+	pthread_mutex_lock(&mutex_log);
+	log_info(logger, "MMU made %d dir",physicDir);
+	pthread_mutex_unlock(&mutex_log);
+	return physicDir;
 }
 
 bool receive_frame(t_packet *petition, int kernel_socket)

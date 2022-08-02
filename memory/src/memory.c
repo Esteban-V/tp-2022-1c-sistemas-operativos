@@ -101,6 +101,7 @@ void *packet_handler(void *_client_socket)
 
 void cpu_handshake_listener()
 {
+
 	int client_socket = accept_client(server_socket);
 	bool serve = true;
 	while (serve)
@@ -385,8 +386,8 @@ t_memory *memory_init()
 	int cant_frames = config->framesInMemory;
 
 	// Crea espacio de memoria contiguo
-	//t_memory *mem = malloc(sizeof(t_memory));
-	t_memory *mem = malloc(config->memorySize);
+	t_memory *mem = malloc(sizeof(t_memory));
+	mem->memory = malloc(config->memorySize);
 	//mem->memory = calloc(cant_frames, sizeof(uint32_t));
 	memset(mem->memory,0,config->memorySize);
 
