@@ -9,6 +9,8 @@ int main()
 	logger = log_create("./cfg/cpu-final.log", "CPU", 1, LOG_LEVEL_TRACE);
 	config = get_cpu_config("./cfg/cpu.config");
 
+	lastPCB=0;
+
 	// Creacion de server
 	kernel_dispatch_socket = create_server(config->dispatchListenPort);
 	kernel_interrupt_socket = create_server(config->interruptListenPort);

@@ -60,6 +60,7 @@ int kernel_client_socket;
 int memory_server_socket;
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
+int lastPCB;
 
 bool bussyCpu();
 

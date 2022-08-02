@@ -200,12 +200,11 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				unassign_process_frames((int)process_frames_index);
 			}
 		}
-		
+
+//		socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
 		t_packet *response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
-
-		stream_add_UINT32(response->payload, 1);
 		socket_send_packet(kernel_socket, response);
-
+ 
 		packet_destroy(response);
 		
 		//socket_send_header(kernel_socket, PROCESS_SUSPENSION_READY);
@@ -217,7 +216,8 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		 */
 	}
 
-	return false;
+
+	return true;
 }
 
 bool process_exit(t_packet *petition, int kernel_socket)
