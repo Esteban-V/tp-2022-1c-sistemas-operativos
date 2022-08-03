@@ -42,6 +42,7 @@ bool receive_value(t_packet *petition, int mem_socket);
 
 void *cpu_cycle();
 enum operation fetch_and_decode(t_instruction **instruction);
+void check_interrupt();
 
 void execute_no_op();
 void execute_io(t_list *params);

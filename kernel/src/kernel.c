@@ -90,6 +90,7 @@ int main(void)
 	pthread_create(&memory_t, NULL, memory_listener, NULL);
 	pthread_detach(memory_t);
 
+	// IO thread
 	pthread_create(&io_t, NULL, io_listener, NULL);
 	pthread_detach(io_t);
 
@@ -336,7 +337,6 @@ void *new_to_ready()
 	pthread_mutex_unlock(&mutex_log);
 
 	put_to_ready(pcb);
-	return 0;
 }
 
 void *suspended_to_ready()
@@ -347,7 +347,7 @@ void *suspended_to_ready()
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "TODO: PID #%d [SUSPENDED READY] --> [READY]", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
-	
+
 	// Manejar memoria, sacar de suspendido y traer a "ram"
 	put_to_ready(pcb);
 }
@@ -388,7 +388,9 @@ void put_to_ready(t_pcb *pcb)
 				// Pide desalojo del proceso tomando la CPU actualmente
 				socket_send_header(cpu_interrupt_socket, INTERRUPT);
 				// Se espera a que vuelva de CPU
+				printf("wait interrupt ready\n");
 				sem_wait(&interrupt_ready);
+				printf("interrupt ready was posted\n");
 			}
 		}
 	}
@@ -454,7 +456,7 @@ bool table_index_success(t_packet *petition, int mem_socket)
 		terminate_kernel(true);
 	}
 
-	return false;
+	return true;
 }
 
 bool suspension_success(t_packet *petition, int mem_socket)
@@ -491,7 +493,7 @@ bool suspension_success(t_packet *petition, int mem_socket)
 		terminate_kernel(true);
 	}
 
-	return false;
+	return true;
 }
 
 bool exit_process_success(t_packet *petition, int mem_socket) // posible problema de sems aca
@@ -525,16 +527,20 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 	}
 
 	sem_post(&sem_multiprogram);
-	return false;
+	return true;
 }
 
 bool handle_interruption(t_packet *petition, int cpu_socket)
 {
-	t_pcb *received_pcb = create_pcb();
-	uint32_t has_pcb = stream_take_UINT32(petition->payload);
+	printf("handle int\n");
 
+	sem_post(&cpu_free);
+
+	uint32_t has_pcb = stream_take_UINT32(petition->payload);
+	printf("has pcb? %d\n", has_pcb);
 	if (has_pcb)
 	{
+		t_pcb *received_pcb = create_pcb();
 		stream_take_pcb(petition, received_pcb);
 
 		if (!!received_pcb)
@@ -556,9 +562,13 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 
 			sem_post(&ready_for_exec);
 		}
-		sem_post(&cpu_free);
+	}
+	else
+	{
+		printf("interruption was released\n");
 	}
 
+	printf("post interrupt ready\n");
 	sem_post(&interrupt_ready);
 
 	return true;
@@ -566,9 +576,14 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 
 bool io_op(t_packet *petition, int cpu_socket)
 {
+	sem_post(&cpu_free);
 
+	pthread_mutex_lock(&execution_mutex);
+	printf("io op\n");
 	t_pcb *received_pcb = create_pcb();
+	printf("crea pcb\n");
 	stream_take_pcb(petition, received_pcb);
+	printf("take pcb??\n");
 
 	if (!!received_pcb)
 	{
@@ -594,14 +609,17 @@ bool io_op(t_packet *petition, int cpu_socket)
 
 		pQueue_put(blocked_q, (void *)received_pcb);
 
-		sem_post(&cpu_free);
 		sem_post(&process_for_IO);
 	}
+	pthread_mutex_unlock(&execution_mutex);
+
 	return true;
 }
 
 bool exit_op(t_packet *petition, int cpu_socket)
 {
+	sem_post(&cpu_free);
+
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
 
@@ -612,12 +630,8 @@ bool exit_op(t_packet *petition, int cpu_socket)
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(exit_q, (void *)received_pcb);
-
-		sem_post(&cpu_free);
-
-		return true;
 	}
-	return false;
+	return true;
 }
 
 bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =

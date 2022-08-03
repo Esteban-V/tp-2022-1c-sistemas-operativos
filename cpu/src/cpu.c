@@ -72,7 +72,8 @@ void *listen_interruption()
 void pcb_to_kernel(kernel_headers header)
 {
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(pcb_packet->payload, 1);
+	if (header == INTERRUPT_DISPATCH)
+		stream_add_UINT32(pcb_packet->payload, 1);
 	stream_add_pcb(pcb_packet, pcb);
 
 	pthread_mutex_lock(&mutex_kernel_socket);
@@ -98,12 +99,17 @@ void pcb_to_kernel(kernel_headers header)
 
 void release_interruption()
 {
+	pthread_mutex_lock(&mutex_log);
+	log_warning(logger, "CPU is not loaded, releasing interruption");
+	pthread_mutex_unlock(&mutex_log);
+
 	t_packet *no_pcb_packet = create_packet(INTERRUPT_DISPATCH, INITIAL_STREAM_SIZE);
-	stream_add_UINT32(no_pcb_packet->payload, 0);
+	stream_add_UINT32(no_pcb_packet->payload, (uint32_t)0);
 
 	pthread_mutex_lock(&mutex_kernel_socket);
 	if (kernel_client_socket != -1)
 	{
+		printf("send packettt\n");
 		socket_send_packet(kernel_client_socket, no_pcb_packet);
 	}
 	pthread_mutex_unlock(&mutex_kernel_socket);
@@ -186,13 +192,20 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 
 bool receive_interruption(t_packet *_petition, int kernel_socket)
 {
-	pthread_mutex_lock(&mutex_has_interruption);
-	new_interruption = true;
-	pthread_mutex_unlock(&mutex_has_interruption);
+	if (!!pcb && !!pcb->pid)
+	{
+		pthread_mutex_lock(&mutex_has_interruption);
+		new_interruption = true;
+		pthread_mutex_unlock(&mutex_has_interruption);
 
-	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "Interruption received");
-	pthread_mutex_unlock(&mutex_log);
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Interruption received");
+		pthread_mutex_unlock(&mutex_log);
+	}
+	else
+	{
+		release_interruption();
+	}
 
 	return true;
 }
@@ -230,45 +243,52 @@ void *cpu_cycle()
 {
 	while (1)
 	{
+		check_interrupt();
+
 		sem_wait(&pcb_loaded);
-		while (!!pcb && pcb->program_counter < list_size(pcb->instructions))
+		while (!!pcb && !!pcb->pid && pcb->program_counter < list_size(pcb->instructions))
 		{
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
 			execute[op](instruction->params);
-
-			// Checkea interrupcion
-			pthread_mutex_lock(&mutex_has_interruption);
-			if (new_interruption)
-			{
-				// Resetea la interrupcion
-				new_interruption = false;
-				pthread_mutex_unlock(&mutex_has_interruption);
-
-				if (!!pcb)
-				{
-					pthread_mutex_lock(&mutex_log);
-					log_warning(logger, "Encountered interruption, kicking out process #%d", pcb->pid);
-					pthread_mutex_unlock(&mutex_log);
-
-					// Desalojar proceso actual
-					pcb_to_kernel(INTERRUPT_DISPATCH);
-				}
-				else
-				{
-					release_interruption();
-				}
-			}
-			else
-			{
-				pthread_mutex_unlock(&mutex_has_interruption);
-			}
+			check_interrupt();
 		}
-
-		// Mandar el proceso al kernel en caso de que no haya un EXIT?
+		// TODO: Definir si mandar el proceso al kernel en caso de que no haya un EXIT
 		// pcb_to_kernel(EXIT_CALL);
 	}
 	return 0;
+}
+
+void check_interrupt()
+{
+	// Checkea interrupcion
+	pthread_mutex_lock(&mutex_has_interruption);
+	if (new_interruption)
+	{
+		// Resetea la interrupcion
+		new_interruption = false;
+		pthread_mutex_unlock(&mutex_has_interruption);
+
+		if (!!pcb && !!pcb->pid)
+		{
+			pthread_mutex_lock(&mutex_log);
+			log_warning(logger, "Encountered interruption, kicking out process #%d", pcb->pid);
+			pthread_mutex_unlock(&mutex_log);
+
+			// Desalojar proceso actual
+			pcb_to_kernel(INTERRUPT_DISPATCH);
+		}
+		else
+		{
+			// Avisa a kernel que se libero la CPU previo al chequeo de la interrupcion
+			// y que no debe esperar el desalojo
+			release_interruption();
+		}
+	}
+	else
+	{
+		pthread_mutex_unlock(&mutex_has_interruption);
+	}
 }
 
 enum operation fetch_and_decode(t_instruction **instruction)
@@ -330,11 +350,11 @@ void execute_read(t_list *params)
 	memory_op(READ_CALL, frame, offset, NULL);
 	sem_wait(&value_loaded);
 
-	pthread_mutex_lock(&mutex_log);
 	pthread_mutex_lock(&mutex_value);
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Read %d in memory", read_value);
-	pthread_mutex_unlock(&mutex_value);
 	pthread_mutex_unlock(&mutex_log);
+	pthread_mutex_unlock(&mutex_value);
 }
 
 void execute_copy(t_list *params)
@@ -358,7 +378,9 @@ void execute_copy(t_list *params)
 	sem_wait(&value_loaded);
 
 	pthread_mutex_lock(&mutex_value);
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Read %d in memory", read_value);
+	pthread_mutex_unlock(&mutex_log);
 	pthread_mutex_unlock(&mutex_value);
 
 	uint32_t page_number = get_page_number(l_address);
@@ -432,7 +454,6 @@ uint32_t get_frame(uint32_t page_number)
 	uint32_t frame = find_tlb_entry(page_number);
 	if (frame != -1)
 	{
-		printf("found in tlb\n");
 		return frame;
 	}
 

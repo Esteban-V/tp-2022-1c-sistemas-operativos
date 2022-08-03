@@ -57,7 +57,7 @@ int main()
 	}
 }
 
-bool (*memory_handlers[8])(t_packet *petition, int socket) =
+bool (*memory_handlers[9])(t_packet *petition, int socket) =
 	{
 		// PROCESS_NEW
 		process_new,
