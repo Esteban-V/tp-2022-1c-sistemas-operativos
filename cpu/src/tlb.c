@@ -34,6 +34,7 @@ t_tlb *create_tlb()
     {
         t_tlb_entry *entry = &tlb->entries[i];
         entry->isFree = true;
+        entry->index = i;
     }
 
     return tlb;
@@ -86,12 +87,15 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
     {
         pthread_mutex_lock(&tlb_mutex);
         t_tlb_entry *entry = &tlb->entries[i];
+        pthread_mutex_unlock(&tlb_mutex);
+
         if (entry->isFree)
         {
             entry->page = page;
             entry->frame = frame;
             entry->isFree = false;
 
+            pthread_mutex_lock(&tlb_mutex);
             pQueue_put(tlb->victims, entry);
             pthread_mutex_unlock(&tlb_mutex);
 
@@ -113,8 +117,8 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
             t_tlb_entry *victim = pQueue_take(tlb->victims);
 
             pthread_mutex_lock(&mutex_log);
-            log_info(logger, "TLB replacement for page %d --> %d / frame %d --> %d",
-                     victim->page, page, victim->frame, frame);
+            log_info(logger, "TLB replacement at entry #%d for page %d --> %d / frame %d --> %d",
+                     victim->index, victim->page, page, victim->frame, frame);
             pthread_mutex_unlock(&mutex_log);
 
             victim->page = page;

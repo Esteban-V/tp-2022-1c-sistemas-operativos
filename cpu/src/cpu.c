@@ -109,7 +109,6 @@ void release_interruption()
 	pthread_mutex_lock(&mutex_kernel_socket);
 	if (kernel_client_socket != -1)
 	{
-		printf("send packettt\n");
 		socket_send_packet(kernel_client_socket, no_pcb_packet);
 	}
 	pthread_mutex_unlock(&mutex_kernel_socket);

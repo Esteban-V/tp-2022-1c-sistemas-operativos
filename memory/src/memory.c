@@ -340,7 +340,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	uint32_t value = stream_take_UINT32(petition->payload);
 	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
-	if (frame != NULL)
+	if (frame != NULL && frame != -1)
 	{
 		memory_write_counter++;
 		sem_wait(&writeRead);
@@ -361,6 +361,11 @@ bool memory_write(t_packet *petition, int cpu_socket)
 
 		sem_post(&writeRead);
 	}
+	else
+	{
+		terminate_memory(true);
+		return false;
+	}
 
 	return true;
 }
@@ -371,7 +376,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 	uint32_t offset = stream_take_UINT32(petition->payload);
 	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
-	if (frame != NULL)
+	if (frame != NULL && frame != -1)
 	{
 		memory_read_counter++;
 		sem_wait(&writeRead);
@@ -397,6 +402,11 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		packet_destroy(response);
 
 		sem_post(&writeRead);
+	}
+	else
+	{
+		terminate_memory(true);
+		return false;
 	}
 
 	return true;

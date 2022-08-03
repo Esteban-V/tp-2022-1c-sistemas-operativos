@@ -142,14 +142,14 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 	}
 	else
 	{
+		// Page fault ++, no estaba presente
+
 		pthread_mutex_lock(&mutex_log);
 		log_error(logger, "Page fault for page %d", entry->page);
 		pthread_mutex_unlock(&mutex_log);
-
-		// Page fault ++, no estaba presente
-		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
-
 		page_fault_counter++;
+
+		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
 
 		// Chequear si se puede asignar directo
 		if (has_free_frame(process_frames))

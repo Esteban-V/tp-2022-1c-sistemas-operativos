@@ -25,6 +25,7 @@ typedef struct tlb_entry
     uint32_t page;
     uint32_t frame;
     bool isFree;
+    int index;
 } t_tlb_entry;
 
 typedef struct tlb
