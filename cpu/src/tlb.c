@@ -72,6 +72,9 @@ uint32_t find_tlb_entry(uint32_t page)
 
     if (frame == -1)
     {
+        pthread_mutex_lock(&mutex_log);
+        log_error(logger, "TLB miss for page %d", page);
+        pthread_mutex_unlock(&mutex_log);
         tlb_miss_counter++;
     }
 
@@ -115,19 +118,21 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
         if (!pQueue_is_empty(tlb->victims))
         {
             t_tlb_entry *victim = pQueue_take(tlb->victims);
+            pthread_mutex_unlock(&tlb_mutex);
 
             pthread_mutex_lock(&mutex_log);
-            log_info(logger, "TLB replacement at entry #%d for page %d --> %d / frame %d --> %d",
-                     victim->index, victim->page, page, victim->frame, frame);
+            log_warning(logger, "TLB replacement at entry #%d for page %d --> %d / frame %d --> %d",
+                        victim->index, victim->page, page, victim->frame, frame);
             pthread_mutex_unlock(&mutex_log);
 
             victim->page = page;
             victim->frame = frame;
             victim->isFree = false;
-            pQueue_put(tlb->victims, victim);
 
-            pthread_mutex_unlock(&tlb_mutex);
+            pthread_mutex_lock(&tlb_mutex);
+            pQueue_put(tlb->victims, victim);
         }
+        pthread_mutex_unlock(&tlb_mutex);
     }
 }
 
@@ -138,8 +143,10 @@ void lru_tlb(t_tlb_entry *entry)
         return victim->page == entry->page && victim->frame == entry->frame;
     };
 
-    t_tlb_entry *entryToBeMoved = list_remove_by_condition(tlb->victims, (void *)isVictim);
+    // Remueve la entry
+    t_tlb_entry *entryToBeMoved = (t_tlb_entry *)pQueue_remove_by_condition(tlb->victims, isVictim);
 
+    // Ubica a la misma atras de todo
     pQueue_put(tlb->victims, entryToBeMoved);
 }
 

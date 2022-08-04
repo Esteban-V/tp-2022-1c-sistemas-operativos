@@ -494,6 +494,7 @@ uint32_t get_frame(uint32_t page_number)
 		}
 	}
 
+	// Frame es -1
 	return frame;
 }
 
@@ -538,14 +539,14 @@ void terminate_cpu(int x)
 	tlb_destroy();
 	destroy_cpu_config(config);
 
-	switch (x)
-	{
-	case 1:
-		log_destroy(logger);
-		exit(EXIT_FAILURE);
-	case SIGINT:
+	if (kernel_dispatch_socket)
+		close(kernel_dispatch_socket);
+
+	if (kernel_dispatch_socket)
+		close(kernel_dispatch_socket);
+
+	if (SIGINT)
 		stats();
-		log_destroy(logger);
-		exit(EXIT_SUCCESS);
-	}
+	log_destroy(logger);
+	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }

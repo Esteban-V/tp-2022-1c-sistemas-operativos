@@ -71,6 +71,14 @@ void pQueue_sort(t_pQueue *queue, bool (*algorithm)(void *, void *))
 	pthread_mutex_unlock(&queue->mutex);
 }
 
+void *pQueue_remove_by_condition(t_pQueue *queue, bool (*condition)(void *))
+{
+	pthread_mutex_lock(&queue->mutex);
+	void *removed_elem = list_remove_by_condition(queue->lib_queue->elements, condition);
+	pthread_mutex_unlock(&queue->mutex);
+	return removed_elem;
+}
+
 void pQueue_lock(t_pQueue *queue)
 {
 	pthread_mutex_lock(&queue->mutex);

@@ -157,8 +157,11 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		stream_add_UINT32(response->payload, pid);
 		stream_add_UINT32(response->payload, (uint32_t)pt1_index);
 		stream_add_UINT32(response->payload, (uint32_t)process_frames_index);
-		socket_send_packet(kernel_socket, response);
 
+		if (kernel_socket != -1)
+		{
+			socket_send_packet(kernel_socket, response);
+		}
 		packet_destroy(response);
 	}
 
@@ -175,15 +178,17 @@ bool process_unsuspend(t_packet *petition, int kernel_socket)
 		log_info(logger, "Resuming process #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		// TODO: assign_process_frames y get_swap
+		int process_frames_index = assign_process_frames();
 
-		t_packet *unsuspend_response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(unsuspend_response->payload, pid);
+		t_packet *response = create_packet(PROCESS_UNSUSPENSION_READY, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, pid);
+		stream_add_UINT32(response->payload, (uint32_t)process_frames_index);
+
 		if (kernel_socket != -1)
 		{
-			socket_send_packet(kernel_socket, unsuspend_response);
+			socket_send_packet(kernel_socket, response);
 		}
-		packet_destroy(unsuspend_response);
+		packet_destroy(response);
 	}
 
 	return true;
@@ -228,13 +233,13 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 			}
 		}
 
-		t_packet *suspend_response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(suspend_response->payload, pid);
+		t_packet *response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
+		stream_add_UINT32(response->payload, pid);
 		if (kernel_socket != -1)
 		{
-			socket_send_packet(kernel_socket, suspend_response);
+			socket_send_packet(kernel_socket, response);
 		}
-		packet_destroy(suspend_response);
+		packet_destroy(response);
 	}
 
 	return true;
@@ -322,7 +327,6 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 	if (pt2_index != -1)
 	{
 		int frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
-
 		t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(response->payload, frame);
 
@@ -340,7 +344,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	uint32_t value = stream_take_UINT32(petition->payload);
 	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
-	if (frame != NULL && frame != -1)
+	if (frame != -1)
 	{
 		memory_write_counter++;
 		sem_wait(&writeRead);
@@ -363,6 +367,9 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	}
 	else
 	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Requested frame is invalid");
+		pthread_mutex_unlock(&mutex_log);
 		terminate_memory(true);
 		return false;
 	}
@@ -376,7 +383,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 	uint32_t offset = stream_take_UINT32(petition->payload);
 	uint32_t frames_index = stream_take_UINT32(petition->payload);
 
-	if (frame != NULL && frame != -1)
+	if (frame != -1)
 	{
 		memory_read_counter++;
 		sem_wait(&writeRead);
@@ -405,6 +412,9 @@ bool memory_read(t_packet *petition, int cpu_socket)
 	}
 	else
 	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Requested frame is invalid");
+		pthread_mutex_unlock(&mutex_log);
 		terminate_memory(true);
 		return false;
 	}
@@ -460,14 +470,8 @@ void terminate_memory(int x)
 	if (server_socket)
 		close(server_socket);
 
-	switch (x)
-	{
-	case 1:
-		log_destroy(logger);
-		exit(EXIT_FAILURE);
-	case SIGINT:
+	if (x == SIGINT)
 		stats();
-		log_destroy(logger);
-		exit(EXIT_SUCCESS);
-	}
+	log_destroy(logger);
+	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }

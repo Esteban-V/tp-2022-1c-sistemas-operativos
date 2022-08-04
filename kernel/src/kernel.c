@@ -14,19 +14,22 @@ int main(void)
 	memory_exit_q = pQueue_create();
 	blocked_q = pQueue_create();
 	memory_suspension_q = pQueue_create();
+	memory_unsuspension_q = pQueue_create();
 	suspended_block_q = pQueue_create();
 	suspended_ready_q = pQueue_create();
 	exit_q = pQueue_create();
 
 	sem_init(&sem_multiprogram, 0, config->multiprogrammingLevel);
 	sem_init(&cpu_free, 0, 1);
+
 	sem_init(&interrupt_ready, 0, 0);
 	sem_init(&process_for_IO, 0, 0);
 	sem_init(&any_for_ready, 0, 0);
 	sem_init(&ready_for_exec, 0, 0);
-	sem_init(&pcb_table_ready, 0, 0);
 
-	sem_init(&suspension_ready, 0, 1);
+	sem_init(&pcb_table_ready, 0, 0);
+	sem_init(&suspension_ready, 0, 0);
+	sem_init(&unsuspension_ready, 0, 0);
 
 	pthread_mutex_init(&execution_mutex, NULL);
 	if (config == NULL)
@@ -344,8 +347,24 @@ void *suspended_to_ready()
 	t_pcb *pcb = NULL;
 	pcb = pQueue_take(suspended_ready_q);
 
+	// Pide desuspension a memoria
+	t_packet *suspend_packet = create_packet(PROCESS_UNSUSPEND, INITIAL_STREAM_SIZE);
+	stream_add_UINT32(suspend_packet->payload, pcb->pid);
+
+	if (memory_socket != -1)
+	{
+		socket_send_packet(memory_socket, suspend_packet);
+	}
+
+	packet_destroy(suspend_packet);
+
+	pQueue_put(memory_unsuspension_q, (void *)pcb);
+
+	// Esperar suspension exitosa
+	sem_wait(&unsuspension_ready);
+
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, "TODO: PID #%d [SUSPENDED READY] --> [READY]", pcb->pid);
+	log_info(logger, "PID #%d [SUSPENDED READY] --> [READY]", pcb->pid);
 	pthread_mutex_unlock(&mutex_log);
 
 	// Manejar memoria, sacar de suspendido y traer a "ram"
@@ -421,31 +440,30 @@ bool table_index_success(t_packet *petition, int mem_socket)
 {
 	uint32_t pid = stream_take_UINT32(petition->payload);
 	uint32_t level1_table_index = stream_take_UINT32(petition->payload);
-	uint32_t process_frame_index = stream_take_UINT32(petition->payload);
+	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
 
 	bool found = false;
 	void _memory_data_to_pid(void *elem)
 	{
-		t_pcb *pcb = (t_pcb *)elem;
+		t_pcb *curr_pcb = (t_pcb *)elem;
 		// Encontrar el pcb correspondiente al pid
-		if (pcb->pid == pid)
+		if (curr_pcb->pid == pid)
 		{
+			found = true;
+
+			t_pcb *pcb = pQueue_take(memory_init_q);
 			// Almacenar index a tabla de paginas nivel 1 y listado de framess dados por memoria
 			pcb->page_table = level1_table_index;
-			pcb->frames_index = process_frame_index;
-			found = true;
-			pQueue_take(memory_init_q);
+			pcb->frames_index = process_frames_index;
+
+			// Avisar de pcb listo para memoria
+			sem_post(&pcb_table_ready);
 		}
 	};
 
 	pQueue_iterate(memory_init_q, _memory_data_to_pid);
 
-	if (found)
-	{
-		// Avisar de pcb listo para memoria
-		sem_post(&pcb_table_ready);
-	}
-	else
+	if (!found)
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_error(logger, "Failed to load page table data for PID #%d", pid);
@@ -464,28 +482,60 @@ bool suspension_success(t_packet *petition, int mem_socket)
 	bool found = false;
 	void _find_suspended_pid(void *elem)
 	{
-		t_pcb *pcb = (t_pcb *)elem;
+		t_pcb *curr_pcb = (t_pcb *)elem;
 		// Encontrar el pcb correspondiente al pid
-		if (pcb->pid == pid)
+		if (curr_pcb->pid == pid)
 		{
 			found = true;
+
 			pQueue_take(memory_suspension_q);
+			// Avisar de proceso suspendido
+			sem_post(&suspension_ready);
+			// Se libera la memoria, sube multiprogramacion
+			sem_post(&sem_multiprogram);
 		}
 	};
 
 	pQueue_iterate(memory_suspension_q, _find_suspended_pid);
 
-	if (found)
-	{
-		// Avisar de proceso suspendido
-		sem_post(&suspension_ready);
-		// Se libera la memoria, sube multiprogramacion
-		sem_post(&sem_multiprogram);
-	}
-	else
+	if (!found)
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_error(logger, "Failed to confirm suspension of PID #%d", pid);
+		pthread_mutex_unlock(&mutex_log);
+
+		terminate_kernel(true);
+	}
+
+	return true;
+}
+
+bool unsuspension_success(t_packet *petition, int mem_socket)
+{
+	uint32_t pid = stream_take_UINT32(petition->payload);
+	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
+
+	bool found = false;
+	void _find_suspended_pid(void *elem)
+	{
+		t_pcb *curr_pcb = (t_pcb *)elem;
+		// Encontrar el pcb correspondiente al pid
+		if (curr_pcb->pid == pid)
+		{
+			found = true;
+			t_pcb *pcb = pQueue_take(memory_unsuspension_q);
+			pcb->frames_index = process_frames_index;
+
+			sem_post(&unsuspension_ready);
+		}
+	};
+
+	pQueue_iterate(memory_unsuspension_q, _find_suspended_pid);
+
+	if (!found)
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Failed to confirm unsuspension of PID #%d", pid);
 		pthread_mutex_unlock(&mutex_log);
 
 		terminate_kernel(true);
@@ -501,10 +551,11 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 	int console_socket = 0;
 	void _page_table_to_pid(void *elem)
 	{
-		t_pcb *pcb = (t_pcb *)elem;
+		t_pcb *curr_pcb = (t_pcb *)elem;
 		// Encontrar el pcb correspondiente al pid
-		if (pcb->pid == pid)
+		if (curr_pcb->pid == pid)
 		{
+			t_pcb *pcb = pQueue_take(memory_exit_q);
 			console_socket = pcb->client_socket;
 			pcb_destroy(pcb);
 		}
@@ -621,7 +672,7 @@ bool exit_op(t_packet *petition, int cpu_socket)
 	return true;
 }
 
-bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
+bool (*kernel_handlers[8])(t_packet *petition, int console_socket) =
 	{
 		// NEW_PROCESS
 		receive_process,
@@ -638,7 +689,7 @@ bool (*kernel_handlers[7])(t_packet *petition, int console_socket) =
 		// PROCESS_SUSPENSION_READY
 		suspension_success,
 		// PROCESS_UNSUSPENSION_READY
-		NULL,
+		unsuspension_success,
 };
 
 void *packet_handler(void *_client_socket)
@@ -672,6 +723,7 @@ void terminate_kernel(int x)
 	pQueue_destroy(memory_exit_q);
 	pQueue_destroy(blocked_q);
 	pQueue_destroy(memory_suspension_q);
+	pQueue_destroy(memory_unsuspension_q);
 	pQueue_destroy(suspended_block_q);
 	pQueue_destroy(suspended_ready_q);
 	pQueue_destroy(exit_q);

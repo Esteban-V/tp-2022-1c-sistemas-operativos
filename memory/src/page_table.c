@@ -67,7 +67,7 @@ int assign_process_frames()
 		}
 		else
 		{
-			// No encuentra frame libre :(
+			// TODO: Definir que hacer si no encuentra frames libres :(
 		}
 	}
 
@@ -85,7 +85,7 @@ void unassign_process_frames(int frames_index)
 {
 	t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
 
-	void unassign_frames(void *elem)
+	void unassign_frame(void *elem)
 	{
 		t_frame_entry *entry = (t_frame_entry *)elem;
 		frame_clear_assigned(frames_bitmap, entry->frame);
@@ -93,7 +93,7 @@ void unassign_process_frames(int frames_index)
 		entry->page_data = NULL;
 	};
 
-	list_iterate(process_frames->frames, unassign_frames);
+	list_iterate(process_frames->frames, unassign_frame);
 }
 
 // Retorna la tabla de nivel 1 segun su indice en su lista global
@@ -143,7 +143,6 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 	else
 	{
 		// Page fault ++, no estaba presente
-
 		pthread_mutex_lock(&mutex_log);
 		log_error(logger, "Page fault for page %d", entry->page);
 		pthread_mutex_unlock(&mutex_log);
@@ -155,6 +154,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 		if (has_free_frame(process_frames))
 		{
 			t_frame_entry *free_frame = find_first_free_frame(process_frames);
+
 			if (free_frame != NULL) // No deberia pasar porque ya entro a has_free_frame
 			{
 				// Actualiza pagina en tabla de paginas
@@ -163,7 +163,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 
 				// Actualiza frame del proceso
 				free_frame->page_data = entry;
-				frame = free_frame->frame;
+				frame = entry->frame;
 			}
 		}
 		else
@@ -236,16 +236,13 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 
 		// Actualiza frame del proceso
 		curr_frame->page_data = entry;
-
-		// TODO: (en CPU)
-		// add_tlb_entry(pid, entry->page, entry->frame);
 	};
 
 	int frame = -1;
 	for (int i = 0; i < (replaceAlgorithm == CLOCK_M ? 2 : 1); i++)
 	{
 		frame = two_clock_turns(process_frames, replaceAlgorithm == 1, _replace);
-		printf("after two clock turns found %d\n", frame);
+		// TODO
 		if (frame != -1)
 		{
 			return frame;

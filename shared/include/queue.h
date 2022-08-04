@@ -27,6 +27,8 @@ void pQueue_iterate(t_pQueue *queue, void (*closure)(void *));
 
 void pQueue_sort(t_pQueue *queue, bool (*algorithm)(void *, void *));
 
+void *pQueue_remove_by_condition(t_pQueue *queue, bool (*condition)(void *));
+
 void pQueue_lock(t_pQueue *queue);
 
 void pQueue_unlock(t_pQueue *queue);
