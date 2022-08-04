@@ -43,7 +43,6 @@ int main()
 	memory_read_counter = 0;
 	memory_write_counter = 0;
 	page_fault_counter = 0;
-	page_assignment_counter = 0;
 	page_replacement_counter = 0;
 
 	int cpu_client_socket = cpu_handshake_listener();
@@ -452,7 +451,6 @@ void stats()
 	log_info(logger, "Memory accesses: %d", memory_access_counter);
 	log_info(logger, "Memory reads: %d", memory_read_counter);
 	log_info(logger, "Memory writes: %d", memory_write_counter);
-	log_info(logger, "Page assignments: %d", page_assignment_counter);
 	log_info(logger, "Page replacements: %d", page_replacement_counter);
 	log_info(logger, "Page faults: %d", page_fault_counter);
 	pthread_mutex_unlock(&mutex_log);

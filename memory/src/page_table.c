@@ -192,8 +192,6 @@ void save_swap(int frame_number, int page_number, int pid)
 	// Lo escribe en la pagina correspondiente en swap
 	swap_write_page(pid, page_number, memory_value);
 
-	// page_assignment_counter++;
-
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Removed PID #%d's page #%d from memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);
@@ -219,20 +217,21 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 {
 	void _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
 	{
+		int frame_number = curr_frame->frame;
 		// Lleva a disco la pagina a reemplazar y la marca como no presente
 		if (old_page->present && old_page->modified)
 		{
-			save_swap(curr_frame->frame, old_page->page, pid);
+			save_swap(frame_number, old_page->page, pid);
 			old_page->modified = false;
 		}
 		old_page->present = false;
 
 		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
-		get_swap((int)curr_frame, entry->page, pid);
+		get_swap(frame_number, entry->page, pid);
 
 		// Actualiza pagina en tabla de paginas
 		entry->present = true;
-		entry->frame = curr_frame->frame;
+		entry->frame = frame_number;
 
 		// Actualiza frame del proceso
 		curr_frame->page_data = entry;
@@ -241,7 +240,7 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 	int frame = -1;
 	for (int i = 0; i < (replaceAlgorithm == CLOCK_M ? 2 : 1); i++)
 	{
-		frame = two_clock_turns(process_frames, replaceAlgorithm == 1, _replace);
+		frame = two_clock_turns(process_frames, replaceAlgorithm == CLOCK_M, _replace);
 		// TODO
 		if (frame != -1)
 		{
@@ -263,7 +262,6 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 			// Empezando de donde apunta el puntero del clock, fijarse si es reemplazable o pasar a proxima frame
 			t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
 			t_page_entry *curr_page = curr_frame->page_data;
-
 			if (check_modified)
 			{
 				// El algoritmo es CLOCK-M

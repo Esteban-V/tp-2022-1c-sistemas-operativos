@@ -17,7 +17,6 @@ int memory_access_counter;
 int memory_read_counter;
 int memory_write_counter;
 int page_fault_counter;
-int page_assignment_counter;
 int page_replacement_counter;
 
 int page_table_init(uint32_t process_size);

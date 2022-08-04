@@ -27,7 +27,7 @@ enum e_sortingAlgorithm
 	SRT = 1
 };
 
-enum e_sortingAlgorithm sortingAlgorithm = FIFO;
+enum e_sortingAlgorithm sortingAlgorithm;
 
 int pid = 0;
 t_log *logger;

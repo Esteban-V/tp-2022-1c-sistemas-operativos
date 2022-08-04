@@ -23,7 +23,6 @@ t_tlb *create_tlb()
     else
     {
         replaceAlgorithm = FIFO;
-
         pthread_mutex_lock(&mutex_log);
         log_warning(logger, "Wrong replace algorithm set in config --> Using FIFO");
         pthread_mutex_unlock(&mutex_log);

@@ -142,9 +142,9 @@ void frame_clear_assigned(t_bitarray *bitmap, int index)
 void increment_clock_hand(int *clock_hand)
 {
     (*clock_hand)++;
-    if (*clock_hand >= config->framesInMemory)
+    if (*clock_hand >= config->framesPerProcess)
     {
-        *clock_hand = *clock_hand % config->framesInMemory;
+        *clock_hand = (*clock_hand) % config->framesPerProcess;
     }
 }
 

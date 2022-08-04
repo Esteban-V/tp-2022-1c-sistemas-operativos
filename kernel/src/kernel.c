@@ -48,6 +48,7 @@ int main(void)
 	}
 	else
 	{
+		sortingAlgorithm = FIFO;
 		log_warning(logger,
 					"Wrong scheduler algorithm set in config --> Using FIFO");
 	}
