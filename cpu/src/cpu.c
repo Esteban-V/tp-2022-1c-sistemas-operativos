@@ -245,7 +245,7 @@ void *cpu_cycle()
 		check_interrupt();
 
 		sem_wait(&pcb_loaded);
-		while (!!pcb && !!pcb->pid && pcb->program_counter < list_size(pcb->instructions))
+		while (!!pcb && !!pcb->pid && (pcb->program_counter < list_size(pcb->instructions)))
 		{
 			t_instruction *instruction;
 			enum operation op = fetch_and_decode(&instruction);
