@@ -537,7 +537,6 @@ void stats()
 void terminate_cpu(int x)
 {
 	tlb_destroy();
-	destroy_cpu_config(config);
 
 	if (kernel_dispatch_socket)
 		close(kernel_dispatch_socket);
@@ -547,6 +546,9 @@ void terminate_cpu(int x)
 
 	if (SIGINT)
 		stats();
+	
 	log_destroy(logger);
+	destroy_cpu_config(config);
+
 	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }
