@@ -237,6 +237,9 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				}
 				else
 				{
+					pthread_mutex_lock(&mutex_log);
+					log_error(logger, "Values received are invalid");
+					pthread_mutex_unlock(&mutex_log);
 					terminate_memory(true);
 				}
 			}
@@ -251,8 +254,18 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_error(logger, "Values received are invalid");
+			pthread_mutex_unlock(&mutex_log);
 			terminate_memory(true);
 		}
+	}
+	else
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Values received are invalid");
+		pthread_mutex_unlock(&mutex_log);
+		terminate_memory(true);
 	}
 
 	return true;
@@ -328,6 +341,9 @@ bool access_lvl1_table(t_packet *petition, int cpu_socket)
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_error(logger, "Values received are invalid");
+			pthread_mutex_unlock(&mutex_log);
 			terminate_memory(true);
 		}
 	}
@@ -357,8 +373,18 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex_log);
+			log_error(logger, "Frame is invalid");
+			pthread_mutex_unlock(&mutex_log);
 			terminate_memory(true);
 		}
+	}
+	else
+	{
+		pthread_mutex_lock(&mutex_log);
+		log_error(logger, "Values received are invalid");
+		pthread_mutex_unlock(&mutex_log);
+		terminate_memory(true);
 	}
 
 	return true;
@@ -395,7 +421,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Requested frame is invalid");
+		log_error(logger, "Requested frame is invalid @ write");
 		pthread_mutex_unlock(&mutex_log);
 		terminate_memory(true);
 		return false;
@@ -440,7 +466,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 	else
 	{
 		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Requested frame is invalid");
+		log_error(logger, "Requested frame is invalid @ read");
 		pthread_mutex_unlock(&mutex_log);
 		terminate_memory(true);
 		return false;

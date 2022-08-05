@@ -103,7 +103,8 @@ t_frame_entry *find_first_free_frame(t_process_frame *process_frames)
     bool _is_free(void *_entry)
     {
         t_frame_entry *entry = (t_frame_entry *)_entry;
-        return entry->page_data == NULL;
+        found = entry->page_data == NULL;
+        return found;
     };
 
     t_frame_entry *frame_entry = (t_frame_entry *)list_find(process_frames->frames, _is_free);
