@@ -83,25 +83,31 @@ int assign_process_frames()
 // Libera todos los frames de un proceso
 void unassign_process_frames(int frames_index)
 {
-	t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
-
-	void unassign_frame(void *elem)
+	if (frames_index < list_size(global_frames))
 	{
-		t_frame_entry *entry = (t_frame_entry *)elem;
-		frame_clear_assigned(frames_bitmap, entry->frame);
-		entry->frame = -1;
-		entry->page_data = NULL;
-	};
+		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
 
-	list_iterate(process_frames->frames, unassign_frame);
+		void unassign_frame(void *elem)
+		{
+			t_frame_entry *entry = (t_frame_entry *)elem;
+			frame_clear_assigned(frames_bitmap, entry->frame);
+			entry->frame = -1;
+			entry->page_data = NULL;
+		};
+
+		list_iterate(process_frames->frames, unassign_frame);
+	}
 }
 
 // Retorna la tabla de nivel 1 segun su indice en su lista global
 t_ptbr1 *get_page_table1(int pt1_index)
 {
-	// Obtiene la tabla de nivel 1
-	t_ptbr1 *level1_table = (t_ptbr1 *)list_get(level1_tables, pt1_index);
-
+	t_ptbr1 *level1_table = NULL;
+	if (pt1_index < list_size(level1_tables))
+	{
+		// Obtiene la tabla de nivel 1
+		level1_table = (t_ptbr1 *)list_get(level1_tables, pt1_index);
+	}
 	return level1_table;
 }
 
@@ -111,73 +117,86 @@ int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index)
 	// Obtiene la tabla de nivel 1
 	t_ptbr1 *level1_table = get_page_table1(pt1_index);
 
-	// Obtiene el index de pt2 en lista global
-	int pt2_index = (int *)list_get(level1_table->entries, entry_index);
-
+	int pt2_index = -1;
+	if (level1_table != NULL && (entry_index < list_size(level1_table->entries)))
+	{
+		// Obtiene el index de pt2 en lista global
+		pt2_index = (int *)list_get(level1_table->entries, entry_index);
+	}
 	return pt2_index;
 }
 
 // Retorna la tabla de nivel 2 segun su indice en su lista global
 t_ptbr2 *get_page_table2(int pt2_index)
 {
-	// Obtiene la tabla de nivel 2
-	t_ptbr2 *level2_table = (t_ptbr2 *)list_get(level2_tables, pt2_index);
+	t_ptbr2 *level2_table = NULL;
 
+	if (pt2_index < list_size(level2_tables))
+	{ // Obtiene la tabla de nivel 2
+		level2_table = (t_ptbr2 *)list_get(level2_tables, pt2_index);
+	}
 	return level2_table;
 }
 
 // Retorna el numero de frame en memoria (cargandola previamente si fuese necesario)
 int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 {
+	int frame = -1;
+
 	// Obtiene la tabla de nivel 2
 	t_ptbr2 *level2_table = get_page_table2(pt2_index);
-	// Obtiene la pagina con sus bits de estado
-	t_page_entry *entry = (t_page_entry *)list_get(level2_table->entries, entry_index);
 
-	int frame = -1;
-	if (entry->present)
+	if (level2_table != NULL && (entry_index < list_size(level2_table->entries)))
 	{
-		// se settean los bits en read (used) o write (used y modified)
-		frame = entry->frame;
-	}
-	else
-	{
-		// Page fault ++, no estaba presente
-		pthread_mutex_lock(&mutex_log);
-		log_error(logger, "Page fault for page %d", entry->page);
-		pthread_mutex_unlock(&mutex_log);
-		page_fault_counter++;
+		// Obtiene la pagina con sus bits de estado
+		t_page_entry *entry = (t_page_entry *)list_get(level2_table->entries, entry_index);
 
-		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
-
-		// Chequear si se puede asignar directo
-		if (has_free_frame(process_frames))
+		if (entry->present)
 		{
-			t_frame_entry *free_frame = find_first_free_frame(process_frames);
-
-			if (free_frame != NULL) // No deberia pasar porque ya entro a has_free_frame
-			{
-				// Actualiza pagina en tabla de paginas
-				entry->present = true;
-				entry->frame = free_frame->frame;
-
-				// Actualiza frame del proceso
-				free_frame->page_data = entry;
-				frame = entry->frame;
-			}
+			// se settean los bits en read (used) o write (used y modified)
+			frame = entry->frame;
 		}
 		else
 		{
+			// Page fault ++, no estaba presente
 			pthread_mutex_lock(&mutex_log);
-			log_warning(logger, "No free frames for process #%d, replacing...", pid);
+			log_error(logger, "Page fault for page %d", entry->page);
 			pthread_mutex_unlock(&mutex_log);
+			page_fault_counter++;
 
-			// Reemplazo ++, no hay mas libres y se debe reemplazar con una existente
-			page_replacement_counter++;
-			frame = replace_algorithm(process_frames, entry, pid);
+			if (frames_index < list_size(global_frames))
+			{
+				t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
+
+				// Chequear si se puede asignar directo
+				if (has_free_frame(process_frames))
+				{
+					t_frame_entry *free_frame = find_first_free_frame(process_frames);
+
+					if (free_frame != NULL) // No deberia pasar porque ya entro a has_free_frame
+					{
+						// Actualiza pagina en tabla de paginas
+						entry->present = true;
+						entry->frame = free_frame->frame;
+
+						// Actualiza frame del proceso
+						free_frame->page_data = entry;
+						frame = entry->frame;
+					}
+				}
+				else
+				{
+					pthread_mutex_lock(&mutex_log);
+					log_warning(logger, "No free frames for process #%d, replacing...", pid);
+					pthread_mutex_unlock(&mutex_log);
+
+					// Reemplazo ++, no hay mas libres y se debe reemplazar con una existente
+					page_replacement_counter++;
+					frame = replace_algorithm(process_frames, entry, pid);
+				}
+			}
 		}
 	}
-
 	return frame;
 }
 
@@ -259,27 +278,51 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 		// Vuelta numero j+1 del reloj
 		for (int k = 0; k < config->framesPerProcess; k++)
 		{
-			// Empezando de donde apunta el puntero del clock, fijarse si es reemplazable o pasar a proxima frame
-			t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
-			t_page_entry *curr_page = curr_frame->page_data;
-			if (check_modified)
+			if (process_frames->clock_hand < list_size(process_frames->frames))
 			{
-				// El algoritmo es CLOCK-M
-				if (!curr_page->used && !curr_page->modified)
+				// Empezando de donde apunta el puntero del clock, fijarse si es reemplazable o pasar a proxima frame
+				t_frame_entry *curr_frame = (t_frame_entry *)list_get(process_frames->frames, process_frames->clock_hand);
+				t_page_entry *curr_page = curr_frame->page_data;
+				if (check_modified)
 				{
-					// Si no esta en uso ni modificado (0, 0): Reemplaza
-					replace(curr_frame, curr_page);
-					// Deja el puntero incrementado para proxima vez
-					increment_clock_hand(&(process_frames->clock_hand));
-					return curr_frame->frame;
-				}
+					// El algoritmo es CLOCK-M
+					if (!curr_page->used && !curr_page->modified)
+					{
+						// Si no esta en uso ni modificado (0, 0): Reemplaza
+						replace(curr_frame, curr_page);
+						// Deja el puntero incrementado para proxima vez
+						increment_clock_hand(&(process_frames->clock_hand));
+						return curr_frame->frame;
+					}
 
-				// 2da vuelta (j = 1): Ignora si esta modificada
-				if (j == 1)
+					// 2da vuelta (j = 1): Ignora si esta modificada
+					if (j == 1)
+					{
+						if (!curr_page->used)
+						{
+							// Si no esta en uso y pero si modificado (0, 1): Reemplaza
+							replace(curr_frame, curr_page);
+							// Deja el puntero incrementado para proxima vez
+							increment_clock_hand(&(process_frames->clock_hand));
+							return curr_frame->frame;
+						}
+						else
+						{
+							// Si esta en uso: Marca uso en 0 para proxima vuelta
+							// - (1, 0) --> (0, 0)
+							// - (1, 1) --> (0, 1)
+							curr_page->used = false;
+						}
+					}
+					// Si no reemplaza, pasa de frame
+					increment_clock_hand(&(process_frames->clock_hand));
+				}
+				else
 				{
+					// El algoritmo es CLOCK
 					if (!curr_page->used)
 					{
-						// Si no esta en uso y pero si modificado (0, 1): Reemplaza
+						// Si no esta en uso: Reemplaza
 						replace(curr_frame, curr_page);
 						// Deja el puntero incrementado para proxima vez
 						increment_clock_hand(&(process_frames->clock_hand));
@@ -287,31 +330,10 @@ int two_clock_turns(t_process_frame *process_frames, bool check_modified, void *
 					}
 					else
 					{
-						// Si esta en uso: Marca uso en 0 para proxima vuelta
-						// - (1, 0) --> (0, 0)
-						// - (1, 1) --> (0, 1)
+						// Si esta en uso: Marca uso en 0 para proxima vuelta y pasa de frame
 						curr_page->used = false;
+						increment_clock_hand(&(process_frames->clock_hand));
 					}
-				}
-				// Si no reemplaza, pasa de frame
-				increment_clock_hand(&(process_frames->clock_hand));
-			}
-			else
-			{
-				// El algoritmo es CLOCK
-				if (!curr_page->used)
-				{
-					// Si no esta en uso: Reemplaza
-					replace(curr_frame, curr_page);
-					// Deja el puntero incrementado para proxima vez
-					increment_clock_hand(&(process_frames->clock_hand));
-					return curr_frame->frame;
-				}
-				else
-				{
-					// Si esta en uso: Marca uso en 0 para proxima vuelta y pasa de frame
-					curr_page->used = false;
-					increment_clock_hand(&(process_frames->clock_hand));
 				}
 			}
 		}

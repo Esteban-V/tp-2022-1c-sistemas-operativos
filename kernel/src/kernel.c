@@ -272,7 +272,7 @@ void *exit_process(void *args)
 
 		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
 		stream_add_UINT32(exit_request->payload, pcb->pid);
-		stream_add_UINT32(exit_request->payload, pcb->page_table);
+		// stream_add_UINT32(exit_request->payload, pcb->page_table);
 		stream_add_UINT32(exit_request->payload, pcb->frames_index);
 
 		if (memory_socket != -1)

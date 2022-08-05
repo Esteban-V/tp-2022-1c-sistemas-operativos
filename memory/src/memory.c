@@ -207,38 +207,52 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 
-		for (int i = 0; i < list_size(pt1->entries); i++)
+		if (pt1 != NULL)
 		{
-			int pt2_index = (int *)list_get(pt1->entries, i);
-			t_ptbr2 *pt2 = get_page_table2(pt2_index);
-
-			for (int j = 0; j < list_size(pt2->entries); j++)
+			for (int i = 0; i < list_size(pt1->entries); i++)
 			{
-				t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, j);
+				int pt2_index = (int *)list_get(pt1->entries, i);
+				t_ptbr2 *pt2 = get_page_table2(pt2_index);
 
-				// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
-				if (entry->present && entry->modified)
+				if (pt2 != NULL)
 				{
-					// Actualiza la pagina en el swap
-					save_swap(entry->frame, entry->page, pid);
-					entry->modified = false;
+					for (int j = 0; j < list_size(pt2->entries); j++)
+					{
+						t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, j);
+
+						// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
+						if (entry->present && entry->modified)
+						{
+							// Actualiza la pagina en el swap
+							save_swap(entry->frame, entry->page, pid);
+							entry->modified = false;
+						}
+
+						entry->present = false;
+						entry->frame = -1;
+
+						// Liberar los frames asignados en memoria
+						unassign_process_frames((int)process_frames_index);
+					}
 				}
-
-				entry->present = false;
-				entry->frame = -1;
-
-				// Liberar los frames asignados en memoria
-				unassign_process_frames((int)process_frames_index);
+				else
+				{
+					terminate_memory(true);
+				}
 			}
-		}
 
-		t_packet *response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, pid);
-		if (kernel_socket != -1)
-		{
-			socket_send_packet(kernel_socket, response);
+			t_packet *response = create_packet(PROCESS_SUSPENSION_READY, INITIAL_STREAM_SIZE);
+			stream_add_UINT32(response->payload, pid);
+			if (kernel_socket != -1)
+			{
+				socket_send_packet(kernel_socket, response);
+			}
+			packet_destroy(response);
 		}
-		packet_destroy(response);
+		else
+		{
+			terminate_memory(true);
+		}
 	}
 
 	return true;
@@ -264,7 +278,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 	}; */
 
 	uint32_t pid = stream_take_UINT32(petition->payload);
-	uint32_t pt1_index = stream_take_UINT32(petition->payload);
+	// uint32_t pt1_index = stream_take_UINT32(petition->payload);
 	uint32_t process_frames_index = stream_take_UINT32(petition->payload);
 
 	if (pid != NULL)
@@ -273,7 +287,7 @@ bool process_exit(t_packet *petition, int kernel_socket)
 		log_warning(logger, "Destroying process #%d memory structures", pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
+		// t_ptbr1 *pt1 = get_page_table1((int)pt1_index);
 		// list_iterate(pt1->entries, _free_frames);
 
 		unassign_process_frames((int)process_frames_index);
@@ -301,14 +315,21 @@ bool access_lvl1_table(t_packet *petition, int cpu_socket)
 	uint32_t pt1_index = stream_take_UINT32(petition->payload);
 	uint32_t entry_index = stream_take_UINT32(petition->payload);
 
-	if (pt1_index != -1)
+	if (pt1_index != -1 && entry_index != -1)
 	{
 		uint32_t pt2_index = (uint32_t)get_page_table2_index(pt1_index, entry_index);
-		t_packet *response = create_packet(TABLE2_TO_CPU, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, pt2_index);
+		if (pt2_index != -1)
+		{
+			t_packet *response = create_packet(TABLE2_TO_CPU, INITIAL_STREAM_SIZE);
+			stream_add_UINT32(response->payload, pt2_index);
 
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+		}
+		else
+		{
+			terminate_memory(true);
+		}
 	}
 
 	return true;
@@ -326,11 +347,18 @@ bool access_lvl2_table(t_packet *petition, int cpu_socket)
 	if (pt2_index != -1)
 	{
 		int frame = get_frame_number((int)pt2_index, (int)entry_index, (int)pid, (int)process_frames_index);
-		t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
-		stream_add_UINT32(response->payload, frame);
+		if (frame != -1)
+		{
+			t_packet *response = create_packet(FRAME_TO_CPU, INITIAL_STREAM_SIZE);
+			stream_add_UINT32(response->payload, frame);
 
-		socket_send_packet(cpu_socket, response);
-		packet_destroy(response);
+			socket_send_packet(cpu_socket, response);
+			packet_destroy(response);
+		}
+		else
+		{
+			terminate_memory(true);
+		}
 	}
 
 	return true;
@@ -355,7 +383,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		void *frame_ptr = get_frame(frame);
 		write_frame_value(frame_ptr, offset, value);
 
-		set_page_bits((int)frames_index, (int)frame, false);
+		set_page_bits((int)frames_index, (int)frame, true);
 		// used = true / modified = true
 
 		pthread_mutex_lock(&mutex_log);

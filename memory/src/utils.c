@@ -70,11 +70,17 @@ void write_frame(void *frame_ptr, void *new_page)
 // Settea los bits de uso y modificado de una pagina leida/escrita
 void set_page_bits(int frames_index, int frame, bool modified)
 {
-    t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
-    t_frame_entry *frame_entry = find_frame(process_frames, frame);
+    if (frames_index < list_size(global_frames))
+    {
+        t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
+        t_frame_entry *frame_entry = find_frame(process_frames, frame);
 
-    frame_entry->page_data->used = true;
-    frame_entry->page_data->modified = modified;
+        if (frame_entry != NULL)
+        {
+            frame_entry->page_data->used = true;
+            frame_entry->page_data->modified = modified;
+        }
+    }
 }
 
 // Determina si de las framesPerProcess frames asignadas al proceso, hay libres para cargarles paginas
@@ -93,26 +99,35 @@ bool has_free_frame(t_process_frame *process_frames)
 
 t_frame_entry *find_first_free_frame(t_process_frame *process_frames)
 {
-
+    bool found = false;
     bool _is_free(void *_entry)
     {
         t_frame_entry *entry = (t_frame_entry *)_entry;
         return entry->page_data == NULL;
     };
 
-    return (t_frame_entry *)list_find(process_frames->frames, _is_free);
+    t_frame_entry *frame_entry = (t_frame_entry *)list_find(process_frames->frames, _is_free);
+    if (!found)
+        return NULL;
+
+    return frame_entry;
 }
 
 t_frame_entry *find_frame(t_process_frame *process_frames, int frame)
 {
-
+    bool found = false;
     bool _is_frame(void *_entry)
     {
         t_frame_entry *entry = (t_frame_entry *)_entry;
-        return entry->frame == frame && entry->page_data->present;
+        found = entry->frame == frame && entry->page_data->present;
+        return found;
     };
 
-    return (t_frame_entry *)list_find(process_frames->frames, _is_frame);
+    t_frame_entry *frame_entry = (t_frame_entry *)list_find(process_frames->frames, _is_frame);
+    if (!found)
+        return NULL;
+
+    return frame_entry;
 }
 
 int find_first_unassigned_frame(t_bitarray *bitmap)
