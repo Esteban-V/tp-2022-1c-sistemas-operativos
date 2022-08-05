@@ -30,7 +30,7 @@ int page_table_init(uint32_t process_size)
 			page->present = false;
 			page->modified = false;
 			page->used = false;
-			page->page = j;
+			page->page = i*config->entriesPerTable+j;
 
 			// Se agrega a la lista de entradas de su tabla nivel 2
 			list_add(level2_table->entries, page);
@@ -182,6 +182,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 						// Actualiza frame del proceso
 						free_frame->page_data = entry;
 						frame = entry->frame;
+						get_swap(frame, entry->page, pid);
 					}
 				}
 				else
@@ -193,6 +194,10 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 					// Reemplazo ++, no hay mas libres y se debe reemplazar con una existente
 					page_replacement_counter++;
 					frame = replace_algorithm(process_frames, entry, pid);
+					pthread_mutex_lock(&mutex_log);
+					log_warning(logger, "Frame victim %d", frame);
+					pthread_mutex_unlock(&mutex_log);
+
 				}
 			}
 		}
@@ -209,6 +214,8 @@ void save_swap(int frame_number, int page_number, int pid)
 	void *memory_value = read_frame(frame_ptr);
 
 	// Lo escribe en la pagina correspondiente en swap
+	
+
 	swap_write_page(pid, page_number, memory_value);
 
 	pthread_mutex_lock(&mutex_log);
@@ -226,6 +233,11 @@ void get_swap(int frame_number, int page_number, int pid)
 
 	// Lo escribe en el frame correspondiente en memoria
 	write_frame(frame_ptr, swap_value);
+
+	int i;
+	for(i=0;i<config->pageSize;i++){
+		printf("%d ",((char *)frame_ptr)[i]);
+	}
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Loaded PID #%d's page #%d into memory", pid, page_number);

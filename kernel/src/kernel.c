@@ -142,7 +142,7 @@ void *io_listener(void *args)
 			 */
 			struct timeval nowTime;
 			gettimeofday(&nowTime, NULL);
-			int currTime = nowTime.tv_usec / 1000;
+			int currTime = nowTime.tv_sec*1000 + nowTime.tv_usec / 1000;
 
 			time_blocked = currTime - pcb->blocked_time;
 
@@ -624,14 +624,14 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 			 */
 			gettimeofday(&fromExec, NULL);
-			int fromExec_ms = fromExec.tv_usec / 1000;
-			int toExec_ms = toExec.tv_usec / 1000;
+			int fromExec_ms = fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
+			int toExec_ms = toExec.tv_sec*1000 +  toExec.tv_usec / 1000;
 
 			int ms_passed = fromExec_ms - toExec_ms;
 			received_pcb->left_burst_estimation = (received_pcb->left_burst_estimation) - ms_passed;
 
 			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
+			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms, had a burst up to now of %d", received_pcb->pid, received_pcb->left_burst_estimation, received_pcb->burst_estimation - received_pcb->left_burst_estimation);
 			pthread_mutex_unlock(&mutex_log);
 
 			pQueue_put(ready_q, received_pcb);
@@ -665,8 +665,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 		 */
 		gettimeofday(&fromExec, NULL);
 
-		int fromExec_ms = fromExec.tv_usec / 1000;
-		int toExec_ms = toExec.tv_usec / 1000;
+		int fromExec_ms =  fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
+		int toExec_ms = toExec.tv_sec*1000 + toExec.tv_usec / 1000;
 
 		int ms_passed = fromExec_ms - toExec_ms;
 		int estimate = (config->alpha * (received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed)) + ((1 - config->alpha) * received_pcb->burst_estimation);
@@ -680,7 +680,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		received_pcb->blocked_time = fromExec_ms;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> [BLOCKED], excuted %dms, with updated estimate of %dms", received_pcb->pid, ms_passed, received_pcb->left_burst_estimation);
+		log_info(logger, "PID #%d CPU --> [BLOCKED], excuted %dms, with updated estimate of %dms, total last burst %d", received_pcb->pid, ms_passed, received_pcb->left_burst_estimation, received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed);
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(blocked_q, (void *)received_pcb);

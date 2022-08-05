@@ -76,25 +76,25 @@ void pcb_to_kernel(kernel_headers header)
 		stream_add_UINT32(pcb_packet->payload, 1);
 	stream_add_pcb(pcb_packet, pcb);
 
+	// Resetea la interrupcion
+	pthread_mutex_lock(&mutex_has_interruption);
+	new_interruption = false;
+	pthread_mutex_unlock(&mutex_has_interruption);
+	clean_tlb(tlb);
+	pthread_mutex_lock(&mutex_log);
+		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
+		pthread_mutex_unlock(&mutex_log);
+	pcb_destroy(pcb);
+
 	pthread_mutex_lock(&mutex_kernel_socket);
 	if (kernel_client_socket != -1)
 	{
 		socket_send_packet(kernel_client_socket, pcb_packet);
 
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> Kernel", pcb->pid);
-		pthread_mutex_unlock(&mutex_log);
 	}
 	pthread_mutex_unlock(&mutex_kernel_socket);
 
 	packet_destroy(pcb_packet);
-	clean_tlb(tlb);
-	pcb_destroy(pcb);
-
-	// Resetea la interrupcion
-	pthread_mutex_lock(&mutex_has_interruption);
-	new_interruption = false;
-	pthread_mutex_unlock(&mutex_has_interruption);
 }
 
 void release_interruption()

@@ -64,7 +64,7 @@ void write_frame_value(void *frame_ptr, uint32_t offset, uint32_t value)
 // Escribe/pisa toda la pagina ubicada en el frame (con comienzo en frame_ptr)
 void write_frame(void *frame_ptr, void *new_page)
 {
-    memcpy(frame_ptr, &new_page, config->pageSize);
+    memcpy(frame_ptr, new_page, config->pageSize);
 }
 
 // Settea los bits de uso y modificado de una pagina leida/escrita
