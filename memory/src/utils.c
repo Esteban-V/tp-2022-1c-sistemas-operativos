@@ -51,7 +51,7 @@ uint32_t read_frame_value(void *frame_ptr, uint32_t offset)
 void *read_frame(void *frame_ptr)
 {
     void *value;
-    memcpy(&value, frame_ptr, config->pageSize);
+    memcpy(value, frame_ptr, config->pageSize);
     return value;
 }
 
@@ -160,7 +160,7 @@ void increment_clock_hand(int *clock_hand)
     (*clock_hand)++;
     if (*clock_hand >= config->framesPerProcess)
     {
-        *clock_hand = (*clock_hand) % config->framesPerProcess;
+        *clock_hand = *clock_hand % config->framesPerProcess;
     }
 }
 
