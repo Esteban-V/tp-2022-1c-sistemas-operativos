@@ -32,7 +32,7 @@ enum e_sortingAlgorithm sortingAlgorithm;
 int pid = 0;
 t_log *logger;
 
-struct timespec now, toExec, fromExec;
+struct timeval now, toExec, fromExec;
 
 t_pQueue *new_q, *ready_q, *memory_init_q, *memory_exit_q, *blocked_q, *memory_suspension_q, *memory_unsuspension_q, *suspended_ready_q, *suspended_block_q, *exit_q;
 

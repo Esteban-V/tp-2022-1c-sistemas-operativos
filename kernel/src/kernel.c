@@ -135,9 +135,16 @@ void *io_listener(void *args)
 			pcb = pQueue_take(blocked_q);
 
 			// Tiempo que ya estuvo bloqueado
+			// ERROR clock_gettime no nos funciona
+			/*
 			struct timespec curr_time;
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &curr_time);
-			time_blocked = time_to_ms(curr_time) - pcb->blocked_time;
+			 */
+			struct timeval nowTime;
+			gettimeofday(&nowTime, NULL);
+			int currTime = nowTime.tv_sec * 1000LL + nowTime.tv_usec / 1000;
+
+			time_blocked = currTime - pcb->blocked_time;
 
 			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
 			sleep_ms = config->maxBlockedTime - time_blocked;
@@ -194,6 +201,8 @@ void *io_listener(void *args)
 				pQueue_put(memory_suspension_q, (void *)pcb);
 
 				// Esperar suspension exitosa
+				// ERROR mientras se suspende el proceso deberia poder seguir corriendo el hilo de io
+				/*
 				sem_wait(&suspension_ready);
 
 				pQueue_put(suspended_block_q, (void *)pcb);
@@ -203,6 +212,7 @@ void *io_listener(void *args)
 				pthread_mutex_unlock(&mutex_log);
 
 				sem_post(&process_for_IO);
+				 */
 			}
 		}
 		else
@@ -268,6 +278,7 @@ void *exit_process(void *args)
 	t_pcb *pcb = NULL;
 	while (1)
 	{
+		// ERROR agrego sem por posibles problemas de sincro
 		pcb = (t_pcb *)pQueue_take(exit_q);
 
 		t_packet *exit_request = create_packet(PROCESS_EXIT, INITIAL_STREAM_SIZE);
@@ -305,7 +316,11 @@ void *to_exec()
 		}
 		packet_destroy(pcb_packet);
 
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
+		// ERROR funcion no nos funciona
+		/*
+				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
+				 */
+		gettimeofday(&toExec, NULL);
 		pthread_mutex_unlock(&execution_mutex);
 
 		pthread_mutex_lock(&mutex_log);
@@ -392,8 +407,6 @@ void put_to_ready(t_pcb *pcb)
 		log_warning(logger, "SJF --> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
-		pQueue_sort(ready_q, SJF_sort);
-
 		int freeCpu;
 		sem_getvalue(&cpu_free, &freeCpu);
 		if (freeCpu <= 0)
@@ -410,6 +423,8 @@ void put_to_ready(t_pcb *pcb)
 				// Se espera a que vuelva de CPU
 				sem_wait(&interrupt_ready);
 			}
+			// ERROR el orden solo tiene sentido hacerlo luego de que volvio de la interrupcion el proceso
+			pQueue_sort(ready_q, SJF_sort);
 		}
 	}
 
@@ -489,11 +504,19 @@ bool suspension_success(t_packet *petition, int mem_socket)
 		{
 			found = true;
 
-			pQueue_take(memory_suspension_q);
+			t_pcb *pcb = pQueue_take(memory_suspension_q);
+
 			// Avisar de proceso suspendido
-			sem_post(&suspension_ready);
+			// sem_post(&suspension_ready);
 			// Se libera la memoria, sube multiprogramacion
 			sem_post(&sem_multiprogram);
+
+			pthread_mutex_lock(&mutex_log);
+			log_warning(logger, "Process #%d suspended, %dms left", pcb->pid, pcb->pending_io_time);
+			pthread_mutex_unlock(&mutex_log);
+
+			pQueue_put(suspended_block_q, (void *)pcb);
+			sem_post(&process_for_IO);
 		}
 	};
 
@@ -596,13 +619,21 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 			log_info(logger, "Successfully kicked out process #%d from CPU", received_pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
 
+			// NO FUNCIONA
+			/*
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+			 */
+			gettimeofday(&fromExec, NULL);
+			int fromInMs = fromExec.tv_sec * 1000LL + fromExec.tv_usec / 1000;
 
-			int ms_passed = time_to_ms(toExec) - time_to_ms(fromExec);
-			received_pcb->left_burst_estimation = received_pcb->left_burst_estimation - ms_passed;
+			int toInMs = toExec.tv_sec * 1000LL + toExec.tv_usec / 1000;
+			// ERROR la resta es desde que volvio menos cuando se fue, no al reves
+			int ms_passed = fromInMs - toInMs;
+			// ERROR CASTEAMOS EL LEFT XQ ESTA COMO unsigned para poder ser pasado como paquete, pero puede ser negativo
+			received_pcb->left_burst_estimation = (int)(received_pcb->left_burst_estimation) - ms_passed;
 
 			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
+			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms", received_pcb->pid, (int)received_pcb->left_burst_estimation);
 			pthread_mutex_unlock(&mutex_log);
 
 			pQueue_put(ready_q, received_pcb);
@@ -630,20 +661,30 @@ bool io_op(t_packet *petition, int cpu_socket)
 		log_info(logger, "Process #%d requested I/O call", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
+		// ERROR NO FUNCIONA
+		/*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
+		 */
+		gettimeofday(&fromExec, NULL);
 
-		int ms_passed = (time_to_ms(toExec) - time_to_ms(fromExec));
-		int estimate = (config->alpha * ms_passed) + ((1 - config->alpha) * received_pcb->burst_estimation);
+		int fromInMs = fromExec.tv_sec * 1000LL + fromExec.tv_usec / 1000;
+		;
+		int toInMs = toExec.tv_sec * 1000LL + toExec.tv_usec / 1000;
+		// ERROR, mismo que interrupt
+		int ms_passed = fromInMs - toInMs;
+		// ERROR antes no comtemplaba casos donde habia un i/o luego de una interrupcion
+		int estimate = (config->alpha * (received_pcb->burst_estimation - (int)received_pcb->left_burst_estimation - ms_passed)) + ((1 - config->alpha) * received_pcb->burst_estimation);
 
 		received_pcb->burst_estimation = estimate;
 		received_pcb->left_burst_estimation = estimate;
 
-		struct timespec blocked_time;
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
-		received_pcb->blocked_time = time_to_ms(blocked_time);
+		// ERROR NO FUNCIONA
+		// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
+
+		received_pcb->blocked_time = fromInMs;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> [BLOCKED] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
+		log_info(logger, "PID #%d CPU --> [BLOCKED] ,excuted %d ms, with updated estimate of %dms", received_pcb->pid, ms_passed, (int)received_pcb->left_burst_estimation);
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(blocked_q, (void *)received_pcb);

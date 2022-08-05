@@ -33,5 +33,6 @@ bool SJF_sort(void *elem1, void *elem2)
 {
 	t_pcb *pcb1 = (t_pcb *)elem1;
 	t_pcb *pcb2 = (t_pcb *)elem2;
-	return (pcb1->left_burst_estimation) <= (pcb2->left_burst_estimation);
+	//ERROR casteamos int xq puede ser negativo
+	return ((int) pcb1->left_burst_estimation) <= ((int) pcb2->left_burst_estimation);
 }
