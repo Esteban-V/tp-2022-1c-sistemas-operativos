@@ -633,8 +633,8 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 			 */
 			gettimeofday(&fromExec, NULL);
-			int fromExec_ms = fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
-			int toExec_ms = toExec.tv_sec*1000 +  toExec.tv_usec / 1000;
+			int64_t fromExec_ms = (int64_t)(fromExec.tv_sec) * 1000 + fromExec.tv_usec / 1000;
+			int64_t toExec_ms = (int64_t)(toExec.tv_sec) * 1000 + toExec.tv_usec / 1000;
 
 			int ms_passed = fromExec_ms - toExec_ms;
 			received_pcb->left_burst_estimation = (received_pcb->left_burst_estimation) - ms_passed;
@@ -679,8 +679,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 		 */
 		gettimeofday(&fromExec, NULL);
 
-		int fromExec_ms =  fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
-		int toExec_ms = toExec.tv_sec*1000 + toExec.tv_usec / 1000;
+		int fromExec_ms = (int64_t)(fromExec.tv_sec) * 1000 + fromExec.tv_usec / 1000;
+		int toExec_ms = (int64_t)(toExec.tv_sec) * 1000 + toExec.tv_usec / 1000;
 
 		int ms_passed = fromExec_ms - toExec_ms;
 		int estimate = (config->alpha * (received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed)) + ((1 - config->alpha) * received_pcb->burst_estimation);
