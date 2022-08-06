@@ -155,18 +155,18 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 
 		pid_size_swap=process_size;
 		pid_swap=pid;
-		swap_instruct=CREATE_SWAPPP;
+		swap_instruct = CREATE_SWAP;
+
 		sem_post(&sem_swap);
 		/*
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "AAAA");
 		pthread_mutex_unlock(&mutex_log);
 		 */
+
 		sem_wait(&swap_end);
 
-
-
-		//create_swap(pid, process_size);
+		// create_swap(pid, process_size);
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
 
@@ -235,7 +235,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				{
 					for (int j = 0; j < list_size(pt2->entries); j++)
 					{
-						//log_info(logger,"ENTRA FOR");
+						// log_info(logger,"ENTRA FOR");
 						t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, j);
 
 						// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
@@ -251,7 +251,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 						// Liberar los frames asignados en memoria
 						unassign_process_frames((int)process_frames_index);
-						//log_info(logger,"TERMINA FOR");
+						// log_info(logger,"TERMINA FOR");
 					}
 				}
 				else
@@ -419,6 +419,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 	if (frame != -1)
 	{
 		memory_write_counter++;
+
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
@@ -435,7 +436,7 @@ bool memory_write(t_packet *petition, int cpu_socket)
 		log_info(logger, "Memory wrote at frame %d + offset %d / value %d", frame, offset, value);
 		pthread_mutex_unlock(&mutex_log);
 
-		sem_post(&writeRead);
+				sem_post(&writeRead);
 	}
 	else
 	{
@@ -458,6 +459,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 	if (frame != -1)
 	{
 		memory_read_counter++;
+
 		sem_wait(&writeRead);
 
 		pthread_mutex_lock(&mutex_log);
@@ -480,7 +482,7 @@ bool memory_read(t_packet *petition, int cpu_socket)
 		socket_send_packet(cpu_socket, response);
 		packet_destroy(response);
 
-		sem_post(&writeRead);
+				sem_post(&writeRead);
 	}
 	else
 	{

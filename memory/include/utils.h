@@ -55,7 +55,7 @@ typedef struct t_page_entry
     bool used;
     // Bit de modificado
     bool modified;
-    // Que pagina (index) en su tabla de paginas nivel 2 es
+    // Que pagina del proceso es
     int page;
 } t_page_entry;
 

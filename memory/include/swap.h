@@ -23,13 +23,15 @@ void swap_write_page(uint32_t pid, int page, void *data);
 void *swap_get_page(uint32_t pid, int page);
 void delete_swap(uint32_t pid);
 void swap();
+
 typedef enum
 {
-    CREATE_SWAPPP,
+    CREATE_SWAP,
     WRITE_SWAP,
     READ_SWAP
 } swap_instrusct;
 swap_instrusct swap_instruct;
+
 sem_t sem_swap, swap_end;
 uint32_t pid_swap, page_num_swap, pid_size_swap;
 bool create_swapp(uint32_t pid, uint32_t size);

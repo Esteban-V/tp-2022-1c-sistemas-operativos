@@ -37,12 +37,15 @@ void pQueue_put(t_pQueue *queue, void *elem)
 	pthread_mutex_lock(&queue->mutex);
 	queue_push(queue->lib_queue, (void *)elem);
 	pthread_mutex_unlock(&queue->mutex);
+
 	sem_post(&queue->sem);
 }
 
 void *pQueue_take(t_pQueue *queue)
 {
+
 	sem_wait(&queue->sem);
+
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = queue_pop(queue->lib_queue);
 	pthread_mutex_unlock(&queue->mutex);
@@ -91,7 +94,9 @@ void pQueue_unlock(t_pQueue *queue)
 
 void *pQueue_peek(t_pQueue *queue)
 {
+
 	sem_wait(&queue->sem);
+
 	pthread_mutex_lock(&queue->mutex);
 	void *elem = queue_peek(queue->lib_queue);
 	pthread_mutex_unlock(&queue->mutex);

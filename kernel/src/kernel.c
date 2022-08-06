@@ -32,9 +32,6 @@ int main(void)
 	sem_init(&suspension_ready, 0, 0);
 	sem_init(&unsuspension_ready, 0, 0);
 
-
-
-
 	pthread_mutex_init(&execution_mutex, NULL);
 	if (config == NULL)
 	{
@@ -133,25 +130,31 @@ void *io_listener(void *args)
 
 	while (1)
 	{
+
 		sem_wait(&process_for_IO);
+
 		if (!pQueue_is_empty(blocked_q))
 		{
 			pcb = pQueue_take(blocked_q);
 
-			// Tiempo que ya estuvo bloqueado
-			// ERROR clock_gettime no nos funciona
-			/*
-			struct timespec curr_time;
-			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &curr_time);
-			 */
+			// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &curr_time);
+
 			struct timeval nowTime;
 			gettimeofday(&nowTime, NULL);
-			int currTime = nowTime.tv_sec*1000 + nowTime.tv_usec / 1000;
+			int64_t currTime = (int64_t)nowTime.tv_sec * 1000 + nowTime.tv_usec / 1000;
 
+			// Tiempo que ya estuvo bloqueado
 			time_blocked = currTime - pcb->blocked_time;
 
-			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
-			sleep_ms = config->maxBlockedTime - time_blocked;
+			// Tiempo que puede seguir bloqueado (restando del maximo lo que ya estuvo)
+			if (time_blocked > config->maxBlockedTime)
+			{
+				sleep_ms = 0;
+			}
+			else
+			{
+				sleep_ms = config->maxBlockedTime - time_blocked;
+			}
 
 			// Tiempo extra luego de hacer su io
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
@@ -176,7 +179,8 @@ void *io_listener(void *args)
 				// Tiempo faltante supera tiempo maximo
 				pthread_mutex_lock(&mutex_log);
 				log_warning(logger, "Process #%d's %dms burst exceeds %dms max", pcb->pid, pcb->pending_io_time, config->maxBlockedTime);
-				log_info(logger, "PID #%d --> I/O burst %dms", pcb->pid, sleep_ms);
+				if (sleep_ms > 0)
+					log_info(logger, "PID #%d --> I/O burst %dms", pcb->pid, sleep_ms);
 				pthread_mutex_unlock(&mutex_log);
 
 				// Duerme el maximo
@@ -187,7 +191,14 @@ void *io_listener(void *args)
 				pthread_mutex_unlock(&mutex_log);
 
 				// Se actualiza lo que le queda (por instruccion I/O) restandole lo que ya "durmio"
-				pcb->pending_io_time = pcb->pending_io_time - sleep_ms;
+				if (sleep_ms > pcb->pending_io_time)
+				{
+					pcb->pending_io_time = 0;
+				}
+				else
+				{
+					pcb->pending_io_time = pcb->pending_io_time - sleep_ms;
+				}
 
 				// Pide suspension a memoria
 				t_packet *suspend_packet = create_packet(PROCESS_SUSPEND, INITIAL_STREAM_SIZE);
@@ -203,20 +214,6 @@ void *io_listener(void *args)
 				packet_destroy(suspend_packet);
 
 				pQueue_put(memory_suspension_q, (void *)pcb);
-
-				// Esperar suspension exitosa
-				// ERROR mientras se suspende el proceso deberia poder seguir corriendo el hilo de io
-				/*
-				sem_wait(&suspension_ready);
-
-				pQueue_put(suspended_block_q, (void *)pcb);
-
-				pthread_mutex_lock(&mutex_log);
-				log_warning(logger, "Process #%d suspended, %dms left", pcb->pid, pcb->pending_io_time);
-				pthread_mutex_unlock(&mutex_log);
-
-				sem_post(&process_for_IO);
-				 */
 			}
 		}
 		else
@@ -232,7 +229,7 @@ void *io_listener(void *args)
 
 			pQueue_put(suspended_ready_q, (void *)pcb);
 
-			sem_post(&any_for_ready);
+						sem_post(&any_for_ready);
 		}
 	}
 }
@@ -267,7 +264,7 @@ bool receive_process(t_packet *petition, int console_socket)
 		log_info(logger, "PID #%d --> [NEW]", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		sem_post(&any_for_ready);
+				sem_post(&any_for_ready);
 	}
 
 	// NO HACER este destroy, porque siguen atados el proceso recibido y el pcb creado (de alguna forma)
@@ -305,12 +302,15 @@ void *to_exec()
 	t_pcb *pcb = NULL;
 	while (1)
 	{
+
 		sem_wait(&ready_for_exec);
+
 		sem_wait(&cpu_free);
 
 		pthread_mutex_lock(&execution_mutex);
 
 		pcb = pQueue_take(ready_q);
+
 		t_packet *pcb_packet = create_packet(PCB_TO_CPU, INITIAL_STREAM_SIZE);
 		stream_add_pcb(pcb_packet, pcb);
 
@@ -320,14 +320,10 @@ void *to_exec()
 		}
 		packet_destroy(pcb_packet);
 
-		// ERROR funcion no nos funciona
-		/*
-				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
-				 */
+		// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toExec);
 		gettimeofday(&toExec, NULL);
-		pthread_mutex_unlock(&execution_mutex);
 
-		int toInMs = toExec.tv_sec * 1000 + toExec.tv_usec / 1000;
+		pthread_mutex_unlock(&execution_mutex);
 
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
@@ -355,7 +351,7 @@ void *new_to_ready()
 
 	pQueue_put(memory_init_q, (void *)pcb);
 
-	sem_wait(&pcb_table_ready);
+		sem_wait(&pcb_table_ready);
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "PID #%d [NEW] --> [READY]", pcb->pid);
@@ -383,6 +379,7 @@ void *suspended_to_ready()
 	pQueue_put(memory_unsuspension_q, (void *)pcb);
 
 	// Esperar suspension exitosa
+
 	sem_wait(&unsuspension_ready);
 
 	pthread_mutex_lock(&mutex_log);
@@ -395,9 +392,10 @@ void *suspended_to_ready()
 
 void put_to_ready(t_pcb *pcb)
 {
-	pthread_mutex_lock(&execution_mutex);
 
 	pQueue_put(ready_q, (void *)pcb);
+
+	pthread_mutex_lock(&execution_mutex);
 
 	if (sortingAlgorithm == FIFO)
 	{
@@ -413,28 +411,34 @@ void put_to_ready(t_pcb *pcb)
 		log_warning(logger, "SJF --> Replanning...");
 		pthread_mutex_unlock(&mutex_log);
 
+		pQueue_sort(ready_q, SJF_sort);
+
 		int freeCpu;
 		sem_getvalue(&cpu_free, &freeCpu);
 		if (freeCpu <= 0)
 		{
+
+			// t_pcb *int_pcb = pQueue_peek(ready_q);
+
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "PID #%d requests interruption", pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
 
-			sem_getvalue(&cpu_free, &freeCpu);
-			if (freeCpu <= 0)
-			{
-				// Pide desalojo del proceso tomando la CPU actualmente
-				socket_send_header(cpu_interrupt_socket, INTERRUPT);
-				// Se espera a que vuelva de CPU
-				sem_wait(&interrupt_ready);
-			}
-			// ERROR el orden solo tiene sentido hacerlo luego de que volvio de la interrupcion el proceso
+			// Pide desalojo del proceso tomando la CPU actualmente
+			socket_send_header(cpu_interrupt_socket, INTERRUPT);
+
+			pthread_mutex_unlock(&execution_mutex);
+
+			// Se espera a que vuelva de CPU
+
+			sem_wait(&interrupt_ready);
+
+			pthread_mutex_lock(&execution_mutex);
 		}
-		pQueue_sort(ready_q, SJF_sort);
 	}
 
-	sem_post(&ready_for_exec);
+		sem_post(&ready_for_exec);
+
 	pthread_mutex_unlock(&execution_mutex);
 }
 
@@ -443,8 +447,10 @@ void *to_ready()
 	while (1)
 	{
 
-		sem_wait(&any_for_ready);
+				sem_wait(&any_for_ready);
+
 		sem_wait(&sem_multiprogram);
+
 		if (!pQueue_is_empty(suspended_ready_q))
 		{
 			suspended_to_ready();
@@ -479,6 +485,7 @@ bool table_index_success(t_packet *petition, int mem_socket)
 			pcb->frames_index = process_frames_index;
 
 			// Avisar de pcb listo para memoria
+
 			sem_post(&pcb_table_ready);
 		}
 	};
@@ -513,8 +520,11 @@ bool suspension_success(t_packet *petition, int mem_socket)
 			t_pcb *pcb = pQueue_take(memory_suspension_q);
 
 			// Avisar de proceso suspendido
-			// sem_post(&suspension_ready);
+			//
+
+			sem_post(&suspension_ready);
 			// Se libera la memoria, sube multiprogramacion
+
 			sem_post(&sem_multiprogram);
 
 			pthread_mutex_lock(&mutex_log);
@@ -522,6 +532,7 @@ bool suspension_success(t_packet *petition, int mem_socket)
 			pthread_mutex_unlock(&mutex_log);
 
 			pQueue_put(suspended_block_q, (void *)pcb);
+
 			sem_post(&process_for_IO);
 		}
 	};
@@ -556,7 +567,7 @@ bool unsuspension_success(t_packet *petition, int mem_socket)
 			t_pcb *pcb = pQueue_take(memory_unsuspension_q);
 			pcb->frames_index = process_frames_index;
 
-			sem_post(&unsuspension_ready);
+						sem_post(&unsuspension_ready);
 		}
 	};
 
@@ -605,19 +616,20 @@ bool exit_process_success(t_packet *petition, int mem_socket) // posible problem
 		terminate_kernel(true);
 	}
 
-	sem_post(&sem_multiprogram);
+		sem_post(&sem_multiprogram);
 	return true;
 }
 
 bool handle_interruption(t_packet *petition, int cpu_socket)
 {
-	sem_post(&cpu_free);
-
 	uint32_t has_pcb = stream_take_UINT32(petition->payload);
+
 	if (has_pcb)
 	{
 		t_pcb *received_pcb = create_pcb();
 		stream_take_pcb(petition, received_pcb);
+
+		sem_post(&cpu_free);
 
 		if (!!received_pcb)
 		{
@@ -625,37 +637,37 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 			log_info(logger, "Successfully kicked out process #%d from CPU", received_pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
 
-			// NO FUNCIONA
-			/*
-			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
-			 */
+			// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 			gettimeofday(&fromExec, NULL);
-			int fromExec_ms = fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
-			int toExec_ms = toExec.tv_sec*1000 +  toExec.tv_usec / 1000;
+			int64_t fromExec_ms = (int64_t)fromExec.tv_sec * 1000 + fromExec.tv_usec / 1000;
+			int64_t toExec_ms = (int64_t)toExec.tv_sec * 1000 + toExec.tv_usec / 1000;
 
 			int ms_passed = fromExec_ms - toExec_ms;
 			received_pcb->left_burst_estimation = (received_pcb->left_burst_estimation) - ms_passed;
 
 			pthread_mutex_lock(&mutex_log);
-			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms, had a burst up to now of %d", received_pcb->pid, received_pcb->left_burst_estimation, received_pcb->burst_estimation - received_pcb->left_burst_estimation);
+			log_info(logger, "PID #%d CPU --> [READY] with updated estimate of %dms (%dms up to now)", received_pcb->pid, received_pcb->left_burst_estimation, received_pcb->burst_estimation - received_pcb->left_burst_estimation);
 			pthread_mutex_unlock(&mutex_log);
 
 			pQueue_put(ready_q, received_pcb);
 
-			sem_post(&ready_for_exec);
+						sem_post(&ready_for_exec);
 		}
 	}
 
-	sem_post(&interrupt_ready);
+		sem_post(&interrupt_ready);
 
 	return true;
 }
 
 bool io_op(t_packet *petition, int cpu_socket)
 {
+	uint32_t _has_pcb = stream_take_UINT32(petition->payload);
+
 	sem_post(&cpu_free);
 
-	pthread_mutex_lock(&execution_mutex);
+		pthread_mutex_lock(&execution_mutex);
+
 	t_pcb *received_pcb = create_pcb();
 	stream_take_pcb(petition, received_pcb);
 
@@ -665,34 +677,33 @@ bool io_op(t_packet *petition, int cpu_socket)
 		log_info(logger, "Process #%d requested I/O call", received_pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 
-		// ERROR NO FUNCIONA
-		/*
-		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
-		 */
+		// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &fromExec);
 		gettimeofday(&fromExec, NULL);
 
-		int fromExec_ms =  fromExec.tv_sec*1000 + fromExec.tv_usec / 1000;
-		int toExec_ms = toExec.tv_sec*1000 + toExec.tv_usec / 1000;
+		int64_t fromExec_ms = (int64_t)fromExec.tv_sec * 1000 + fromExec.tv_usec / 1000;
+		int64_t toExec_ms = (int64_t)toExec.tv_sec * 1000 + toExec.tv_usec / 1000;
 
 		int ms_passed = fromExec_ms - toExec_ms;
-		int estimate = (config->alpha * (received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed)) + ((1 - config->alpha) * received_pcb->burst_estimation);
+		int last_burst = received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed;
+		int estimate = (config->alpha * last_burst) + ((1 - config->alpha) * received_pcb->burst_estimation);
 
 		received_pcb->burst_estimation = estimate;
 		received_pcb->left_burst_estimation = estimate;
 
-		// ERROR NO FUNCIONA
 		// clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &blocked_time);
 
 		received_pcb->blocked_time = fromExec_ms;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d CPU --> [BLOCKED], excuted %dms, with updated estimate of %dms, total last burst %d", received_pcb->pid, ms_passed, received_pcb->left_burst_estimation, received_pcb->burst_estimation - received_pcb->left_burst_estimation + ms_passed);
+		log_info(logger, "PID #%d CPU --> [BLOCKED] with updated estimate of %dms", received_pcb->pid, received_pcb->left_burst_estimation);
+		log_info(logger, "Executed %dms / Total last burst %dms", ms_passed, last_burst);
 		pthread_mutex_unlock(&mutex_log);
 
 		pQueue_put(blocked_q, (void *)received_pcb);
 
-		sem_post(&process_for_IO);
+				sem_post(&process_for_IO);
 	}
+
 	pthread_mutex_unlock(&execution_mutex);
 
 	return true;
@@ -700,6 +711,8 @@ bool io_op(t_packet *petition, int cpu_socket)
 
 bool exit_op(t_packet *petition, int cpu_socket)
 {
+	uint32_t _has_pcb = stream_take_UINT32(petition->payload);
+
 	sem_post(&cpu_free);
 
 	t_pcb *received_pcb = create_pcb();

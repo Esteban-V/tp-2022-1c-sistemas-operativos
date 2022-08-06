@@ -84,8 +84,8 @@ int assign_process_frames()
 // Libera todos los frames de un proceso
 void unassign_process_frames(int frames_index)
 {
-	//log_info(logger,"UNAAA");
-	
+	// log_info(logger,"UNAAA");
+
 	if (frames_index < list_size(global_frames))
 	{
 		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
@@ -93,9 +93,9 @@ void unassign_process_frames(int frames_index)
 		void unassign_frame(void *elem)
 		{
 			t_frame_entry *entry = (t_frame_entry *)elem;
-			//log_info(logger,"pre bit");
+			// log_info(logger,"pre bit");
 			frame_clear_assigned(frames_bitmap, entry->frame);
-			//log_info(logger,"post bit");
+			// log_info(logger,"post bit");
 			entry->frame = -1;
 			entry->page_data = NULL;
 		};
@@ -200,9 +200,7 @@ int get_frame_number(int pt2_index, int entry_index, int pid, int frames_index)
 					page_replacement_counter++;
 					frame = replace_algorithm(process_frames, entry, pid);
 					pthread_mutex_lock(&mutex_log);
-					log_warning(logger, "Frame victim %d", frame);
 					pthread_mutex_unlock(&mutex_log);
-
 				}
 			}
 		}
@@ -219,15 +217,16 @@ void save_swap(int frame_number, int page_number, int pid)
 	void *memory_value = read_frame(frame_ptr);
 
 	// Lo escribe en la pagina correspondiente en swap
-	swap_instruct=WRITE_SWAP;
-	value_swap=memory_value;
-	page_num_swap=page_number;
-	pid_swap=pid;
+	swap_instruct = WRITE_SWAP;
+	value_swap = memory_value;
+	page_num_swap = page_number;
+	pid_swap = pid;
+
 	sem_post(&sem_swap);
+
 	sem_wait(&swap_end);
 
-	//swap_write_page(pid, page_number, memory_value);
-
+	// swap_write_page(pid, page_number, memory_value);
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Removed PID #%d's page #%d from memory", pid, page_number);
@@ -237,29 +236,34 @@ void save_swap(int frame_number, int page_number, int pid)
 void get_swap(int frame_number, int page_number, int pid)
 {
 	// Obtiene lo leido de la pagina en swap
-	swap_instruct=READ_SWAP;
-	pid_swap=pid;
-	page_num_swap=page_number;
+	swap_instruct = READ_SWAP;
+	pid_swap = pid;
+	page_num_swap = page_number;
+
 	sem_post(&sem_swap);
+
 	sem_wait(&swap_end);
+
 	void *swap_value = read_from_swap;
-	//void *swap_value = swap_get_page(pid, page_number);
+	// void *swap_value = swap_get_page(pid, page_number);
 
 	// Identifica que parte de memoria (frame) debe escribir
 	void *frame_ptr = get_frame(frame_number);
 
 	// int j;
 	// for(j=0;j<config->pageSize;j++){
-	// 	printf("%d ",((char *)frame_ptr)[j]);
+	//
+
 	// }
 
 	// Lo escribe en el frame correspondiente en memoria
 	memcpy(frame_ptr, swap_value, config->pageSize);
-	//write_frame(frame_ptr, swap_value);
+	// write_frame(frame_ptr, swap_value);
 
 	// int i;
 	// for(i=0;i<config->pageSize;i++){
-	// 	printf("%d ",((char *)frame_ptr)[i]);
+	//
+
 	// }
 
 	pthread_mutex_lock(&mutex_log);
@@ -269,16 +273,22 @@ void get_swap(int frame_number, int page_number, int pid)
 
 int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int pid)
 {
-	void _replace(t_frame_entry * curr_frame, t_page_entry * old_page)
+	void _replace(t_frame_entry * curr_frame, t_page_entry * victim)
 	{
 		int frame_number = curr_frame->frame;
+
+		pthread_mutex_lock(&mutex_log);
+		log_warning(logger, "Clock replacement at frame #%d for page %d --> %d",
+					frame_number, victim->page, entry->page);
+		pthread_mutex_unlock(&mutex_log);
+
 		// Lleva a disco la pagina a reemplazar y la marca como no presente
-		if (old_page->present && old_page->modified)
+		if (victim->present && victim->modified)
 		{
-			save_swap(frame_number, old_page->page, pid);
-			old_page->modified = false;
+			save_swap(frame_number, victim->page, pid);
+			victim->modified = false;
 		}
-		old_page->present = false;
+		victim->present = false;
 
 		// Trae la nueva pagina de disco (mismo frame y mismo proceso)
 		get_swap(frame_number, entry->page, pid);

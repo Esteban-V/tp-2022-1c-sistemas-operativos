@@ -57,7 +57,7 @@ uint32_t get_frame(uint32_t page_number);
 void memory_op(enum memory_headers header, uint32_t frame, uint32_t offset, uint32_t value);
 
 pthread_t interruptionThread, execThread, memoryThread;
-pthread_mutex_t mutex_kernel_socket, mutex_has_interruption, mutex_value;
+pthread_mutex_t mutex_kernel_socket, mutex_has_interruption, mutex_value, mutex_pcb;
 
 sem_t pcb_loaded, value_loaded;
 bool new_interruption;

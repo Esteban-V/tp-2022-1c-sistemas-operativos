@@ -81,11 +81,13 @@ void swap()
 
     while (true)
     {
+
         sem_wait(&sem_swap);
+
         usleep(config->swapDelay * 1000);
         switch (swap_instruct)
         {
-        case CREATE_SWAPPP:
+        case CREATE_SWAP:
             create_swapp(pid_swap, pid_size_swap);
             break;
 
@@ -97,6 +99,7 @@ void swap()
             read_swap(read_from_swap, pid_swap, page_num_swap);
             break;
         }
+
         sem_post(&swap_end);
     }
 }
@@ -108,7 +111,6 @@ bool create_swapp(uint32_t pid, uint32_t size)
     int file = open(swap_file_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (file == -1)
     {
-        //TODO ERROR
         return false;
     }
 
@@ -119,12 +121,7 @@ bool create_swapp(uint32_t pid, uint32_t size)
     rel->dir = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, file, 0);
 
     list_add(relations, rel);
-
-    if (errno != 0)
-        log_error(logger, "Error en mmap: errno %i", errno);
-
     memset(rel->dir, 0, size);
-
     close(file);
 
     pthread_mutex_lock(&mutex_log);
@@ -133,24 +130,12 @@ bool create_swapp(uint32_t pid, uint32_t size)
 
     return true;
 }
-/*
-void *findDir(uint32_t pid)
-{
-    bool find_dir(void *elem)
-    {
-        relation_t *rela = (relation_t *)elem;
-        log_info(logger,"comparo con %d", rela->pid);
-        return rela->pid == pid;
-    }
-    return ((relation_t *)list_find(relations, find_dir))->dir;
-}
- */
+
 relation_t *findRela(uint32_t pid)
 {
     bool find_dir(void *elem)
     {
         relation_t *rela = (relation_t *)elem;
-        //log_info(logger, "comparo con %d", rela->pid);
         return rela->pid == pid;
     }
     return ((relation_t *)list_find(relations, find_dir));
@@ -159,27 +144,27 @@ relation_t *findRela(uint32_t pid)
 void read_swap(void *result, uint32_t pid, uint32_t page_num)
 {
     pthread_mutex_lock(&mutex_log);
-    log_warning(logger, "Reading swap file for process #%d | Page #%d", pid, page_num);
+    log_warning(logger, "Reading swap file for process #%d / Page #%d", pid, page_num);
     pthread_mutex_unlock(&mutex_log);
 
     void *mapped = findRela(pid)->dir;
     memcpy(result, mapped + page_num * config->pageSize, config->pageSize);
 
     pthread_mutex_lock(&mutex_log);
-    log_warning(logger, "Read swap file for process #%d | Page #%d", pid, page_num);
+    log_info(logger, "Sucessfully read swap file");
     pthread_mutex_unlock(&mutex_log);
 }
 
 void write_swapp(uint32_t pid, void *value, uint32_t page_num)
 {
     pthread_mutex_lock(&mutex_log);
-    log_warning(logger, "Writing swap file for process #%d | Page #%d", pid, page_num);
+    log_warning(logger, "Writing swap file for process #%d / Page #%d", pid, page_num);
     pthread_mutex_unlock(&mutex_log);
 
-    //log_info(logger, "ANTES %d", pid);
     void *mapped = findRela(pid)->dir;
-    //log_info(logger, "DESPUES");
-    if (mapped == NULL)
-        log_info(logger, "NO ENCONTRO");
     memcpy(mapped + page_num * config->pageSize, value, config->pageSize);
+
+    pthread_mutex_lock(&mutex_log);
+    log_info(logger, "Sucessfully wrote swap file");
+    pthread_mutex_unlock(&mutex_log);
 }

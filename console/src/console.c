@@ -103,7 +103,22 @@ void get_code(FILE *file)
 	lines_read = getline(&line_buf, &line_buf_size, file);
 	while (lines_read != -1)
 	{
-		list_add(instruction_list, parse_instruction(line_buf));
+		char **instruction_text = string_split(line_buf, " ");
+		char *id = instruction_text[0];
+		string_trim(&id);
+		if (strcmp(id, "NO_OP") == 0)
+		{
+			int times = atoi(instruction_text[1]);
+			for (int i = 0; i < times; i++)
+			{
+				list_add(instruction_list, parse_instruction("NO_OP 1"));
+			}
+		}
+		else
+		{
+			list_add(instruction_list, parse_instruction(line_buf));
+		}
+
 		lines_read = getline(&line_buf, &line_buf_size, file);
 	}
 }
