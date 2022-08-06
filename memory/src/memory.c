@@ -538,11 +538,14 @@ void terminate_memory(int x)
 	list_destroy(global_frames);
 	destroyMemoryConfig(config);
 
+	list_destroy(relations);
+
 	if (server_socket)
 		close(server_socket);
 
 	if (x == SIGINT)
 		stats();
+
 	log_destroy(logger);
 	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }

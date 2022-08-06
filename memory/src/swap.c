@@ -63,6 +63,13 @@ void delete_swap(uint32_t pid)
     usleep(config->swapDelay * 1000);
     munmap(findRela(pid)->dir, findRela(pid)->size); // desmapeamos el archivo swap del proceso (liberamos la variable)
     remove(swap_file_path);
+
+    bool condition(relation_t * elem)
+    {
+        return elem->pid == pid;
+    }
+
+    list_remove_and_destroy_by_condition(relations, condition, free);
 }
 
 void swap()
@@ -156,6 +163,11 @@ void *read_swap(uint32_t pid, uint32_t page_num)
     void *mapped = findRela(pid)->dir;
     void *content = malloc(config->pageSize);
     memcpy(content, mapped + page_num * config->pageSize, config->pageSize);
+
+    pthread_mutex_lock(&mutex_log);
+    log_warning(logger, "Read swap file for process #%d | Page #%d", pid, page_num);
+    pthread_mutex_unlock(&mutex_log);
+
     return content;
 }
 
