@@ -13,7 +13,7 @@ int page_table_init(uint32_t process_size)
 	// Cantidad de tablas de 2do nivel necesarias segun tamaño del proceso
 	int pages_required = ceil_div(process_size, config->pageSize);
 	int level2_pages_required = ceil_div(pages_required, config->entriesPerTable);
-
+	int page_counter = 0;
 	// Creacion tablas nivel 2
 	for (int i = 0; i < level2_pages_required; i++)
 	{
@@ -30,7 +30,8 @@ int page_table_init(uint32_t process_size)
 			page->present = false;
 			page->modified = false;
 			page->used = false;
-			page->page = i*config->entriesPerTable+j;
+			page->page = page_counter;
+			page_counter++;
 
 			// Se agrega a la lista de entradas de su tabla nivel 2
 			list_add(level2_table->entries, page);
@@ -83,6 +84,8 @@ int assign_process_frames()
 // Libera todos los frames de un proceso
 void unassign_process_frames(int frames_index)
 {
+	//log_info(logger,"UNAAA");
+	
 	if (frames_index < list_size(global_frames))
 	{
 		t_process_frame *process_frames = (t_process_frame *)list_get(global_frames, frames_index);
@@ -90,7 +93,9 @@ void unassign_process_frames(int frames_index)
 		void unassign_frame(void *elem)
 		{
 			t_frame_entry *entry = (t_frame_entry *)elem;
+			//log_info(logger,"pre bit");
 			frame_clear_assigned(frames_bitmap, entry->frame);
+			//log_info(logger,"post bit");
 			entry->frame = -1;
 			entry->page_data = NULL;
 		};
@@ -214,9 +219,15 @@ void save_swap(int frame_number, int page_number, int pid)
 	void *memory_value = read_frame(frame_ptr);
 
 	// Lo escribe en la pagina correspondiente en swap
-	
+	swap_instruct=WRITE_SWAP;
+	value_swap=memory_value;
+	page_num_swap=page_number;
+	pid_swap=pid;
+	sem_post(&sem_swap);
+	sem_wait(&swap_end);
 
-	swap_write_page(pid, page_number, memory_value);
+	//swap_write_page(pid, page_number, memory_value);
+
 
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Removed PID #%d's page #%d from memory", pid, page_number);
@@ -226,19 +237,29 @@ void save_swap(int frame_number, int page_number, int pid)
 void get_swap(int frame_number, int page_number, int pid)
 {
 	// Obtiene lo leido de la pagina en swap
-	void *swap_value = swap_get_page(pid, page_number);
+	swap_instruct=READ_SWAP;
+	pid_swap=pid;
+	page_num_swap=page_number;
+	sem_post(&sem_swap);
+	sem_wait(&swap_end);
+	void *swap_value = read_from_swap;
+	//void *swap_value = swap_get_page(pid, page_number);
 
 	// Identifica que parte de memoria (frame) debe escribir
 	void *frame_ptr = get_frame(frame_number);
-
+	int j;
+	for(j=0;j<config->pageSize;j++){
+		printf("%d ",((char *)frame_ptr)[j]);
+	}
 	// Lo escribe en el frame correspondiente en memoria
-	write_frame(frame_ptr, swap_value);
-
+	memcpy(frame_ptr, swap_value, config->pageSize);
+	//write_frame(frame_ptr, swap_value);
+/*
 	int i;
 	for(i=0;i<config->pageSize;i++){
 		printf("%d ",((char *)frame_ptr)[i]);
 	}
-
+ */
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Loaded PID #%d's page #%d into memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);

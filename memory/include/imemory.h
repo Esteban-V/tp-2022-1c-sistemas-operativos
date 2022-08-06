@@ -15,7 +15,7 @@ bool cpu_handshake(int cpu_socket);
 void *packet_handler(void *_client_socket);
 
 int server_socket;
-pthread_t cpuThread;
+pthread_t cpuThread, swapThread;
 
 t_memory *memory_init();
 void terminate_memory(int x);

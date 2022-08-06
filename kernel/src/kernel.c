@@ -2,6 +2,7 @@
 
 int main(void)
 {
+
 	signal(SIGINT, terminate_kernel);
 
 	logger = log_create("./cfg/kernel-final.log", "KERNEL", 1, LOG_LEVEL_INFO);
@@ -30,6 +31,9 @@ int main(void)
 	sem_init(&pcb_table_ready, 0, 0);
 	sem_init(&suspension_ready, 0, 0);
 	sem_init(&unsuspension_ready, 0, 0);
+
+
+
 
 	pthread_mutex_init(&execution_mutex, NULL);
 	if (config == NULL)
@@ -323,8 +327,10 @@ void *to_exec()
 		gettimeofday(&toExec, NULL);
 		pthread_mutex_unlock(&execution_mutex);
 
+		int toInMs = toExec.tv_sec * 1000 + toExec.tv_usec / 1000;
+
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
+		log_info(logger, "PID #%d [READY] --> CPU, time %d ", pcb->pid,toInMs);
 		pthread_mutex_unlock(&mutex_log);
 		pcb_destroy(pcb);
 	}

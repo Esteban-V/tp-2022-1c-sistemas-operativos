@@ -50,6 +50,10 @@ int main()
 	pthread_create(&cpuThread, NULL, packet_handler, cpu_client_socket);
 	pthread_detach(cpuThread);
 
+	pthread_create(&swapThread, NULL, swap, NULL);
+	pthread_detach(swapThread);
+	
+
 	while (1)
 	{
 		server_listen(server_socket, packet_handler);
@@ -149,7 +153,20 @@ bool process_new(t_packet *petition, int kernel_socket) // Listo
 		int pt1_index = page_table_init(process_size);
 		int process_frames_index = assign_process_frames();
 
-		create_swap(pid, process_size);
+		pid_size_swap=process_size;
+		pid_swap=pid;
+		swap_instruct=CREATE_SWAPPP;
+		sem_post(&sem_swap);
+		/*
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "AAAA");
+		pthread_mutex_unlock(&mutex_log);
+		 */
+		sem_wait(&swap_end);
+
+
+
+		//create_swap(pid, process_size);
 
 		t_packet *response = create_packet(PROCESS_MEMORY_READY, INITIAL_STREAM_SIZE);
 
@@ -218,6 +235,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 				{
 					for (int j = 0; j < list_size(pt2->entries); j++)
 					{
+						//log_info(logger,"ENTRA FOR");
 						t_page_entry *entry = (t_page_entry *)list_get(pt2->entries, j);
 
 						// Se actualiza en "disco" unicamente si la pagina estaba en RAM y fue modificada
@@ -233,6 +251,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 
 						// Liberar los frames asignados en memoria
 						unassign_process_frames((int)process_frames_index);
+						//log_info(logger,"TERMINA FOR");
 					}
 				}
 				else
@@ -527,3 +546,4 @@ void terminate_memory(int x)
 	log_destroy(logger);
 	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }
+
