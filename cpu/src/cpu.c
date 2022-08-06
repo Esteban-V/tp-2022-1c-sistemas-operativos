@@ -69,6 +69,29 @@ void *listen_interruption()
 	}
 }
 
+
+bool receive_interruption(t_packet *_petition, int kernel_socket)
+{
+	pthread_mutex_lock(&mutex_has_interruption);
+	if (!!pcb && !!pcb->pid)
+	{
+		
+		new_interruption = true;
+		
+
+		pthread_mutex_lock(&mutex_log);
+		log_info(logger, "Interruption received");
+		pthread_mutex_unlock(&mutex_log);
+	}
+	else
+	{
+		release_interruption();
+	}
+	pthread_mutex_unlock(&mutex_has_interruption);
+
+	return true;
+}
+
 void pcb_to_kernel(kernel_headers header)
 {
 	t_packet *pcb_packet = create_packet(header, INITIAL_STREAM_SIZE);
@@ -189,25 +212,6 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 	return true;
 }
 
-bool receive_interruption(t_packet *_petition, int kernel_socket)
-{
-	if (!!pcb && !!pcb->pid)
-	{
-		pthread_mutex_lock(&mutex_has_interruption);
-		new_interruption = true;
-		pthread_mutex_unlock(&mutex_has_interruption);
-
-		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "Interruption received");
-		pthread_mutex_unlock(&mutex_log);
-	}
-	else
-	{
-		release_interruption();
-	}
-
-	return true;
-}
 
 /* bool receive_value(t_packet *petition, int mem_socket)
 {
@@ -242,7 +246,7 @@ void *cpu_cycle()
 {
 	while (1)
 	{
-		check_interrupt();
+		//check_interrupt();
 
 		sem_wait(&pcb_loaded);
 		while (!!pcb && !!pcb->pid && (pcb->program_counter < list_size(pcb->instructions)))
@@ -266,7 +270,7 @@ void check_interrupt()
 	{
 		// Resetea la interrupcion
 		new_interruption = false;
-		pthread_mutex_unlock(&mutex_has_interruption);
+		
 
 		if (!!pcb && !!pcb->pid)
 		{
@@ -284,10 +288,7 @@ void check_interrupt()
 			release_interruption();
 		}
 	}
-	else
-	{
-		pthread_mutex_unlock(&mutex_has_interruption);
-	}
+	pthread_mutex_unlock(&mutex_has_interruption);
 }
 
 enum operation fetch_and_decode(t_instruction **instruction)

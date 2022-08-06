@@ -150,13 +150,17 @@ void *io_listener(void *args)
 
 			time_blocked = currTime - pcb->blocked_time;
 
+			pthread_mutex_lock(&mutex_log);
+				log_info(logger, "PID #%d --> estuve bloqueado %dms", pcb->pid, time_blocked);
+				pthread_mutex_unlock(&mutex_log);
+
 			// Tiempo que puede seguir bloqueado (restando del maximo lo que "ya estuvo")
 			sleep_ms = config->maxBlockedTime - time_blocked;
 
 			// Tiempo extra luego de hacer su io
 			remaining_io_time = sleep_ms - pcb->pending_io_time;
 
-			if (remaining_io_time >= 0)
+			if (remaining_io_time > 0)
 			{
 				pthread_mutex_lock(&mutex_log);
 				log_info(logger, "PID #%d --> I/O burst %dms", pcb->pid, pcb->pending_io_time);
@@ -415,26 +419,25 @@ void put_to_ready(t_pcb *pcb)
 
 		int freeCpu;
 		sem_getvalue(&cpu_free, &freeCpu);
-		if (freeCpu <= 0)
+		if(pedida>=1){
+			pedida++;
+		}else{
+			if (freeCpu <= 0)
 		{
+			pedida=1;
 			pthread_mutex_lock(&mutex_log);
 			log_info(logger, "PID #%d requests interruption", pcb->pid);
 			pthread_mutex_unlock(&mutex_log);
-
-			sem_getvalue(&cpu_free, &freeCpu);
-			if (freeCpu <= 0)
-			{
 				// Pide desalojo del proceso tomando la CPU actualmente
 				socket_send_header(cpu_interrupt_socket, INTERRUPT);
-				// Se espera a que vuelva de CPU
-				sem_wait(&interrupt_ready);
-			}
-			// ERROR el orden solo tiene sentido hacerlo luego de que volvio de la interrupcion el proceso
+		}else{
+			pQueue_sort(ready_q, SJF_sort);
+			sem_post(&ready_for_exec);
 		}
-		pQueue_sort(ready_q, SJF_sort);
+		}
+		
+		
 	}
-
-	sem_post(&ready_for_exec);
 	pthread_mutex_unlock(&execution_mutex);
 }
 
@@ -641,19 +644,24 @@ bool handle_interruption(t_packet *petition, int cpu_socket)
 			pthread_mutex_unlock(&mutex_log);
 
 			pQueue_put(ready_q, received_pcb);
-
+			pQueue_sort(ready_q, SJF_sort);
 			sem_post(&ready_for_exec);
+			for(int i =0;i<pedida;i++){
+				sem_post(&ready_for_exec);
+			}
+			pedida=0;
 		}
 	}
 
-	sem_post(&interrupt_ready);
+	//sem_post(&interrupt_ready);
+	
 
 	return true;
 }
 
 bool io_op(t_packet *petition, int cpu_socket)
 {
-	sem_post(&cpu_free);
+	
 
 	pthread_mutex_lock(&execution_mutex);
 	t_pcb *received_pcb = create_pcb();
@@ -692,6 +700,7 @@ bool io_op(t_packet *petition, int cpu_socket)
 		pQueue_put(blocked_q, (void *)received_pcb);
 
 		sem_post(&process_for_IO);
+		sem_post(&cpu_free);
 	}
 	pthread_mutex_unlock(&execution_mutex);
 
