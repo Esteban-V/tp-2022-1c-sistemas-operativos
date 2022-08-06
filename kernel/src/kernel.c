@@ -330,7 +330,7 @@ void *to_exec()
 		int toInMs = toExec.tv_sec * 1000 + toExec.tv_usec / 1000;
 
 		pthread_mutex_lock(&mutex_log);
-		log_info(logger, "PID #%d [READY] --> CPU, time %d ", pcb->pid,toInMs);
+		log_info(logger, "PID #%d [READY] --> CPU", pcb->pid);
 		pthread_mutex_unlock(&mutex_log);
 		pcb_destroy(pcb);
 	}
@@ -430,8 +430,8 @@ void put_to_ready(t_pcb *pcb)
 				sem_wait(&interrupt_ready);
 			}
 			// ERROR el orden solo tiene sentido hacerlo luego de que volvio de la interrupcion el proceso
-			pQueue_sort(ready_q, SJF_sort);
 		}
+		pQueue_sort(ready_q, SJF_sort);
 	}
 
 	sem_post(&ready_for_exec);

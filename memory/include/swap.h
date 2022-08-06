@@ -33,7 +33,7 @@ swap_instrusct swap_instruct;
 sem_t sem_swap, swap_end;
 uint32_t pid_swap, page_num_swap, pid_size_swap;
 bool create_swapp(uint32_t pid, uint32_t size);
-void *read_swap(uint32_t pid, uint32_t page_num);
+void read_swap(void *result, uint32_t pid, uint32_t page_num);
 void write_swapp(uint32_t pid, void *value, uint32_t page_num);
 relation_t *findRela(uint32_t pid);
 

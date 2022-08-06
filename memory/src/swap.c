@@ -77,6 +77,8 @@ void swap()
     sem_init(&sem_swap, 0, 0);
     sem_init(&swap_end, 0, 0);
     relations = list_create();
+    read_from_swap = malloc(config->pageSize);
+
     while (true)
     {
         sem_wait(&sem_swap);
@@ -92,7 +94,7 @@ void swap()
             break;
 
         case READ_SWAP:
-            read_from_swap = read_swap(pid_swap, page_num_swap);
+            read_swap(read_from_swap, pid_swap, page_num_swap);
             break;
         }
         sem_post(&swap_end);
@@ -154,21 +156,18 @@ relation_t *findRela(uint32_t pid)
     return ((relation_t *)list_find(relations, find_dir));
 }
 
-void *read_swap(uint32_t pid, uint32_t page_num)
+void read_swap(void *result, uint32_t pid, uint32_t page_num)
 {
     pthread_mutex_lock(&mutex_log);
     log_warning(logger, "Reading swap file for process #%d | Page #%d", pid, page_num);
     pthread_mutex_unlock(&mutex_log);
 
     void *mapped = findRela(pid)->dir;
-    void *content = malloc(config->pageSize);
-    memcpy(content, mapped + page_num * config->pageSize, config->pageSize);
+    memcpy(result, mapped + page_num * config->pageSize, config->pageSize);
 
     pthread_mutex_lock(&mutex_log);
     log_warning(logger, "Read swap file for process #%d | Page #%d", pid, page_num);
     pthread_mutex_unlock(&mutex_log);
-
-    return content;
 }
 
 void write_swapp(uint32_t pid, void *value, uint32_t page_num)
