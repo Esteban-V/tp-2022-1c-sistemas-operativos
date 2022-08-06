@@ -143,6 +143,8 @@ t_instruction *parse_instruction(char *string)
 		list_add(instruction->params, param_pointer);
 		i++;
 	}
+	free(id);
+	free(instruction_text);
 
 	return instruction;
 }

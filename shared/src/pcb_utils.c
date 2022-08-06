@@ -2,14 +2,14 @@
 
 void pcb_destroy(t_pcb *pcb)
 {
-	void _delete_instrucion(void *elem)
+	void _delete_instrucion(t_instruction *elem)
 	{
 		instruction_destroy(elem);
 	}
 
 	if (pcb != NULL)
 	{
-		list_destroy_and_destroy_elements(pcb->instructions, _delete_instrucion);
+		list_destroy_and_destroy_elements(pcb->instructions, (void*)_delete_instrucion);
 		free(pcb);
 	}
 }

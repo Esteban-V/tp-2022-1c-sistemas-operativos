@@ -228,7 +228,7 @@ bool process_suspend(t_packet *petition, int kernel_socket)
 		{
 			for (int i = 0; i < list_size(pt1->entries); i++)
 			{
-				int pt2_index = (int *)list_get(pt1->entries, i);
+				int pt2_index = (int)list_get(pt1->entries, i);
 				t_ptbr2 *pt2 = get_page_table2(pt2_index);
 
 				if (pt2 != NULL)
@@ -533,22 +533,64 @@ void stats()
 
 void terminate_memory(int x)
 {
-	free(memory);
-	bitarray_destroy(frames_bitmap);
-	list_destroy(level1_tables);
-	list_destroy(level2_tables);
-	list_destroy(global_frames);
-	destroyMemoryConfig(config);
-
-	list_destroy(relations);
-
-	if (server_socket)
-		close(server_socket);
 
 	if (x == SIGINT)
 		stats();
 
+	void _destroyer_uno(t_ptbr1* elem){
+		list_destroy(elem->entries);
+		free(elem);
+	}
+
+	void _destroyer_dos(t_ptbr2* elem){
+		void _destroyeeer(t_page_entry * elem){
+			free(elem);
+		}
+
+		list_destroy_and_destroy_elements(elem->entries, (void*)_destroyeeer);
+		free(elem);
+	}
+
+	void _destroyer_frames(t_process_frame* elem){
+
+		void _destroyer(t_frame_entry *elem){
+			free(elem->page_data);
+			free(elem);
+		}
+
+		list_destroy_and_destroy_elements(elem->frames, (void*)_destroyer);
+		free(elem);
+	}
+
+	bitarray_destroy(frames_bitmap);
+
+	// Lista de t_ptbr1
+	list_destroy_and_destroy_elements(level1_tables, (void*)_destroyer_uno);
+
+	// Lista de t_ptbr2
+	list_destroy_and_destroy_elements(level2_tables, (void*)_destroyer_dos);
+
+	// Lista de t_process_frames
+	list_destroy_and_destroy_elements(global_frames, (void*)_destroyer_frames);
+
+	destroyMemoryConfig(config);
+	free(read_from_swap);
+
+	if (server_socket)
+		close(server_socket);
+
+	free(memory->memory);
+
+
+	void _destroy_rel(relation_t* elem){
+		free(elem->dir);
+		free(elem);
+	}
+
+	list_destroy_and_destroy_elements(relations, (void*)_destroy_rel);
+	free(memory);
+
 	log_destroy(logger);
+
 	exit(x == 1 ? EXIT_FAILURE : EXIT_SUCCESS);
 }
-

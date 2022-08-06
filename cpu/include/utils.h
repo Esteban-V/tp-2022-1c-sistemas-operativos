@@ -37,6 +37,9 @@ typedef struct t_cpu_config
 
 t_cpu_config *config;
 
+int tlb_replacement;
+int tlb_assignment;
+
 void destroy_cpu_config(t_cpu_config *cpu_config);
 t_cpu_config *get_cpu_config(char *path);
 

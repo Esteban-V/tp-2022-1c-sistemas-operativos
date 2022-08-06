@@ -25,7 +25,7 @@ int main()
 	pthread_mutex_init(&mutex_value, NULL);
 
 	new_interruption = false;
-	read_value = NULL;
+	read_value = 0;
 
 	memory_server_socket = connect_to(config->memoryIP, config->memoryPort);
 
@@ -141,12 +141,13 @@ void *header_handler(void *_client_socket)
 	bool serve = true;
 	while (serve)
 	{
-		uint8_t header = socket_receive_header(_client_socket);
+		uint8_t header = socket_receive_header((int)_client_socket);
 		if (header == INTERRUPT)
 		{
 			serve = cpu_handlers[header](NULL, (int)_client_socket);
 		}
 	}
+	return 0;
 }
 
 void *packet_handler(void *_client_socket)
@@ -181,7 +182,7 @@ bool receive_pcb(t_packet *petition, int kernel_socket)
 	pcb = create_pcb();
 	stream_take_pcb(petition, pcb);
 
-	if (!!pcb && !!pcb->pid && ((int)pcb->pid > 0))
+	if (!!pcb && !!pcb->pid && ((int)pcb->pid >= 0))
 	{
 		pthread_mutex_lock(&mutex_log);
 		log_info(logger, "Received PID #%d with %d instructions", pcb->pid,
@@ -374,7 +375,7 @@ void execute_read(t_list *params)
 	log_info(logger, "Request to read frame %d", frame);
 	pthread_mutex_unlock(&mutex_log);
 
-	memory_op(READ_CALL, frame, offset, NULL);
+	memory_op(READ_CALL, frame, offset, 0);
 
 	sem_wait(&value_loaded);
 
@@ -402,7 +403,7 @@ void execute_copy(t_list *params)
 	log_info(logger, "Request to read frame %d", val_frame);
 	pthread_mutex_unlock(&mutex_log);
 
-	memory_op(READ_CALL, val_frame, val_offset, NULL);
+	memory_op(READ_CALL, val_frame, val_offset, 0);
 
 	sem_wait(&value_loaded);
 
@@ -569,6 +570,8 @@ void stats()
 	log_info(logger, "- - - Stats - - -");
 	log_info(logger, "TLB hits: %d", tlb_hit_counter);
 	log_info(logger, "TLB misses: %d", tlb_miss_counter);
+	log_info(logger, "TLB assign: %d", tlb_replacement);
+	log_info(logger, "TLB replace: %d", tlb_assignment);
 	pthread_mutex_unlock(&mutex_log);
 }
 

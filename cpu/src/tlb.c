@@ -1,10 +1,12 @@
 #include "tlb.h"
 
-tlb_hit_counter = 0;
-tlb_miss_counter = 0;
-
 t_tlb *create_tlb()
 {
+    tlb_replacement = 0;
+    tlb_assignment = 0;
+    tlb_hit_counter = 0;
+    tlb_miss_counter = 0;
+
     pthread_mutex_init(&tlb_mutex, NULL);
 
     // Inicializa estructura de TLB
@@ -58,7 +60,7 @@ uint32_t find_tlb_entry(uint32_t page)
             tlb_hit_counter++;
 
             pthread_mutex_lock(&mutex_log);
-            log_info(logger, "TLB hit on page %d / frame %d", page, frame);
+            log_error(logger, "TLB hit on page %d / frame %d", page, frame);
             pthread_mutex_unlock(&mutex_log);
 
             break;
@@ -80,7 +82,6 @@ uint32_t find_tlb_entry(uint32_t page)
     return frame;
 }
 
-// TODO ejecutar en memoria cuando se reemplaza / asigna pagina a TP
 void add_tlb_entry(uint32_t page, uint32_t frame)
 {
     // Busco si hay una entrada libre
@@ -106,6 +107,9 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
             pthread_mutex_lock(&mutex_log);
             log_info(logger, "TLB assignment for page %d / frame %d", page, frame);
             pthread_mutex_unlock(&mutex_log);
+
+            tlb_assignment++;
+
             break;
         }
     }
@@ -123,6 +127,8 @@ void add_tlb_entry(uint32_t page, uint32_t frame)
             log_warning(logger, "TLB replacement at entry #%d for page %d --> %d / frame %d --> %d",
                         victim->index, victim->page, page, victim->frame, frame);
             pthread_mutex_unlock(&mutex_log);
+
+            tlb_replacement++;
 
             victim->page = page;
             victim->frame = frame;
@@ -143,7 +149,7 @@ void lru_tlb(t_tlb_entry *entry)
     };
 
     // Remueve la entry
-    t_tlb_entry *entryToBeMoved = (t_tlb_entry *)pQueue_remove_by_condition(tlb->victims, isVictim);
+    t_tlb_entry *entryToBeMoved = (t_tlb_entry *)pQueue_remove_by_condition(tlb->victims, (void*)isVictim);
 
     // Ubica a la misma atras de todo
     pQueue_put(tlb->victims, entryToBeMoved);

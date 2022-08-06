@@ -34,14 +34,14 @@ int page_table_init(uint32_t process_size)
 			page_counter++;
 
 			// Se agrega a la lista de entradas de su tabla nivel 2
-			list_add(level2_table->entries, page);
+			list_add(level2_table->entries, (void*)page);
 		}
 
 		// Se agrega a lista global 2 y se obtiene su posicion en la misma...
-		int level2_index = list_add(level2_tables, level2_table);
+		int level2_index = list_add(level2_tables, (void*)level2_table);
 
 		// para agregar a la lista de entradas de su tabla nivel 1
-		list_add(level1_table->entries, level2_index);
+		list_add(level1_table->entries, (void*)level2_index);
 	}
 	return level1_index;
 }
@@ -126,7 +126,7 @@ int get_page_table2_index(uint32_t pt1_index, uint32_t entry_index)
 	if (level1_table != NULL && (entry_index < list_size(level1_table->entries)))
 	{
 		// Obtiene el index de pt2 en lista global
-		pt2_index = (int *)list_get(level1_table->entries, entry_index);
+		pt2_index = (int)list_get(level1_table->entries, entry_index);
 	}
 	return pt2_index;
 }
@@ -304,7 +304,7 @@ int replace_algorithm(t_process_frame *process_frames, t_page_entry *entry, int 
 	int frame = -1;
 	for (int i = 0; i < (replaceAlgorithm == CLOCK_M ? 2 : 1); i++)
 	{
-		frame = two_clock_turns(process_frames, replaceAlgorithm == CLOCK_M, _replace);
+		frame = two_clock_turns(process_frames, replaceAlgorithm == CLOCK_M, (void*)_replace);
 		// TODO
 		if (frame != -1)
 		{

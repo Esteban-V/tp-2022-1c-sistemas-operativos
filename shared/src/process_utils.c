@@ -15,7 +15,7 @@ void log_instruction(t_log *logger, t_instruction *inst)
 	}
 
 	pthread_mutex_lock(&mutex_log);
-	log_info(logger, inst->id);
+	log_info(logger, "Instruction ID: %s", inst->id);
 	pthread_mutex_unlock(&mutex_log);
 
 	list_iterate(inst->params, _log_instruction_param);
@@ -65,7 +65,7 @@ void instruction_destroy(t_instruction *instruction)
 	if (instruction != NULL)
 	{
 		free(instruction->id);
-		free(instruction->params);
+		list_destroy_and_destroy_elements(instruction->params, free);
 		free(instruction);
 	}
 }
@@ -93,7 +93,8 @@ void process_destroy(t_process *process)
 {
 	if (process != NULL)
 	{
-		list_destroy_and_destroy_elements(process->instructions, instruction_destroy);
+		list_destroy_and_destroy_elements(process->instructions, (void*)instruction_destroy);
+		free(process);
 	}
 }
 
@@ -112,6 +113,8 @@ void stream_take_process(t_packet *packet, t_process *process)
 	t_list *instructions = stream_take_LIST(packet->payload,
 											stream_take_instruction);
 	memcpy(process->instructions, instructions, sizeof(t_list));
+
+	list_destroy(instructions);
 }
 
 void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem)
@@ -126,6 +129,9 @@ void stream_take_instruction(t_stream_buffer *stream, t_instruction **elem)
 
 	t_list *params = stream_take_LIST(stream, stream_take_UINT32P);
 	memcpy((*elem)->params, params, sizeof(t_list));
+
+	list_destroy(params);
+	free(id);
 }
 
 void stream_add_instruction(t_stream_buffer *stream, void *elem)

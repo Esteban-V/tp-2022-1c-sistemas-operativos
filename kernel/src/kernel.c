@@ -63,7 +63,9 @@ int main(void)
 		terminate_kernel(true);
 	}
 
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Kernel connected to CPU and memory");
+	pthread_mutex_unlock(&mutex_log);
 
 	// Creacion de server
 	server_socket = create_server(config->listenPort);
@@ -73,7 +75,9 @@ int main(void)
 		terminate_kernel(true);
 	}
 
+	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Kernel server ready for console");
+	pthread_mutex_unlock(&mutex_log);
 
 	// Planificador de mediano plazo
 	pthread_create(&any_to_ready_t, NULL, to_ready, NULL);
@@ -358,6 +362,8 @@ void *new_to_ready()
 	pthread_mutex_unlock(&mutex_log);
 
 	put_to_ready(pcb);
+
+	return 0;
 }
 
 void *suspended_to_ready()
