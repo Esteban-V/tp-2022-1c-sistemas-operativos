@@ -247,19 +247,21 @@ void get_swap(int frame_number, int page_number, int pid)
 
 	// Identifica que parte de memoria (frame) debe escribir
 	void *frame_ptr = get_frame(frame_number);
-	int j;
-	for(j=0;j<config->pageSize;j++){
-		printf("%d ",((char *)frame_ptr)[j]);
-	}
+
+	// int j;
+	// for(j=0;j<config->pageSize;j++){
+	// 	printf("%d ",((char *)frame_ptr)[j]);
+	// }
+
 	// Lo escribe en el frame correspondiente en memoria
 	memcpy(frame_ptr, swap_value, config->pageSize);
 	//write_frame(frame_ptr, swap_value);
-/*
-	int i;
-	for(i=0;i<config->pageSize;i++){
-		printf("%d ",((char *)frame_ptr)[i]);
-	}
- */
+
+	// int i;
+	// for(i=0;i<config->pageSize;i++){
+	// 	printf("%d ",((char *)frame_ptr)[i]);
+	// }
+
 	pthread_mutex_lock(&mutex_log);
 	log_info(logger, "Loaded PID #%d's page #%d into memory", pid, page_number);
 	pthread_mutex_unlock(&mutex_log);

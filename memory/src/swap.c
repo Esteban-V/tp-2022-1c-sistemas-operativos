@@ -63,8 +63,6 @@ void delete_swap(uint32_t pid)
     usleep(config->swapDelay * 1000);
     munmap(findRela(pid)->dir, findRela(pid)->size); // desmapeamos el archivo swap del proceso (liberamos la variable)
     remove(swap_file_path);
-
-    //    remove(swap_file_path);
 }
 
 void swap()
@@ -120,6 +118,10 @@ bool create_swapp(uint32_t pid, uint32_t size)
 
     close(file);
 
+    pthread_mutex_lock(&mutex_log);
+    log_warning(logger, "Created swap file for process #%d", pid);
+    pthread_mutex_unlock(&mutex_log);
+
     return true;
 }
 /*
@@ -147,6 +149,10 @@ relation_t *findRela(uint32_t pid)
 
 void *read_swap(uint32_t pid, uint32_t page_num)
 {
+    pthread_mutex_lock(&mutex_log);
+    log_warning(logger, "Reading swap file for process #%d | Page #%d", pid, page_num);
+    pthread_mutex_unlock(&mutex_log);
+
     void *mapped = findRela(pid)->dir;
     void *content = malloc(config->pageSize);
     memcpy(content, mapped + page_num * config->pageSize, config->pageSize);
@@ -155,6 +161,10 @@ void *read_swap(uint32_t pid, uint32_t page_num)
 
 void write_swapp(uint32_t pid, void *value, uint32_t page_num)
 {
+    pthread_mutex_lock(&mutex_log);
+    log_warning(logger, "Writing swap file for process #%d | Page #%d", pid, page_num);
+    pthread_mutex_unlock(&mutex_log);
+
     //log_info(logger, "ANTES %d", pid);
     void *mapped = findRela(pid)->dir;
     //log_info(logger, "DESPUES");
